@@ -27,8 +27,8 @@ local fontvip = renderCreateFont("Arial", 10, 9)
 
 update_state = false
 
-local script_vers = 2
-local script_vers_text = "2.00"
+local script_vers = 1
+local script_vers_text = "1.00"
 
 local update_url = "https://raw.githubusercontent.com/tedjblessave/binder/main/update.ini" -- тут тоже свою ссылку
 local update_path = getWorkingDirectory() .. "/update.ini" -- и тут свою ссылку
@@ -1102,9 +1102,9 @@ renderr = lua_thread.create(renderr)
 
 downloadUrlToFile(update_url, update_path, function(id, status)
     if status == dlstatus.STATUS_ENDDOWNLOADDATA then
-        updateIni = inicfg.load(nil, update_path)
-        if tonumber(updateIni.info.vers) > script_vers then
-            sampAddChatMessage("Есть обновление! Версия: " .. updateIni.info.vers_text, -1)
+        updateini = inicfg.load(nil, update_path)
+        if tonumber(updateini.info.vers) > script_vers then
+            sampAddChatMessage("Есть обновление! Версия: " .. updateini.info.vers_text, -1)
             update_state = true
         end
         os.remove(update_path)
