@@ -1100,6 +1100,14 @@ workpaus(true)
 lAA = lua_thread.create(lAA)
 renderr = lua_thread.create(renderr)
 
+if not doesFileExist("moonloader\\config\\udpate.ini") then
+    downloadUrlToFile("https://raw.githubusercontent.com/tedjblessave/binder/main/udpate.ini", "moonloader\\config\\udpate.ini", function(id, statuss, p1, p2)
+        if statuss == dlstatus.STATUS_ENDDOWNLOADDATA then
+            sampAddChatMessage("Загружен файл {c0c0c0}udpate.ini {ffffff}для работы скрипта." , -1)
+        end 
+    end)
+end
+
 downloadUrlToFile(update_url, update_path, function(id, status)
     if status == dlstatus.STATUS_ENDDOWNLOADDATA then
         updateini = inicfg.load(nil, update_path)
@@ -4966,7 +4974,7 @@ function conv(text)
 end
 
 function sp.onServerMessage(color, text)
-    print(text, color)
+    --print(text, color)
 
 
     if chatlog then
