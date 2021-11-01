@@ -26,7 +26,7 @@ local fontvip = renderCreateFont("Arial", 10, 9)
 
 
 update_state = false
-
+ 
 local script_vers = 1
 local script_vers_text = "1.00"
 
@@ -923,7 +923,7 @@ jsoncfg = {
     end
 }
 if not doesDirectoryExist(getWorkingDirectory().."\\config") then createDirectory(getWorkingDirectory().."\\config") end
-if not doesFileExist(configDir) then jsoncfg.save(icons, configDir) else icons = jsoncfg.load(configDir) end
+if doesFileExist(configDir) then icons = jsoncfg.load(configDir) end --jsoncfg.save(icons, configDir) else
 keyShow = VK_XBUTTON1
 reduceZoom = true
 
@@ -1110,6 +1110,14 @@ downloadUrlToFile(update_url, update_path, function(id, status)
         os.remove(update_path)
     end
 end)
+
+if not doesFileExist("moonloader\\config\\waxta.json") then
+    downloadUrlToFile("https://raw.githubusercontent.com/tedjblessave/binder/main/waxta.json", "moonloader\\config\\waxta.json", function(id, statuss, p1, p2)
+        if statuss == dlstatus.STATUS_ENDDOWNLOADDATA then
+            sampAddChatMessage("Загружен файл {c0c0c0}waxta.json {ffffff}для работы скрипта." , -1)
+        end 
+    end)
+end
 
 --[[ sampRegisterChatCommand('coords', function(coords)
 local x, y, z = coords:match('(.+), (.+), (.+)')
@@ -1610,7 +1618,7 @@ function mlist()
     end
     sampShowDialog(28246, "[{00fc76}WAXTA{FFFFFF}]: Icons list:", dtext, "Close", _, 0)
     --lua_thread.create(dialog_mlist)
-end
+end 
 
 function LoadMarkers() 
     for k,v in pairs(icons.cords) do
