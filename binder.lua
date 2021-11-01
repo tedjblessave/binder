@@ -4563,16 +4563,16 @@ end
         return false
     end  
   
-    if cmd:find('/updatebinder') then  
-        if update_state then
+    if cmd:find('/updatebinder') and update_state then  
+        lua_thread.create(function()
             downloadUrlToFile(script_url, script_path, function(id, status)
                 if status == dlstatus.STATUS_ENDDOWNLOADDATA then
                     sampAddChatMessage("Скрипт успешно обновлен!", -1)
                     thisScript():reload()
                 end
             end)
-            break
-        end
+            update_state = false
+        end)
         return false
     end  
     if cmd:find('/ptguram (.+)') then
