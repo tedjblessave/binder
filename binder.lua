@@ -24,6 +24,7 @@ local fixbike = false
 
 local fontvip = renderCreateFont("Arial", 10, 9)
 
+local activeextra = false
 
 update_state = false
  
@@ -56,7 +57,6 @@ resNames = {{'Камень', 0xFFFFFFFF}, {'Металл', 0xFF808080}, {'Серебро', 0xFF00BF
 resources = {}
 
 musorasosat = false
-kopathui = false
 
 sound = false
 sound1 = false
@@ -278,6 +278,7 @@ local mainini = inicfg.load({
     functions = {
         dotmoney=true,
         dhits=false,
+        extra=false,
         bott=false,
         autoc=false,
         hphud=true,
@@ -307,7 +308,7 @@ inicfg.save(mainini, 'bd.ini')
 --local maintxt = inicfg.load(nil, "pidorasi.txt")
    -- inicfg.save(mainini, 'moonloader\\config.ini') 
 ----------------------------------------------------------------------------------------------------------------------------------------------------------
-local supsettings = "\nНастроить конфиг bd.ini скрипта можно командами: \nЦифровой айди VK: /userid (айди). Нынешний айди: "..mainini.helper.user_id.." \nПароль для авто-ввода: /auto_pass (Пароль). Нынешний пароль: "..mainini.helper.password.." \nБанковский пин-код для авто-ввода: /auto_pin (пин). Нынешний пин-код: "..mainini.helper.bankpin.."\n\nВключить/Выключить раздельный VIP-chat: /chatvip \nВключить/Выключить разделение точками деньги: /dotmoney \nВключить/Выключить HP-HUD: /hphud \nВключить/Выключить Авто-Шот: /ashot \nВключить/Выключить Авто-+C: /autoc \nВключить/Выключить Авто-даблхиты: /dhits \n\nНастройка активации по клавишам. Весь список клавиш /buttons: \nWallHack: /whb (название кнопки). Сейчас: "..mainini.config.wh.." \nСбив всего: /allsbiv (название кнопки). Сейчас: "..mainini.config.allsbiv.." \nПростой сбив: /sbiv (название кнопки). Сейчас: "..mainini.config.sbiv.." \nCуицид: /suicide (название кнопки). Сейчас: "..mainini.config.suicide
+local supsettings = "\nНастроить конфиг bd.ini скрипта можно командами: \nЦифровой айди VK: /userid (айди). Нынешний айди: "..mainini.helper.user_id.." \nПароль для авто-ввода: /auto_pass (Пароль). Нынешний пароль: "..mainini.helper.password.." \nБанковский пин-код для авто-ввода: /auto_pin (пин). Нынешний пин-код: "..mainini.helper.bankpin.."\n\nВключить/Выключить раздельный VIP-chat: /chatvip \nВключить/Выключить разделение точками деньги: /dotmoney \nВключить/Выключить HP-HUD: /hphud \nВключить/Выключить Авто-Шот: /ashot \nВключить/Выключить Авто-+C: /autoc \nВключить/Выключить Авто-даблхиты: /dhits \nВключить/Выключить Экстра WS: /extra \n\nНастройка активации по клавишам. Весь список клавиш /buttons: \nWallHack: /whb (название кнопки). Сейчас: "..mainini.config.wh.." \nСбив всего: /allsbiv (название кнопки). Сейчас: "..mainini.config.allsbiv.." \nПростой сбив: /sbiv (название кнопки). Сейчас: "..mainini.config.sbiv.." \nCуицид: /suicide (название кнопки). Сейчас: "..mainini.config.suicide
 local supsettings2 = [[
 
 В биндере скрипта \\moonloader\\config\\binds.bind настройка следующая:
@@ -321,8 +322,73 @@ local supsettings2 = [[
 ]]
 
 local supfunctions = [[
-    
-скоро, заебал
+    0. Как настроить скрипт - /blessave
+    1. Биндер, который настраивается в binds.bind
+    2. Пиар-флудилка - /flood
+    3. Рендер многого чего c авто-альтом - /rend
+    4. Самый пиздатый анти-афк с VK с возможностью говорить по телефону /phone
+    5. Доставание оружия командами - /de /m4 /rf /sg /mp5 /pst /ak
+    6. Легальный мод для фрапса - SHIFT + F2
+    7. Пробив всего себя для фрапса - /probiv
+    8. Лучший WallHack с рендером мусоров и пидорасов.
+    9. Серверный список пидорасов /pidors, /addpidor, /delpidor
+    10. Удобное пользование майнинг фермой
+    11. Собственный чат-лог с поиском - /ch
+    12. Анти-столбы при врезании в трапспорте - зажать SHIFT
+    13. Зажимной GM-car - зажать SHIFT
+    14. Авто-баги игры: быстро бегать/плавать - зажать 1, ездить на велике/мото - зажать SHIFT, высокий прыжок на велике - C
+    15. Авто-обновление скрипта по команде - /updatebinder
+    16. Сокращенные команды: /members - /mb, /findihouse - /fh, /findibiz - /fbiz, /fam - /k 
+    17. Очистка памяти зоны стрима - /cln
+    18. Удобное открытие меню дома /home - ALT в доме
+    19. Удаление всякого ебаного мусора из чата
+    20. Цветной текст в чате, кто говорит
+    21. Цвет чата адвокатов
+    22. Цвет чата альянса
+    23. Авто-/key
+    24. Анти-ломка
+    25. Калькулятор - /calc
+    26. Разделение суммы запятыми
+    27. Авто+С. Клацать доп.кнопку мыши 2
+    28. Авто-дабл-хиты. Клацать букву Е
+    29. Экстра ВС. SHIFT+9
+    30. Авто-шот. если вкл /ashot то срабатывает при наводке на скин, можно отключить ALT + V
+    31. Отключить рабочий чат
+    32. Отдельный вип-чат
+    33. Суицид
+    34. Сбивы анимаций
+    35. ХП-худ в цифрах
+    36. Отправка различных уведомлений в VK
+    37. Помощник для заместителей/лидеров банд - /9
+    38. Пиздатая обоссывалка в двух режимах /anim 85 и /piss - ПКМ на игрока + Q (/anim 85 - 1, /piss - 2)
+    39. Реконнект - /hrec
+    40. Авто-реконнект
+    41. Выключить скрипт - SHIFT+F5
+    42. Авто-оплата налогов семейной квартиры - /fpay
+    43. Авто-оплата налогов на трейлер - /trpay
+    44. Авто-флудилка в чат /vr
+    45. Авто-прокрутка сундуков с рулетками - /rlt + фикс инвентаря в случае бага
+    46. Авто-нитро - ЛКМ в машине
+    47. Спидхак маленький - ПКМ в машине
+    48. Трамплин - 7 в машине
+    49. Бесконечный бег
+    50. Зажимное анти-падение с велосипеда/мото - зажать SHIFT. Исключение: в воде всегда не работает
+    51. Кам-хак
+    52. Авто-ввод пароля
+    53. Авто-ввод пин-кода в банке
+    54. Поесть в доме с холодильника - /eathome
+    55. Авто-еда мясо оленя
+    56. Авто-ТвинТурбо
+    57. Перевод секунды в минуты при /jail
+    58. Перевод секунды в минуты при /mute
+    59. Цвета авто всех банд - /gcolors
+    60. Узнать цвет авто по иду из /dl - /getcolor
+    61. Список всех кнопок - /buttons
+    62. Очистка чата - /cchat
+    63. Авто-закуп патрон у Гурамма - /ptguram
+    64. Умные и красивые /sms
+    65. Уведомления об оплате налогов, чтоб не забыть
+    66. 
 ]]
 local maintxt = inicfg.load({
     pidors = {    },
@@ -1078,7 +1144,7 @@ function iin(list, what_find, mode) -- vk.com/fottes
     end
 end
 
-pidoraso = false
+--pidoraso = false
 
 local dialogTabArr = {}
 local dialogTabStr = ""
@@ -1096,7 +1162,6 @@ local nickker = string.match(nicker, '(.*)_')
 printStringNow("~B~Script ~Y~/blessave ~G~ON ~P~for "..nickker, 1500, 5)
 
 workpaus(true)
-
 lAA = lua_thread.create(lAA)
 renderr = lua_thread.create(renderr)
 
@@ -1285,6 +1350,21 @@ else
     changeCrosshairColor(("0xFF%06X"):format(clr))
 end
 
+if mainini.functions.extra then
+    if isKeyDown(16) and isKeyJustPressed(57) and isKeyCheckAvailable() and not captureon then 
+        activeextra = not activeextra
+        if activeextra then
+            cameraRestorePatch(true)
+            sampAddChatMessage('123', -1)
+        else
+            cameraRestorePatch(false)
+            sampAddChatMessage('123456', -1)
+            activeextra = false
+        end
+    end
+    if isCharDead(playerPed) then cameraRestorePatch(false) sampAddChatMessage('sda123456', -1) activeextra = false end
+end
+
 --[[ if isKeyJustPressed(86) and isKeyCheckAvailable() and not isKeyDown(18) then salosalo = not salosalo end
 if isKeyDown(18) and isKeyJustPressed(86) and isKeyCheckAvailable() then silentShootWalls = not silentShootWalls end 
 		
@@ -1430,10 +1510,12 @@ doKeyCheck()
 
 arec()
 
+--[[ if mainini.functions.extra then
+	if not isCharDead(playerPed) then cameraRestorePatch(true)
+	else cameraRestorePatch(false) end end
 
 
-
---[[  if isKeyDown(189) and isKeyJustPressed(187) and isKeyCheckAvailable() then
+ if isKeyDown(189) and isKeyJustPressed(187) and isKeyCheckAvailable() then
 trigger = not trigger
 if trigger then
 mainini.functions.bott = true
@@ -1488,6 +1570,27 @@ if isKeyDown(16) and isKeyJustPressed(113) and isKeyCheckAvailable() then
     captureon = not captureon
     if captureon then
         printStringNow("~P~LEGAL ~G~ON", 1500, 5)
+        wh = false
+        musorasosat = false
+        sound = false
+        sound1 = false
+        onfp = false
+        cameraRestorePatch(false)
+        activeextra = false
+        musora = false
+        obideli = false
+        ScriptState = false
+        ScriptState2 = false
+        ScriptState3 = false
+        ScriptState4 = false
+        enabled = false
+        olenina = false
+        status = false
+        graffiti = false
+
+        on = false
+        draw_suka = false
+
     else
         printStringNow("~P~LEGAL ~R~OFF", 1500, 5)
     end
@@ -1847,6 +1950,7 @@ function onScriptTerminate(scr, quitgame)
     end 
     if scr == thisScript() then
         os.remove(getWorkingDirectory()..'\\config\\pidorasi.ini')
+        cameraRestorePatch(false)
     end
 end
 
@@ -2099,6 +2203,32 @@ function dHits()
     end
 end
     end
+
+    function cameraRestorePatch(qqq) 
+        if qqq then
+            if not patch_cameraRestore then
+                patch_cameraRestore1 = memory.read(0x5109AC, 1, true)
+                patch_cameraRestore2 = memory.read(0x5109C5, 1, true)
+                patch_cameraRestore3 = memory.read(0x5231A6, 1, true)
+                patch_cameraRestore4 = memory.read(0x52322D, 1, true)
+                patch_cameraRestore5 = memory.read(0x5233BA, 1, true)
+            end
+            memory.write(0x5109AC, 235, 1, true)
+            memory.write(0x5109C5, 235, 1, true)
+            memory.write(0x5231A6, 235, 1, true)
+            memory.write(0x52322D, 235, 1, true)
+            memory.write(0x5233BA, 235, 1, true)
+        elseif patch_cameraRestore1 ~= nil then
+            memory.write(0x5109AC, patch_cameraRestore1, 1, true)
+            memory.write(0x5109C5, patch_cameraRestore2, 1, true)
+            memory.write(0x5231A6, patch_cameraRestore3, 1, true)
+            memory.write(0x52322D, patch_cameraRestore4, 1, true)
+            memory.write(0x5233BA, patch_cameraRestore5, 1, true)
+            patch_cameraRestore1 = nil
+        end
+    end
+
+
 
 function tormoz()
     while true do wait(0)
@@ -3998,6 +4128,7 @@ function sp.onSendCommand(cmd)
         sampAddChatMessage("{00ffff}[9-10] {c0c0c0}/sc {ffffff}- Заспавнить транспорт", -1)
         
         sampAddChatMessage("{00ffff}[9-10] {c0c0c0}/nabor {ffffff}- Пиар в VIP-chat о наборе", -1)
+        sampAddChatMessage("{00ffff}[9-10] {c0c0c0}/povish {ffffff}- Флудилка о том, как повыситься", -1)
         return false
     end
     if cmd:find("/nabor") and devyatka then
@@ -4073,6 +4204,12 @@ function sp.onSendCommand(cmd)
             sampSendChat("/stats")
             wait(1000)
             sampSendChat("/donate")
+            wait(1000)
+            setVirtualKeyDown(9, false)
+            wait(4000)
+            setVirtualKeyDown(9, false)
+            wait(1000)
+            setVirtualKeyDown(192, false)
         end)
         return false
     end
@@ -4184,6 +4321,20 @@ function sp.onSendCommand(cmd)
             inicfg.save(mainini, 'bd') 
 		else
             sampAddChatMessage('Авто-даблхиты {ff0000}off',-1)
+            inicfg.save(mainini, 'bd')
+		end
+        return false
+    end
+    if cmd:find('/extra') then
+        mainini.functions.extra = not mainini.functions.extra
+		if mainini.functions.extra then 
+           -- if not isCharDead(playerPed) then cameraRestorePatch(true) else cameraRestorePatch(false) end
+            sampAddChatMessage('Экстра WS {228b22}on',-1)
+            inicfg.save(mainini, 'bd') 
+		else
+            cameraRestorePatch(false)
+            activeextra = false
+            sampAddChatMessage('Экстра WS {ff0000}off',-1)
             inicfg.save(mainini, 'bd')
 		end
         return false
@@ -4578,6 +4729,20 @@ end
         --LoadMarkers1()
         return false
     end  
+  --[[   if cmd:find('/eblan') then -- Adam_Yor 278
+        --[[             local name_prem, id_prem, msg_prem = string.match(text, '{F345FC}%[PREMIUM%] {FFFFFF}(.+)%[(%d+)%]: (.+)')
+            if name_prem and tonumber(id_prem) and msg_prem then
+                sampAddChatMessage(string.format('{FFDAB9}'..name_prem..'{FFDAB9}[{DC143C}'..id_prem..'{FFDAB9}]: '..msg_prem), 0xF345FC)
+                return false
+            end
+            local name_vip, id_vip, msg_vip = string.match(text, '{6495ED}%[VIP%] {FFFFFF}(.+)%[(%d+)%]: (.+)')
+            if name_vip and tonumber(id_vip) and msg_vip then
+                sampAddChatMessage(string.format('{FFDAB9}'..name_vip..'{FFDAB9}[{DC143C}'..id_vip..'{FFDAB9}]: '..msg_vip), 0x6495ED)
+                return false
+            end 
+            sampAddChatMessage('{6495ED}%[VIP%] {FFFFFF}Adam_Yor%[278%]: ВАШИ МАМЫ ВСЕ ЕБАНОЕ ГОВНО, Я НАСРАЛ В ШТАНЫ А МНЕ МАМА ПИЗДЫ ДАЛА, ПОШЛИ ВСЕ НАХУЙ', -1)
+        return false
+    end   ]]
   
     if cmd:find('/updatebinder') and update_state then  
         lua_thread.create(function()
@@ -5239,16 +5404,6 @@ function sp.onServerMessage(color, text)
                 return false
             end
 
---[[             local name_prem, id_prem, msg_prem = string.match(text, '{F345FC}%[PREMIUM%] {FFFFFF}(.+)%[(%d+)%]: (.+)')
-            if name_prem and tonumber(id_prem) and msg_prem then
-                sampAddChatMessage(string.format('{FFDAB9}'..name_prem..'{FFDAB9}[{DC143C}'..id_prem..'{FFDAB9}]: '..msg_prem), 0xF345FC)
-                return false
-            end
-            local name_vip, id_vip, msg_vip = string.match(text, '{6495ED}%[VIP%] {FFFFFF}(.+)%[(%d+)%]: (.+)')
-            if name_vip and tonumber(id_vip) and msg_vip then
-                sampAddChatMessage(string.format('{FFDAB9}'..name_vip..'{FFDAB9}[{DC143C}'..id_vip..'{FFDAB9}]: '..msg_vip), 0x6495ED)
-                return false
-            end ]]
 
             ----------------------sadlkjjasdlknmadsklasd
             if mainini.functions.chatvipka then
