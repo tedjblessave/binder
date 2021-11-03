@@ -1,6 +1,7 @@
 local encoding = require 'encoding'
 local lanes = require('lanes').configure()
 local sp  = require 'lib.samp.events'
+local se = require "samp.events"
 local weapons = require 'game.weapons'
 local mem = require "memory" 
 local memory = require 'memory'
@@ -65,7 +66,7 @@ musora = false
 obideli = false
 
 
-
+local fontALT = renderCreateFont("Tahoma", 14, 0x4)
 
 local fontVR = renderCreateFont("Arial", 10, 9)
 
@@ -353,8 +354,8 @@ local supfunctions = [[
     28. Авто-дабл-хиты. Клацать букву Е
     29. Экстра ВС. SHIFT+9
     30. Авто-шот. если вкл /ashot то срабатывает при наводке на скин, можно отключить ALT + V
-    31. Отключить рабочий чат
-    32. Отдельный вип-чат
+    31. Отключить рабочий чат - /rabchat
+    32. Отдельный вип-чат - /chatvip
     33. Суицид
     34. Сбивы анимаций
     35. ХП-худ в цифрах
@@ -388,7 +389,8 @@ local supfunctions = [[
     63. Авто-закуп патрон у Гурамма - /ptguram
     64. Умные и красивые /sms
     65. Уведомления об оплате налогов, чтоб не забыть
-    66. 
+    66. Разделение цен авто на АвтоБазаре
+    67. Авто-сборка шара, велика, дельтаплана
 ]]
 local maintxt = inicfg.load({
     pidors = {    },
@@ -840,6 +842,7 @@ local ScriptState = false
 local ScriptState2 = false
 local ScriptState3 = false
 local ScriptState4 = false
+local autoaltrend = false
 local enabled = false
 local olenina = false
 local status = false
@@ -1283,6 +1286,9 @@ elseif 100 / (mainini.stats.shots / mainini.stats.hits) >= 81 and 100 / (mainini
 renderFontDrawText(fo0nt, string.format('VERY HARD'), 0, ph - 30, 0xFFFFFFFF)
 end ]]
 
+if autoaltrend then
+    renderFontDrawText(fontALT, "{ffffff}Auto{ff0000}ALT", 1400, 600, 0xDD6622FF)
+end
 
 
 
@@ -1333,6 +1339,7 @@ if mainini.functions.bott and trigbott then
         end
     end
 end
+
 if isKeyDown(18) and isKeyJustPressed(86) and isKeyCheckAvailable() then trigbott = not trigbott end
 if not trigbott then 
     --local clr = join_argb(0, 220, 20, 60)
@@ -1587,6 +1594,7 @@ if isKeyDown(16) and isKeyJustPressed(113) and isKeyCheckAvailable() then
         olenina = false
         status = false
         graffiti = false
+        autoaltrend = false
 
         on = false
         draw_suka = false
@@ -1612,6 +1620,11 @@ if isKeyCheckAvailable() and captureon then
     end 
 end
 
+--[[ local _, myidanim = sampGetPlayerIdByCharHandle(playerPed)
+local animka = sampGetPlayerAnimationId(myidanim)
+if isPlayerPlaying(PLAYER_HANDLE) and animka == 1462 and isCharOnFoot(PLAYER_PED) and isKeyCheckAvailable() and not sampIsChatInputActive() then
+    if isKeyJustPressed(VK_LSHIFT) then  taskPlayAnim(PLAYER_PED, "camcrch_stay", "CAMERA", 4.0, false, false, true, false, 1) end 
+end ]]
 
 if isPlayerPlaying(PLAYER_HANDLE) and isCharOnFoot(PLAYER_PED) and isKeyCheckAvailable() then
     if isKeyJustPressed(_G['VK_'..mainini.config.sbiv]) and not captureon then  taskPlayAnim(playerPed, "HANDSUP", "PED", 4.0, false, false, false, false, 4) 
@@ -2135,7 +2148,47 @@ function doKeyCheck()
 		    return {id, color, position, distance, testLOS, attachedPlayerId, attachedVehicleId, text}
         end
 	end
+    function se.onSetObjectMaterialText(id, data)
+        local object = sampGetObjectHandleBySampId(id)
+        if object and doesObjectExist(object) then
+            if getObjectModel(object) == 18663 then
+                if string.find(data.text, "Владелец: [A-z0-9_]+") then
+                    last = {
+                        vehicle = nil,
+                        price = nil,
+                        tuning = nil
+                    }
+    
+                    local tuning = string.match(data.text, "\n\n\n([^\n]+)\n\nВладелец: [A-z0-9_]+\n{%x+}id: %d+")
+                    if tuning and last ~= nil then
+                        last.tuning = string.gsub(tuning, "{%x+}", "")
+                    end
+                end
+                
+                local vehicle, color, price = string.match(data.text, "([^\n]+)\n({%x+})%$(%d+)")
+                if vehicle and color and price and last ~= nil then
+                    last.vehicle = vehicle
+                    last.price = sum_format(price)
+                    data.text = string.format("%s\n%s$%s\n\n\n\n", last.vehicle, color, last.price)
+    
 
+    
+                    return { id, data }
+                end
+            end
+        end
+    end
+
+    function sum_format(sum)
+        sum = tostring(sum)
+        if sum ~= nil and #sum > 3 then
+            local b, e = ('%d'):format(sum):gsub('^%-', '')
+            local c = b:reverse():gsub('%d%d%d', '%1.')
+            local d = c:reverse():gsub('^%.', '')
+            return (e == 1 and '-' or '')..d
+        end
+        return sum
+    end
 
 function sp.onSendPlayerSync(data)
     if bit.band(data.keysData, 0x28) == 0x28 then
@@ -4729,6 +4782,12 @@ end
         --LoadMarkers1()
         return false
     end  
+--[[     if cmd:find('/are') then
+    local _, myidanim = sampGetPlayerIdByCharHandle(playerPed)
+local animka = sampGetPlayerAnimationId(myidanim)
+sampAddChatMessage(animka, -1)
+return false
+end  ]] 
   --[[   if cmd:find('/eblan') then -- Adam_Yor 278
         --[[             local name_prem, id_prem, msg_prem = string.match(text, '{F345FC}%[PREMIUM%] {FFFFFF}(.+)%[(%d+)%]: (.+)')
             if name_prem and tonumber(id_prem) and msg_prem then
@@ -4847,9 +4906,11 @@ end
     if cmd:find('/laa') then
 		status = not status
 		if status then
-			printString("AutoALT ~G~ON",1500)
+            autoaltrend = true
+			--printString("AutoALT ~G~ON",1500)
 		else
-			printString("AutoALT ~R~OFF",1500)
+			--printString("AutoALT ~R~OFF",1500)
+            autoaltrend = false
 		end
         return false
     end
