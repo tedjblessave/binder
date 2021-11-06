@@ -19,7 +19,6 @@ local poss = false
 
 local captureon = false
 
-local devyatka = false
 
 local fixbike = false
 
@@ -284,7 +283,9 @@ local mainini = inicfg.load({
         autoc=false,
         hphud=true,
         chatvipka=false,
-        offrabchat=false
+        offrabchat=false,
+        offfrachat=false,
+        devyatka=false
     },
     config = {
         allsbiv="0",
@@ -391,6 +392,7 @@ local supfunctions = [[
     65. Уведомления об оплате налогов, чтоб не забыть
     66. Разделение цен авто на АвтоБазаре
     67. Авто-сборка шара, велика, дельтаплана
+    68. Отключить фракционный чат - /frachat
 ]]
 local maintxt = inicfg.load({
     pidors = {    },
@@ -801,7 +803,7 @@ local anim_gun = 1369
 local usee=2302
 local next_page=2111
 local d_id = 3011
-local close = 2110
+local closegun = 2110
 local dialog_exist = false
 
 ---Weapons---
@@ -906,18 +908,20 @@ local dtextm = {}
 function sp.onSetPlayerDrunk(drunkLevel)
     return {1}
 end 
-
+ 
 local chatlog = true
-local defString = ""
-local fpath = getWorkingDirectory()..'\\config\\chatlog.txt'
-if not doesFileExist(fpath) then
+--local defString = ""
+local fpath = getWorkingDirectory()..'\\config\\chatlogs\\chatlog_' .. os.date('%y.%m.%d').. '.txt'
+local fpapka = getGameDirectory().."/moonloader/config/chatlogs"
+createDirectory(fpapka)
+if not doesFileExist(fpath) then 
 	local fw = io.open(fpath, 'w+')
-	if fw then fw:write(defString):close() end
-else
+	if fw then fw:write():close() end
+--[[ else
 	local fw = io.open(fpath, 'w+')
-	if fw then fw:write(defString):close() end
-	local fr = io.open(fpath, 'r')
-	if fr then defString = fr:read('*a') fr:close() end
+	if fw then fw:write():close() end 
+--[[ 	local fr = io.open(fpath, 'r')
+	if fr then defString = fr:read('*a') fr:close() end ]]
 end
 
 
@@ -1157,8 +1161,13 @@ local keyl = 'AAF0rwwhGQ1-qPZL1sCP7s6rqCL7uuajy54' -- ключ конечно лучше шифрова
 function main()
 if not isSampfuncsLoaded() or not isSampLoaded() then return end
 while not isSampAvailable() do wait(100) end 
---sampProcessChatInput("/lfconnect 0 900") wait(100) sampProcessChatInput("/lfconnect 1 900")
---sampAddChatMessage("{ff4500}[ble$$ave] {4682B4}Скрипт {008000}ВКЛЮЧЕН. {ffffff}Автор: {800080}tedj.",-1)
+if not doesFileExist("moonloader\\config\\udpate.ini") then
+    downloadUrlToFile("https://raw.githubusercontent.com/tedjblessave/binder/main/udpate.ini", "moonloader\\config\\udpate.ini", function(id, statuss, p1, p2)
+        if statuss == dlstatus.STATUS_ENDDOWNLOADDATA then
+            sampAddChatMessage("Загружен файл {c0c0c0}udpate.ini {ffffff}для работы скрипта." , -1)
+        end 
+    end)
+end
 local _, ider = sampGetPlayerIdByCharHandle(PLAYER_PED)
 local nicker = sampGetPlayerNickname(ider)
 local nickker = string.match(nicker, '(.*)_')
@@ -1168,13 +1177,7 @@ workpaus(true)
 lAA = lua_thread.create(lAA)
 renderr = lua_thread.create(renderr)
 
-if not doesFileExist("moonloader\\config\\udpate.ini") then
-    downloadUrlToFile("https://raw.githubusercontent.com/tedjblessave/binder/main/udpate.ini", "moonloader\\config\\udpate.ini", function(id, statuss, p1, p2)
-        if statuss == dlstatus.STATUS_ENDDOWNLOADDATA then
-            sampAddChatMessage("Загружен файл {c0c0c0}udpate.ini {ffffff}для работы скрипта." , -1)
-        end 
-    end)
-end
+
 
 downloadUrlToFile(update_url, update_path, function(id, status)
     if status == dlstatus.STATUS_ENDDOWNLOADDATA then
@@ -1214,7 +1217,8 @@ end) ]]
 
 
 --sampRegisterChatCommand("buttons", function() sampShowDialog(1905, "{00CC00}Список клавиш | Справка", buttonslist, "ОК", _, 2) end)
-
+--[[ sampRegisterChatCommand("st", cmdSetTime)
+sampRegisterChatCommand("sw", cmdSetWeather) ]]
 
 sampRegisterChatCommand('calc', function(arg) 
 if #arg > 0 then 
@@ -1320,6 +1324,9 @@ if mainini.functions.chatvipka and not sampIsDialogActive() then
 end
 
 wait(0)
+--[[ if timestsw then
+    setTimeOfDay(timestsw, 0)
+  end ]]
 if mainini.functions.bott and trigbott then
     if isKeyDown(VK_RBUTTON) then
         if getCurrentCharWeapon(playerPed) == 24 or getCurrentCharWeapon(playerPed) == 33 or getCurrentCharWeapon(playerPed) == 35 then
@@ -1397,7 +1404,7 @@ if text:match("%[ ~p~%u+~w~ %]") then
 setGameKeyState(16, 255)
 setGameKeyState(21, 255)
 setGameKeyState(9, 255)
-wait(0)
+wait(100)
 setGameKeyState(16, 0)
 setGameKeyState(21, 0)
 setGameKeyState(9, 0)
@@ -1422,13 +1429,21 @@ end
 if act and not sampTextdrawIsExists(2103) then act = false end
 
 
+
 --[[     if isKeyDown(VK_9) then 
 for i = 0, 300 do
-sampSendClickTextdraw(2128) runToPoint(518.62, 969.45)
+    setVirtualKeyDown(vkeys.VK_LSHIFT, true)
+    wait(50)
+setVirtualKeyDown(vkeys.VK_LSHIFT, false)
 wait(500)
-
-end
+sampSendDialogResponse(216, 1, 0, nil)
+sampSendDialogResponse(217, 1, 3, nil)
+sampSendDialogResponse(221, 1, 0, "500")
+sampCloseCurrentDialogWithButton(1)
+end 
 end ]]
+
+
 
 while isPauseMenuActive() do -- в меню паузы отключаем курсор, если он активен
     if cursorEnabled then
@@ -1463,14 +1478,14 @@ if valid and doesCharExist(ped) then
             sampSendChat(string.format('/me обоссал жертву рваного дюрекса по кличке %s', nickk))
             poss = true
         end
-        if devyatka and isKeyJustPressed(219) and isKeyCheckAvailable() then
+        if mainini.functions.devyatka and isKeyJustPressed(219) and isKeyCheckAvailable() then
             sampSendChat(string.format("/todo Надень вот это на себя*кинув в руки %s бандану The Rifa номер 5", namee))
             wait(500)
             sampSendChat(string.format('/invite %s', name))
             wait(3000)
             sampSendChat(string.format('/giverank %s 5', name))
         end
-        if devyatka and isKeyJustPressed(221) and isKeyCheckAvailable() then
+        if mainini.functions.devyatka and isKeyJustPressed(221) and isKeyCheckAvailable() then
             sampSendChat(string.format("/todo Надень вот это на себя*кинув в руки %s бандану The Rifa номер 8", namee))
             wait(500)
             sampSendChat(string.format('/invite %s', name))
@@ -1479,11 +1494,11 @@ if valid and doesCharExist(ped) then
             -- принял ваше предложение вступить к вам в организацию
 
         end
-        if devyatka and isKeyJustPressed(187) and isKeyCheckAvailable() then
+        if mainini.functions.devyatka and isKeyJustPressed(187) and isKeyCheckAvailable() then
             sampSetChatInputText(string.format('/giveskin %s ', id))
             sampSetChatInputEnabled(true)
         end
-        if devyatka and isKeyJustPressed(189) and isKeyCheckAvailable() then
+        if mainini.functions.devyatka and isKeyJustPressed(189) and isKeyCheckAvailable() then
             sampSetChatInputText(string.format('/giverank %s ', id))
             sampSetChatInputEnabled(true)
         end
@@ -2087,14 +2102,14 @@ function thread_func()
 	end
 	wait(300)
 	cmd = 0
-	sampSendClickTextdraw(close)
+	sampSendClickTextdraw(closegun)
 end
 
 function thread_func2()
 	wait(200)
 	sampSendClickTextdraw(usee)
 	wait(100)
-	sampSendClickTextdraw(close)
+	sampSendClickTextdraw(closegun)
 	wait(100)
 	--sampAddChatMessage(amount, -1)
 	sampSendDialogResponse(d_id, 1, 1, amount)
@@ -4162,15 +4177,17 @@ function sp.onSendCommand(cmd)
         return false
     end
     if cmd:find('/9') then
-        devyatka = not devyatka
-        if devyatka then
+        mainini.functions.devyatka = not mainini.functions.devyatka
+        if mainini.functions.devyatka then
             sampAddChatMessage("Режим заместителя в банде {228b22}on {ffffff}| /h9 - помощь ", -1)
+            inicfg.save(mainini, 'bd') 
         else
             sampAddChatMessage("Режим заместителя в банде {ff0000}off", -1)
+            inicfg.save(mainini, 'bd') 
         end
         return false
     end
-    if cmd:find("/h9") and devyatka then
+    if cmd:find("/h9") and mainini.functions.devyatka then
         sampAddChatMessage("{00ffff}[9-10] {c0c0c0}ПКМ+1 {ffffff}- Принять в банду на 5", -1)
         sampAddChatMessage("{00ffff}[9-10] {c0c0c0}ПКМ+2 {ffffff}- Принять в банду на 8", -1)
         sampAddChatMessage("{00ffff}[9-10] {c0c0c0}/fu id {ffffff}- Уволить с причиной 'выселен'", -1)
@@ -4184,11 +4201,11 @@ function sp.onSendCommand(cmd)
         sampAddChatMessage("{00ffff}[9-10] {c0c0c0}/povish {ffffff}- Флудилка о том, как повыситься", -1)
         return false
     end
-    if cmd:find("/nabor") and devyatka then
+    if cmd:find("/nabor") and mainini.functions.devyatka then
         sampSendChat("/vr Набор в ФК 'The Rifa'. /smug /port | Желающих ждём на площадке.")
         return false
     end
-    if cmd:find("/povish") and devyatka then
+    if cmd:find("/povish") and mainini.functions.devyatka then
         lua_thread.create(function()
             sampSendChat("/f Чтобы повыситься на 6-7 ранг: активно ездить на порты, проявлять себя любыми способами...")
             wait(1000)
@@ -4198,32 +4215,32 @@ function sp.onSendCommand(cmd)
         end)
         return false
     end
-    if cmd:find('/fu') and devyatka then 
+    if cmd:find('/fu') and mainini.functions.devyatka then 
         local arguninv = cmd:match('/fu (.+)')
         sampSendChat('/uninvite '..arguninv..' Выселен.')
         return false
     end
-    if cmd:find('/skl') and devyatka then 
+    if cmd:find('/skl') and mainini.functions.devyatka then 
         sampSendChat('/lmenu')
         sampSendDialogResponse(1214, 1, 2, -1)
         return false
     end
-    if cmd:find('/fc') and devyatka then 
+    if cmd:find('/fc') and mainini.functions.devyatka then 
         sampSendChat('/lmenu')
         sampSendDialogResponse(1214, 1, 4, -1)
         return false
     end
-    if cmd:find('/sc') and devyatka then 
+    if cmd:find('/sc') and mainini.functions.devyatka then 
         sampSendChat('/lmenu')
         sampSendDialogResponse(1214, 1, 3, -1)
         return false
     end
-    if cmd:find('/gr') and devyatka then 
+    if cmd:find('/gr') and mainini.functions.devyatka then 
         local argidgr = cmd:match('/gr (.+)')
         sampSendChat('/giverank '..argidgr)
         return false
     end
-    if cmd:find('/gs') and devyatka then 
+    if cmd:find('/gs') and mainini.functions.devyatka then 
         local argskin = cmd:match('/gs (.+)')
         sampSendChat('/giveskin '..argskin)
         return false
@@ -4235,6 +4252,21 @@ function sp.onSendCommand(cmd)
     if cmd:find('/spb') then
         sampSendChat("/cars")
         fixbike = true
+        return false
+    end
+    if cmd:find('/sliv') then
+        lua_thread.create(function()
+            for i = 0, 300 do
+                setVirtualKeyDown(vkeys.VK_LSHIFT, true)
+                wait(50)
+            setVirtualKeyDown(vkeys.VK_LSHIFT, false)
+            wait(500)
+            sampSendDialogResponse(216, 1, 0, nil)
+            sampSendDialogResponse(217, 1, 3, nil)
+            sampSendDialogResponse(221, 1, 0, "500")
+            sampCloseCurrentDialogWithButton(1)
+            end 
+        end)
         return false
     end
     if cmd:find('/probiv') then
@@ -4273,6 +4305,7 @@ function sp.onSendCommand(cmd)
         sampAddChatMessage(" {ffffff}В игре написать команду {FF1493}/userid {ffffff}и через пробел вставить скопированный цифровой ID вашего VK", -1)
         sampAddChatMessage(" {ffffff}Если всё сделали верно, то вам в VK придет от группы {F0E68C}тестовое сообщение{ffffff}.", -1)
         sampAddChatMessage(" {ffffff}Далее узнать подробнее можно с помощью кнопок {00ffff}Настройки/Функционал{ffffff}, в беседе с группой.", -1)
+        sampAddChatMessage(" {ffffff}P.S. если у Вас нет ВК, чтоб скрипт мог полностью работать, то: {fff000}регистрируйтесь там или идите{ff0000} НАХУЙ!", -1)
         return false
     end --[[
     if cmd:find('/info2') then
@@ -4352,6 +4385,17 @@ function sp.onSendCommand(cmd)
             inicfg.save(mainini, 'bd') 
 		else
             sampAddChatMessage('Рабочий-chat {ff0000}off',-1)
+            inicfg.save(mainini, 'bd')
+		end
+        return false
+    end
+    if cmd:find('/frachat') then
+        mainini.functions.offfrachat = not mainini.functions.offfrachat
+		if not mainini.functions.offfrachat then 
+            sampAddChatMessage('Фракционный-chat {228b22}on',-1)
+            inicfg.save(mainini, 'bd') 
+		else
+            sampAddChatMessage('Фракционный-chat {ff0000}off',-1)
             inicfg.save(mainini, 'bd')
 		end
         return false
@@ -4457,20 +4501,35 @@ function sp.onSendCommand(cmd)
         sampAddChatMessage('Клавиша для WallHack теперь {00FFFF}'..mainini.config.wh,-1)
         return false
     end
-    if cmd:find('/ch') and not cmd:find('/ch (.+)') then
+    if cmd:find('/ch') and not cmd:find('/ch (.+)') and not cmd:find('/chh') then
         tbl = {}
-        for l in io.lines(getWorkingDirectory()..'\\config\\chatlog.txt') do 
+        for l in io.lines(getWorkingDirectory()..'\\config\\chatlogs\\chatlog_' .. os.date('%y.%m.%d').. '.txt') do 
             if l ~= "" then
                 table.insert(tbl, string.sub(l, 1, 325)) 
             end
         end
+        if #tbl <= 2000 then    
+            sampShowDialog(1007, "Результат: "..#tbl, table.concat(tbl, "\n"), "Выйти", _, 4)
+        elseif #tbl > 2000 then
+            local warningch = "{ffffff}В чат-логе целых {ff0000}"..#tbl.." {ffffff}строк, может быть пролаг вплоть до краша. \nРекомендую использовать поиск по фразе/слову - {00ffff}/ch (слово) \n{ffffff}Если хочешь вывести чат-лог целиком вводи - {fff000}/chh"
+            sampShowDialog(1047, "{ff0000}Предупреждение", warningch, "Выйти", _, 0)
+        end
+        return false
+    end
+    if cmd:find('/chh') then
+        tbl = {}
+        for l in io.lines(getWorkingDirectory()..'\\config\\chatlogs\\chatlog_' .. os.date('%y.%m.%d').. '.txt') do 
+            if l ~= "" then
+                table.insert(tbl, string.sub(l, 1, 325)) 
+            end
+        end   
         sampShowDialog(1007, "Результат: "..#tbl, table.concat(tbl, "\n"), "Выйти", _, 4)
         return false
     end
     if cmd:find('/ch (.+)') then
         local param = cmd:match('/ch (.+)')
         tbl = {}
-        for l in io.lines(getWorkingDirectory()..'\\config\\chatlog.txt') do 
+        for l in io.lines(getWorkingDirectory()..'\\config\\chatlogs\\chatlog_' .. os.date('%y.%m.%d').. '.txt') do 
             if l ~= "" then
                 if param ~= 0 then
                     if string.find(l, param) ~= nil then
@@ -5226,9 +5285,14 @@ function sp.onServerMessage(color, text)
             sendvknotf0(text)
 		end
         
-        if color == -1 and text:find('%[Тел%]:')then
+--[[         if color == -1 and text:find('%[Тел%]:')then
 			sendvknotf0(text)
-		end
+		end ]]
+        if text:match('{73B461}%[Тел%]:') then
+            sendvknotf0(text)
+            text = text:gsub('^{73B461}%[Тел%]', '{2FAA5B}[Тел]') --b800a2
+            return { 0xFFFFFFFF, text }
+        end
         if color == -1347440641 and text:find('Звонок окончен') and text:find('Информация') and text:find('Время разговора') then
 			sendvknotf(text)
 		end
@@ -5258,7 +5322,7 @@ function sp.onServerMessage(color, text)
             sendvknotf(t00ext)
 		end ]]
 
-   --print(text, color)
+   print(text, color)
 
         if text:find("Вам пришло новое сообщение!") and not text:find("говорит") and not text:find('- |') then
             sampAddChatMessage("{fff000}Вам пришло новое {FFFFFF}SMS{fff000}-сообщение!", -1)
@@ -5275,23 +5339,33 @@ function sp.onServerMessage(color, text)
             end ]]
 
         if text:find('говорит:') then
-                idd = text:match('%d+')
-            colorr = sampGetPlayerColor(idd)
+                local idd = text:match('%d+')
+            local colorr = sampGetPlayerColor(idd)
                 sampAddChatMessage(text,colorr)
-                return false
+                return false 
         end
 
         if text:find('%[Альянс ') then
-            sampAddChatMessage(text, 0xFF00FF)
-            return false
+            --sampAddChatMessage(text, 0xFF00FF)
+            return { 0x9c15c1ff, text }
         end
 
         if text:find('%[Адвокат%] ') then
             if mainini.functions.offrabchat then
                 return false
             else
-                sampAddChatMessage(text, 0x5F9EA0)
+                local advtext = text:match('%[Адвокат%] (.+)')
+                --sampAddChatMessage("{ffffff} Адвокат "..advtext, 0x5F9EA0)
+                return { 0x5f9ea0ff, "{ff4500}[J] {5f9ea0}"..advtext }
+            end
+        end
+
+        if text:find('%[F%] ') and color == 766526463 then
+            if mainini.functions.offfrachat then
                 return false
+            else
+                local bandtext = text:match('%[F%] (.+)')
+                return { 0x2db043ff, "{ff4500}[F] {2db043}"..bandtext }
             end
         end
         
@@ -5386,9 +5460,66 @@ function sp.onServerMessage(color, text)
 
                 if (text:find("~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~") or text:find("Основные команды сервера:") or text:find("Пригласи друга и получи") or text:find("Наш сайт:"))  and color == -89368321 then return false end
 
-                if text:find("Отредактировал сотрудник СМИ") and color == 1941201407 then return false end
-                if text:find("Отредактировал сотрудник СМИ") and not text:find('говорит:') then return false end
+--[[                 if text:find("Отредактировал сотрудник СМИ") and color == 1941201407 then return false end
+                if text:find("Отредактировал сотрудник СМИ") and not text:find('говорит:') then return false end ]]
   
+                if color == 0x73B461FF then
+                    local ad, tel = text:match('^Объявление:%s(.+)%.%sОтправил:%s[A-z0-9_]+%[%d+%]%sТел%.%s(%d+)')
+                    if ad ~= nil then
+                        local outstring = string.format('AD: {73B461}%s {D5A457}| Тел: %s', ad, tel)
+                        return { 0xD5A457FF, outstring }
+                    elseif text:find('Отредактировал сотрудник') then
+                        return false
+                    end
+                end
+
+     --[[            if  text:find('F') then
+                    print('{'..bit.tohex(bit.rshift(color, 8), 6)..'}'..text)
+                    print('======')
+                    print('%X', color)
+                    print(bit.tohex(bit.rshift(color, 8), 6))
+                end 
+                if text:find("%[F%]") and color == 766526463 then
+                    local rank_band, name_band, id_band, msg_band = string.match(text, '{2db043}%[F%] (.+) (.+)%[(%d+)%]: (.+)')
+                    if rank_band and name_band and tonumber(id_band) and msg_band then
+                        sampAddChatMessage(string.format('{FFDAB9}'..name_band..'{FFDAB9}[{DC143C}'..id_band..'{FFDAB9}]: '..msg_band), 0xF345FC)
+                        return false
+                    end
+                end]]
+                
+                if color == -1 then
+                    local ad, tel = text:match('^{%x+}%[VIP%]%sОбъявление:%s(.+)%.%sОтправил:%s[A-z0-9_]+%[%d+%]%sТел%.%s(%d+)')
+                    if ad ~= nil then
+                        local outstring = string.format('VIP AD: {73B461}%s {D5A457}| Тел: %s', ad, tel)
+                        return { 0xD5A457FF, outstring }
+                    elseif text:find('Отредактировал сотрудник') then
+                        return false
+                    end
+                end
+
+                if text:find('Администратор') then
+                    if color == -10270721 then -- действия FF6347FF
+                        return { 0xb22222ff, text }
+                    elseif color == -2686721 then -- /ao FFD700FF
+                        return { 0x38fcffff, text }
+                    end
+                end
+
+--[[                 if text:match('^{6495ED}%[VIP%]') then
+                    text = text:gsub('^{6495ED}%[VIP%]', '[VIP]')
+                    return { 0x2FAA5BFF, text }
+                end
+            
+                if text:match('^{F345FC}%[PREMIUM%]') then
+                    text = text:gsub('^{F345FC}%[PREMIUM%]', '[PREMIUM]')
+                    return { 0xFFAA00FF, text }
+                end
+            
+                if text:match('^{FCC645}%[ADMIN%]') then
+                    text = text:gsub('^{FCC645}%[ADMIN%]', '[ADMIN]')
+                    return { 0xFF4040FF, text }
+                end ]]
+
                 if (text:find("В нашем магазине ты можешь приобрести нужное количество игровых денег и потратить") or text:find("их на желаемый тобой") or text:find("имеют большие возможности") or text:find("имеют больше возможностей") or text:find("можно приобрести редкие") or text:find("которые выделят тебя из толпы")) and color == 1687547391 then return false end
 
                 if text:find("вышел при попытке избежать ареста и был наказан") and color == -1104335361 then return false end
@@ -5416,7 +5547,7 @@ function sp.onServerMessage(color, text)
                 if text:find("Номера телефонов государственных служб") and not text:find('говорит') and not text:find('- |')  and color == 1687547391 then return false end
 
                 if text:find('Вам был добавлен предмет') and text:find('Ингредиенты') and color == -65281 then return false end
-
+                if text:find('домами могут бесплатно раз в день получать') and text:find('Подсказка') and color == -1347440641 then return false end
                 if (text:find('Либерти Сити') or text:find('отправляйтесь на его разгрузку') or text:find('об контрабанде')) and text:find('Внимание') and color == -1104335361 then return false end
 
                 if (text:find('Ограбление изъятых патронов и наркотиков завершено') or text:find('Если вам удалось что-то украсть') or text:find('Внимание!') or text:find('Через 10 минут состоится выгрузка изъятых патронов и наркотиков') or text:find('чтобы украсть как можно больше ящиков в порту и пополнить ими общак') or text:find('Берите фургон и направляйтесь в порт') or text:find('Берите фургон и направляйтесь в порт') or text:find('вся Армия штата сосредоточена на том')) and color == -10270721 then return false end
@@ -5484,8 +5615,23 @@ function sp.onServerMessage(color, text)
                     lastmsg[5] = text
                     return false
                 end
+            else
+                ------------------
+                if text:match('^{6495ED}%[VIP%]') then
+                    text = text:gsub('^{6495ED}%[VIP%]', '{b800a2}[VIP]')   
+                    return { 0xFFFFFFFF, text }
+                end
+            
+                if text:match('^{F345FC}%[PREMIUM%]') then
+                    text = text:gsub('^{F345FC}%[PREMIUM%]', '{FFAA00}[PREMIUM]')
+                    return { 0xFFFFFFFF, text }
+                end
+            
+                if text:match('^{FCC645}%[ADMIN%]') then
+                    text = text:gsub('^{FCC645}%[ADMIN%]', '{38fcff}[ADMIN]')
+                    return { 0xffffffff, text }
+                end
             end
-            ------------------
 
             if mainini.functions.dotmoney then
                 text = separator(text)
@@ -5618,4 +5764,35 @@ end
 
 
 
-
+--[[ 
+--- Callbacks
+function cmdSetTime(param)
+    local hour = tonumber(param)
+    if hour ~= nil and hour >= 0 and hour <= 23 then
+      timestsw = hour
+      patch_samp_time_set(true)
+    else
+      patch_samp_time_set(false)
+      timestsw = nil
+    end
+  end
+  
+  function cmdSetWeather(param)
+    local weather = tonumber(param)
+    if weather ~= nil and weather >= 0 and weather <= 45 then
+      forceWeatherNow(weather)
+    end
+  end
+  
+  
+  --- Functions
+  function patch_samp_time_set(enable)
+      if enable and default == nil then
+          default = readMemory(sampGetBase() + 0x9C0A0, 4, true)
+          writeMemory(sampGetBase() + 0x9C0A0, 4, 0x000008C2, true)
+      elseif enable == false and default ~= nil then
+          writeMemory(sampGetBase() + 0x9C0A0, 4, default, true)
+          default = nil
+      end
+  end ]]
+  
