@@ -283,6 +283,7 @@ local mainini = inicfg.load({
         autoc=false,
         hphud=true,
         chatvipka=false,
+        colorchat=false,
         offrabchat=false,
         offfrachat=false,
         devyatka=false
@@ -345,7 +346,7 @@ local supfunctions = [[
     18. Удобное открытие меню дома /home - ALT в доме
     19. Удаление всякого ебаного мусора из чата
     20. Цветной текст в чате, кто говорит
-    21. Цвет чата адвокатов
+    21. Цвета в чате по мнению разработчика
     22. Цвет чата альянса
     23. Авто-/key
     24. Анти-ломка
@@ -997,8 +998,8 @@ jsoncfg = {
 }
 if not doesDirectoryExist(getWorkingDirectory().."\\config") then createDirectory(getWorkingDirectory().."\\config") end
 if doesFileExist(configDir) then icons = jsoncfg.load(configDir) end --jsoncfg.save(icons, configDir) else
-keyShow = VK_XBUTTON1
-reduceZoom = true
+--[[ keyShow = VK_XBUTTON1
+reduceZoom = true ]]
 
 
 local props = { 
@@ -1671,7 +1672,7 @@ if isKeyDown(119) then
     end
 end
 
-
+--[[ 
 local menuPtr = 0x00BA6748
 if isPlayerPlaying(playerHandle) then 
         if isKeyCheckAvailable()  and isKeyDown(keyShow) then
@@ -1694,7 +1695,7 @@ if isPlayerPlaying(playerHandle) then
             end
         end
     end
-end
+end ]]
 
 
 function runToPoint(tox, toy)
@@ -4378,6 +4379,20 @@ function sp.onSendCommand(cmd)
 		end
         return false
     end
+    if cmd:find('/colorchat') then
+        mainini.functions.colorchat = not mainini.functions.colorchat
+		if mainini.functions.colorchat then 
+            sampAddChatMessage('Цветной chat {228b22}on',-1)
+            
+            --notf.addNotification(string.format("%s \nРаздельный VIP-chat\nВключен" , os.date()), 10)
+            inicfg.save(mainini, 'bd') 
+		else
+            sampAddChatMessage('Цветной chat {ff0000}off',-1)
+            --notf.addNotification(string.format("%s \nРаздельный VIP-chat\nВыключен" , os.date()), 10)
+            inicfg.save(mainini, 'bd')
+		end
+        return false
+    end
     if cmd:find('/rabchat') then
         mainini.functions.offrabchat = not mainini.functions.offrabchat
 		if not mainini.functions.offrabchat then 
@@ -5350,24 +5365,7 @@ function sp.onServerMessage(color, text)
             return { 0x9c15c1ff, text }
         end
 
-        if text:find('%[Адвокат%] ') then
-            if mainini.functions.offrabchat then
-                return false
-            else
-                local advtext = text:match('%[Адвокат%] (.+)')
-                --sampAddChatMessage("{ffffff} Адвокат "..advtext, 0x5F9EA0)
-                return { 0x5f9ea0ff, "{ff4500}[J] {5f9ea0}"..advtext }
-            end
-        end
 
-        if text:find('%[F%] ') and color == 766526463 then
-            if mainini.functions.offfrachat then
-                return false
-            else
-                local bandtext = text:match('%[F%] (.+)')
-                return { 0x2db043ff, "{ff4500}[F] {2db043}"..bandtext }
-            end
-        end
         
 
 
@@ -5460,50 +5458,7 @@ function sp.onServerMessage(color, text)
 
                 if (text:find("~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~") or text:find("Основные команды сервера:") or text:find("Пригласи друга и получи") or text:find("Наш сайт:"))  and color == -89368321 then return false end
 
---[[                 if text:find("Отредактировал сотрудник СМИ") and color == 1941201407 then return false end
-                if text:find("Отредактировал сотрудник СМИ") and not text:find('говорит:') then return false end ]]
-  
-                if color == 0x73B461FF then
-                    local ad, tel = text:match('^Объявление:%s(.+)%.%sОтправил:%s[A-z0-9_]+%[%d+%]%sТел%.%s(%d+)')
-                    if ad ~= nil then
-                        local outstring = string.format('AD: {73B461}%s {D5A457}| Тел: %s', ad, tel)
-                        return { 0xD5A457FF, outstring }
-                    elseif text:find('Отредактировал сотрудник') then
-                        return false
-                    end
-                end
 
-     --[[            if  text:find('F') then
-                    print('{'..bit.tohex(bit.rshift(color, 8), 6)..'}'..text)
-                    print('======')
-                    print('%X', color)
-                    print(bit.tohex(bit.rshift(color, 8), 6))
-                end 
-                if text:find("%[F%]") and color == 766526463 then
-                    local rank_band, name_band, id_band, msg_band = string.match(text, '{2db043}%[F%] (.+) (.+)%[(%d+)%]: (.+)')
-                    if rank_band and name_band and tonumber(id_band) and msg_band then
-                        sampAddChatMessage(string.format('{FFDAB9}'..name_band..'{FFDAB9}[{DC143C}'..id_band..'{FFDAB9}]: '..msg_band), 0xF345FC)
-                        return false
-                    end
-                end]]
-                
-                if color == -1 then
-                    local ad, tel = text:match('^{%x+}%[VIP%]%sОбъявление:%s(.+)%.%sОтправил:%s[A-z0-9_]+%[%d+%]%sТел%.%s(%d+)')
-                    if ad ~= nil then
-                        local outstring = string.format('VIP AD: {73B461}%s {D5A457}| Тел: %s', ad, tel)
-                        return { 0xD5A457FF, outstring }
-                    elseif text:find('Отредактировал сотрудник') then
-                        return false
-                    end
-                end
-
-                if text:find('Администратор') then
-                    if color == -10270721 then -- действия FF6347FF
-                        return { 0xb22222ff, text }
-                    elseif color == -2686721 then -- /ao FFD700FF
-                        return { 0x38fcffff, text }
-                    end
-                end
 
 --[[                 if text:match('^{6495ED}%[VIP%]') then
                     text = text:gsub('^{6495ED}%[VIP%]', '[VIP]')
@@ -5617,21 +5572,72 @@ function sp.onServerMessage(color, text)
                 end
             else
                 ------------------
-                if text:match('^{6495ED}%[VIP%]') then
+                if text:match('^{6495ED}%[VIP%]') and mainini.functions.colorchat then
                     text = text:gsub('^{6495ED}%[VIP%]', '{b800a2}[VIP]')   
                     return { 0xFFFFFFFF, text }
                 end
             
-                if text:match('^{F345FC}%[PREMIUM%]') then
+                if text:match('^{F345FC}%[PREMIUM%]') and mainini.functions.colorchat then
                     text = text:gsub('^{F345FC}%[PREMIUM%]', '{FFAA00}[PREMIUM]')
                     return { 0xFFFFFFFF, text }
                 end
             
-                if text:match('^{FCC645}%[ADMIN%]') then
+                if text:match('^{FCC645}%[ADMIN%]') and mainini.functions.colorchat then
                     text = text:gsub('^{FCC645}%[ADMIN%]', '{38fcff}[ADMIN]')
                     return { 0xffffffff, text }
                 end
             end
+                --[[                 if text:find("Отредактировал сотрудник СМИ") and color == 1941201407 then return false end
+                if text:find("Отредактировал сотрудник СМИ") and not text:find('говорит:') then return false end ]]
+            if mainini.functions.colorchat then
+                if color == 0x73B461FF then
+                    local ad, tel = text:match('^Объявление:%s(.+)%.%sОтправил:%s[A-z0-9_]+%[%d+%]%sТел%.%s(%d+)')
+                    if ad ~= nil then
+                        local outstring = string.format('AD: {73B461}%s {D5A457}| Тел: %s', ad, tel)
+                        return { 0xD5A457FF, outstring }
+                    elseif text:find('Отредактировал сотрудник') then
+                        return false
+                    end
+                end                
+                if color == -1 then
+                    local ad, tel = text:match('^{%x+}%[VIP%]%sОбъявление:%s(.+)%.%sОтправил:%s[A-z0-9_]+%[%d+%]%sТел%.%s(%d+)')
+                    if ad ~= nil then
+                        local outstring = string.format('VIP AD: {73B461}%s {D5A457}| Тел: %s', ad, tel)
+                        return { 0xD5A457FF, outstring }
+                    elseif text:find('Отредактировал сотрудник') then
+                        return false
+                    end
+                end
+
+                if text:find('Администратор') then
+                    if color == -10270721 then -- действия FF6347FF
+                        return { 0xb22222ff, text }
+                    elseif color == -2686721 then -- /ao FFD700FF
+                        return { 0x38fcffff, text }
+                    end
+                end
+                if text:find('%[Адвокат%] ') then
+                    if mainini.functions.offrabchat then
+                        return false
+                    else
+                        local advtext = text:match('%[Адвокат%] (.+)')
+                        --sampAddChatMessage("{ffffff} Адвокат "..advtext, 0x5F9EA0)
+                        return { 0x5f9ea0ff, "{ff4500}[J] {5f9ea0}"..advtext }
+                    end
+                end
+        
+                if text:find('%[F%] ') and color == 766526463 then
+                    if mainini.functions.offfrachat then
+                        return false
+                    else
+                        local bandtext = text:match('%[F%] (.+)')
+                        return { 0x2db043ff, "{ff4500}[F] {2db043}"..bandtext }
+                    end
+                end
+            end 
+
+            if text:find("Отредактировал сотрудник СМИ") and color == 1941201407 then return false end
+            if text:find("Отредактировал сотрудник СМИ") and not text:find('говорит:') then return false end
 
             if mainini.functions.dotmoney then
                 text = separator(text)
