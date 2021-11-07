@@ -282,6 +282,7 @@ local mainini = inicfg.load({
         bott=false,
         autoc=false,
         hphud=true,
+        fastmap=false,
         chatvipka=false,
         colorchat=false,
         offrabchat=false,
@@ -292,7 +293,8 @@ local mainini = inicfg.load({
         allsbiv="0",
         sbiv="Z",
         suicide="F10",
-        wh="MBUTTON"
+        wh="MBUTTON",
+        fmap="XBUTTON1"
     },
     flood = {
         fltext3="/j ываываыва",
@@ -311,7 +313,7 @@ inicfg.save(mainini, 'bd.ini')
 --local maintxt = inicfg.load(nil, "pidorasi.txt")
    -- inicfg.save(mainini, 'moonloader\\config.ini') 
 ----------------------------------------------------------------------------------------------------------------------------------------------------------
-local supsettings = "\nНастроить конфиг bd.ini скрипта можно командами: \nЦифровой айди VK: /userid (айди). Нынешний айди: "..mainini.helper.user_id.." \nПароль для авто-ввода: /auto_pass (Пароль). Нынешний пароль: "..mainini.helper.password.." \nБанковский пин-код для авто-ввода: /auto_pin (пин). Нынешний пин-код: "..mainini.helper.bankpin.."\n\nВключить/Выключить раздельный VIP-chat: /chatvip \nВключить/Выключить разделение точками деньги: /dotmoney \nВключить/Выключить HP-HUD: /hphud \nВключить/Выключить Авто-Шот: /ashot \nВключить/Выключить Авто-+C: /autoc \nВключить/Выключить Авто-даблхиты: /dhits \nВключить/Выключить Экстра WS: /extra \n\nНастройка активации по клавишам. Весь список клавиш /buttons: \nWallHack: /whb (название кнопки). Сейчас: "..mainini.config.wh.." \nСбив всего: /allsbiv (название кнопки). Сейчас: "..mainini.config.allsbiv.." \nПростой сбив: /sbiv (название кнопки). Сейчас: "..mainini.config.sbiv.." \nCуицид: /suicide (название кнопки). Сейчас: "..mainini.config.suicide
+local supsettings = "\nНастроить конфиг bd.ini скрипта можно командами: \nЦифровой айди VK: /userid (айди). Нынешний айди: "..mainini.helper.user_id.." \nПароль для авто-ввода: /auto_pass (Пароль). Нынешний пароль: "..mainini.helper.password.." \nБанковский пин-код для авто-ввода: /auto_pin (пин). Нынешний пин-код: "..mainini.helper.bankpin.."\n\nВключить/Выключить раздельный VIP-chat: /chatvip \nВключить/Выключить разделение точками деньги: /dotmoney \nВключить/Выключить HP-HUD: /hphud \nВключить/Выключить Авто-Шот: /ashot \nВключить/Выключить Авто-+C: /autoc \nВключить/Выключить Авто-даблхиты: /dhits \nВключить/Выключить быструю карту: /fastmap \nВключить/Выключить Экстра WS: /extra \n\nНастройка активации по клавишам. Весь список клавиш /buttons: \nWallHack: /whb (название кнопки). Сейчас: "..mainini.config.wh.." \nFastMap: /fmap (название кнопки). Сейчас: "..mainini.config.fmap.." \nСбив всего: /allsbiv (название кнопки). Сейчас: "..mainini.config.allsbiv.." \nПростой сбив: /sbiv (название кнопки). Сейчас: "..mainini.config.sbiv.." \nCуицид: /suicide (название кнопки). Сейчас: "..mainini.config.suicide
 local supsettings2 = [[
 
 В биндере скрипта \\moonloader\\config\\binds.bind настройка следующая:
@@ -346,7 +348,7 @@ local supfunctions = [[
     18. Удобное открытие меню дома /home - ALT в доме
     19. Удаление всякого ебаного мусора из чата
     20. Цветной текст в чате, кто говорит
-    21. Цвета в чате по мнению разработчика
+    21. Цвета в чате по мнению разработчика - /colorchat
     22. Цвет чата альянса
     23. Авто-/key
     24. Анти-ломка
@@ -998,8 +1000,10 @@ jsoncfg = {
 }
 if not doesDirectoryExist(getWorkingDirectory().."\\config") then createDirectory(getWorkingDirectory().."\\config") end
 if doesFileExist(configDir) then icons = jsoncfg.load(configDir) end --jsoncfg.save(icons, configDir) else
---[[ keyShow = VK_XBUTTON1
-reduceZoom = true ]]
+
+
+
+reduceZoom = true
 
 
 local props = { 
@@ -1672,10 +1676,10 @@ if isKeyDown(119) then
     end
 end
 
---[[ 
+
 local menuPtr = 0x00BA6748
 if isPlayerPlaying(playerHandle) then 
-        if isKeyCheckAvailable()  and isKeyDown(keyShow) then
+        if isKeyCheckAvailable() and mainini.functions.fastmap and isKeyDown(_G['VK_'..mainini.config.fmap]) then
             writeMemory(menuPtr + 0x33, 1, 1, false) -- activate menu  and isKeyDown(VK_Z)
             -- wait for a next frame
             wait(0)
@@ -1688,14 +1692,14 @@ if isPlayerPlaying(playerHandle) then
                 wait(1500)
                 setVirtualKeyDown(90, false)
             end
-            while isKeyDown(keyShow) do
+            while mainini.functions.fastmap and isKeyDown(_G['VK_'..mainini.config.fmap]) do
                 wait(80)
             end
                 writeMemory(menuPtr + 0x32, 1, 1, false) -- close menu
             end
         end
     end
-end ]]
+end
 
 
 function runToPoint(tox, toy)
@@ -4379,6 +4383,20 @@ function sp.onSendCommand(cmd)
 		end
         return false
     end
+    if cmd:find('/fastmap') then
+        mainini.functions.fastmap = not mainini.functions.fastmap
+		if mainini.functions.fastmap then 
+            sampAddChatMessage('FastMap {228b22}on',-1)
+            
+            --notf.addNotification(string.format("%s \nРаздельный VIP-chat\nВключен" , os.date()), 10)
+            inicfg.save(mainini, 'bd') 
+		else
+            sampAddChatMessage('FastMap {ff0000}off',-1)
+            --notf.addNotification(string.format("%s \nРаздельный VIP-chat\nВыключен" , os.date()), 10)
+            inicfg.save(mainini, 'bd')
+		end
+        return false
+    end
     if cmd:find('/colorchat') then
         mainini.functions.colorchat = not mainini.functions.colorchat
 		if mainini.functions.colorchat then 
@@ -4500,6 +4518,13 @@ function sp.onSendCommand(cmd)
         mainini.config.sbiv = arg
         inicfg.save(mainini, 'bd')
         sampAddChatMessage('Клавиша для сбива теперь {00FFFF}'..mainini.config.sbiv,-1)
+        return false
+    end
+    if cmd:find('/fmap (.+)') then
+        local arg = cmd:match('/fmap (.+)')
+        mainini.config.fmap = arg
+        inicfg.save(mainini, 'bd')
+        sampAddChatMessage('Клавиша для быстрой карты теперь {00FFFF}'..mainini.config.fmap,-1)
         return false
     end
     if cmd:find('/suicide (.+)') then
