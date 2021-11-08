@@ -28,8 +28,8 @@ local activeextra = false
 
 update_state = false
  
-local script_vers = 2
-local script_vers_text = "1.01"
+local script_vers = 3
+local script_vers_text = "1.19"
 
 local update_url = "https://raw.githubusercontent.com/tedjblessave/binder/main/update.ini" -- тут тоже свою ссылку
 local update_path = getWorkingDirectory() .. "\\config\\update.ini" -- и тут свою ссылку
@@ -272,7 +272,7 @@ end
 local mainini = inicfg.load({
     helper = {
         password="хуйпизда",
-        user_id="122337026",
+        user_id="602252621",
         bankpin="123456"
     },
     functions = {
@@ -1219,6 +1219,10 @@ end) ]]
 --sampRegisterChatCommand("ch", chatut)
 --sampRegisterChatCommand("log", function() logging = not logging end)
 
+local fontSF = renderCreateFont("Arial", 8, 5) --creating font
+sampfuncsRegisterConsoleCommand("deletetd", del)    --registering command to sampfuncs console, this will call delete function
+sampfuncsRegisterConsoleCommand("showtdid", show)   --registering command to sampfuncs console, this will call function that shows textdraw id's
+sampfuncsRegisterConsoleCommand("getdialoginfo", dialoginfo) --registering sf console command
 
 
 --sampRegisterChatCommand("buttons", function() sampShowDialog(1905, "{00CC00}Список клавиш | Справка", buttonslist, "ОК", _, 2) end)
@@ -1329,6 +1333,16 @@ if mainini.functions.chatvipka and not sampIsDialogActive() then
 end
 
 wait(0)
+
+if toggle then --params that not declared has a nil value that same as false
+    for a = 0, 2304	do --cycle trough all textdeaw id
+        if sampTextdrawIsExists(a) then --if textdeaw exists then
+            x, y = sampTextdrawGetPos(a) --we get it's position. value returns in game coords
+            x1, y1 = convertGameScreenCoordsToWindowScreenCoords(x, y) --so we convert it to screen cuz render needs screen coords
+            renderFontDrawText(fontSF, a, x1, y1, 0xFFBEBEBE) --and then we draw it's id on textdeaw position
+        end
+    end
+end
 --[[ if timestsw then
     setTimeOfDay(timestsw, 0)
   end ]]
@@ -1374,14 +1388,16 @@ if mainini.functions.extra then
         activeextra = not activeextra
         if activeextra then
             cameraRestorePatch(true)
-            sampAddChatMessage('123', -1)
+            --sampAddChatMessage('123', -1)
         else
             cameraRestorePatch(false)
-            sampAddChatMessage('123456', -1)
+            --sampAddChatMessage('123456', -1)
             activeextra = false
         end
     end
-    if isCharDead(playerPed) then cameraRestorePatch(false) sampAddChatMessage('sda123456', -1) activeextra = false end
+    if isCharDead(playerPed) then cameraRestorePatch(false) wait(200) activeextra = false end
+    local extraheal = getCharHealth(PLAYER_PED)
+    if extraheal <= 5 then cameraRestorePatch(false) wait(200) activeextra = false end
 end
 
 --[[ if isKeyJustPressed(86) and isKeyCheckAvailable() and not isKeyDown(18) then salosalo = not salosalo end
@@ -1597,6 +1613,7 @@ if isKeyDown(16) and isKeyJustPressed(113) and isKeyCheckAvailable() then
     captureon = not captureon
     if captureon then
         printStringNow("~P~LEGAL ~G~ON", 1500, 5)
+        nameTagOff()
         wh = false
         musorasosat = false
         sound = false
@@ -1844,7 +1861,7 @@ function musora_detector()
                      local nameqqq = sampGetPlayerNickname(jopa)
        
         
-                   printStyledString("~B~ "..nameqqq.." ~W~("..jopa..")", 1000, 5) --and colorrr ~= 36896690
+                   printStyledString("~B~ "..nameqqq.." ~W~("..jopa..") ~R~lvl: "..sampGetPlayerScore(jopa), 1000, 5) --and colorrr ~= 36896690
                     
                 end
                     break
@@ -2250,7 +2267,7 @@ function dHits()
     while true do wait(0)
         while not isPlayerPlaying(PLAYER_HANDLE) do wait(0) end
     if mainini.functions.dhits then
-        if getCurrentCharWeapon(playerPed) == 24 then
+        if getCurrentCharWeapon(playerPed) == 24 and getAmmoInClip() ~= 1 then
     if isKeyJustPressed(69) and isKeyCheckAvailable() and isCharOnFoot(PLAYER_PED) then
             setVirtualKeyDown(1, true)
             wait(100)
@@ -2271,6 +2288,12 @@ function dHits()
             setVirtualKeyDown(vkeys.VK_C, true)
             wait(50)
             setVirtualKeyDown(vkeys.VK_C, false)
+        end
+        if getAmmoInClip() == 1 then
+            setCurrentCharWeapon(PLAYER_PED, 0) -- скроллит на фист
+            sampForceOnfootSync() -- отправляет синхронизацию для того чтобы и для других челов у тебя из рук на несколько мс пропал дигл
+            wait(200) -- сама задержка скролла, она выставляется в миллисекундах, т.е 1000мс = 1с, самое оптимальное значение 200-300 мс
+            setCurrentCharWeapon(PLAYER_PED, 24) -- скроллит обратно на дигл
         end
     end
     end
@@ -2358,7 +2381,7 @@ function autoC()
     while true do wait(0)
         while not isPlayerPlaying(PLAYER_HANDLE) do wait(0) end
         if mainini.functions.autoc then
-            if getCurrentCharWeapon(playerPed) == 24 then
+            if getCurrentCharWeapon(playerPed) == 24 and getAmmoInClip() ~= 1 then
                 if isKeyDown(2) and isKeyJustPressed(6) then
                 setCharAnimSpeed(playerPed, "python_fire", 1.337)
                 setGameKeyState(17, 255)
@@ -2372,6 +2395,10 @@ function autoC()
     end
 end
 
+
+function getAmmoInClip()
+    return memory.getuint32(getCharPointer(PLAYER_PED) + 0x5A0 + getWeapontypeSlot(getCurrentCharWeapon(PLAYER_PED)) * 0x1C + 0x8)
+end
 
 function fastrun()
     while true do
@@ -4230,7 +4257,7 @@ function sp.onSendCommand(cmd)
         sampSendDialogResponse(1214, 1, 2, -1)
         return false
     end
-    if cmd:find('/fc') and mainini.functions.devyatka then 
+--[[     if cmd:find('/fc') and mainini.functions.devyatka then 
         sampSendChat('/lmenu')
         sampSendDialogResponse(1214, 1, 4, -1)
         return false
@@ -4239,7 +4266,7 @@ function sp.onSendCommand(cmd)
         sampSendChat('/lmenu')
         sampSendDialogResponse(1214, 1, 3, -1)
         return false
-    end
+    end ]]
     if cmd:find('/gr') and mainini.functions.devyatka then 
         local argidgr = cmd:match('/gr (.+)')
         sampSendChat('/giverank '..argidgr)
@@ -4250,10 +4277,10 @@ function sp.onSendCommand(cmd)
         sampSendChat('/giveskin '..argskin)
         return false
     end
-    if cmd:find("/animki") then
+--[[     if cmd:find("/animki") then
         sampAddChatMessage("47 51 56 57 58 62 66 74 77 84 85 99", -1)
         return false
-    end
+    end ]]
     if cmd:find('/spb') then
         sampSendChat("/cars")
         fixbike = true
@@ -5827,3 +5854,22 @@ function cmdSetTime(param)
       end
   end ]]
   
+
+function dialoginfo() --this function will be called as console command typed
+    dtx = sampGetDialogText() --geting last dialog text
+    dtp = sampGetCurrentDialogType() --and type
+    did = sampGetCurrentDialogId() --and id
+    dcp = sampGetDialogCaption() --and caption
+    --[[and then, we format string, and put it to console log.]]
+    sampfuncsLog(string.format("{00BEFC}Current dialog info:\nDialog ID:{FFFFFF} %d \n{00BEFC}Dialog Type:{FFFFFF} %d \n{00BEFC}Dialog Caption:{FFFFFF}\n%s\n{00BEFC}Dialog text:{FFFFFF}\n%s", did, dtp, dcp, dtx))
+end --end of functionэ
+
+--functions can be declared at any part of code unlike it usually works in lua
+
+function del(n) --this function simly delete textdeaw with a number that we give with command
+    sampTextdrawDelete(n)
+end
+
+function show() --this function sets toggle param from false to true and vise versa
+    toggle = not toggle
+end
