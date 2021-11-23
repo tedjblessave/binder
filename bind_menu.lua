@@ -14,7 +14,6 @@ local wm = require 'lib.windows.message'
 local rkeys = require 'rkeys'
 encoding.default = 'CP1251'
 u8 = encoding.UTF8
-local oboss = false
 local poss = false
 
 local captureon = false
@@ -27,8 +26,8 @@ local activeextra = false
 
 update_state = false
  
-local script_vers = 4
-local script_vers_text = "4.00"
+local script_vers = 5
+local script_vers_text = "5.00"
 
 local update_url = "https://raw.githubusercontent.com/tedjblessave/binder/main/update.ini" -- тут тоже свою ссылку
 local update_path = getWorkingDirectory() .. "\\config\\update.ini" -- и тут свою ссылку
@@ -286,16 +285,22 @@ local mainini = inicfg.load({
         chatvipka=false,
         colorchat=false,
         offrabchat=false,
-        offfrachat=false,
-        devyatka=false
+        offfrachat=false
+    },
+    lidzam = { 
+        devyatka = false,
+        nabortext="/vr Набор в ФК 'The Rifa'. /smug /port | Желающих ждём на площадке.",
+        naborwait="180",
+        band="The Rifa"
     },
     config = {
-        allsbiv="0",
+        allsbiv="V",
         sbiv="Z",
         suicide="F10",
         wh="MBUTTON",
         fmap="XBUTTON1",
-        shook="1"
+        shook="1",
+        tramp="7"
     },
     flood = {
         fltext3="/j ываываыва",
@@ -304,10 +309,18 @@ local mainini = inicfg.load({
         flwait3="15",
         fltext1="/vr Набор активных гетто-игроков в закрытую full семью nuestra. 18+, 60+fps fullHD. vk: @blessave",
         fltext2="/vr Куплю MAZDA RX7. Куплю объекты для дома 'Мишени (1 или 2)'. Звоните или vk: @blessave"
+    },
+    oboss = {
+        piss1 = false,
+        piss2 = false,
+        piss3 = false,
+        obossactiv = "Q",
+        animactiv = "1",
+        pissactiv = "2",
+        pisstext = "/me обоссал жертву рваного дюрекса по кличке %s"
     }
 }, 'bd')
 inicfg.save(mainini, 'bd.ini')
-
 
 
 --local mainini = inicfg.load(nil, "settings")
@@ -338,6 +351,7 @@ floodon1 = false
 floodon2 = false
 floodon3 = false
 
+naboron = false
 
 
 ---------------
@@ -780,7 +794,7 @@ local zadervka3 = 1
 
 local Counter = 0
 
-local logging = false
+
 
 local fix = false
 local activrsdf = false
@@ -1077,7 +1091,8 @@ function menu()
 {9ACD32}Биндер binds.bind
 {BC8F8F}Кнопки для активации. Название (id)
 {C0C0C0}Анти-АФК
-{DEB887}Чат-лог]]),  
+{DEB887}Чат-лог
+{ff4500}Обоссывалка]]),  
     'Выбрать', 'Закрыть', 2)
 end
 
@@ -1087,6 +1102,7 @@ function afk_menu()
 {ffffff}2. Возможно включить все диалоги и управлять ими через VK. !d (text) !d (строка в диалоге)
 {ffffff}3. Включить весь чат
 {ffffff}4. Включить семейный чат, альянса
+5. Можно разговаривать по телефону (пока работает только на самсунгах)
 ]]),  
     'Закрыть', _, 0)
 end
@@ -1125,6 +1141,7 @@ function drugoenosoft_menu()
 {ffffff}22. Умные и красивые /sms
 {ffffff}23. Уведомления об оплате налогов, чтоб не забыть
 {ffffff}24. Авто-сборка шара, велика, дельтаплана
+25. Для адвокатов: ПКМ + CapsLock по зеку, чтобы предложить услуги адвоката
 ]]),  
     'Закрыть', _, 0)
 end
@@ -1152,17 +1169,50 @@ function drugoesoft_menu()
     'Закрыть', _, 0)
 end
 
+--[[ sampAddChatMessage("{00ffff}[9-10] {c0c0c0}ПКМ+1 {ffffff}- Принять в банду на 5", -1)
+sampAddChatMessage("{00ffff}[9-10] {c0c0c0}ПКМ+2 {ffffff}- Принять в банду на 8", -1)
+sampAddChatMessage("{00ffff}[9-10] {c0c0c0}/fu id {ffffff}- Уволить с причиной 'выселен'", -1)
+sampAddChatMessage("{00ffff}[9-10] {c0c0c0}/gr id rank {ffffff}- Выдать ранг", -1)
+sampAddChatMessage("{00ffff}[9-10] {c0c0c0}/st id skinid {ffffff}- Выдать скин", -1)
+sampAddChatMessage("{00ffff}[9-10] {c0c0c0}/sk {ffffff}- Открыть/Закрыть общак", -1)
+sampAddChatMessage("{00ffff}[9-10] {c0c0c0}/fc {ffffff}- Заправить транспорт", -1)
+sampAddChatMessage("{00ffff}[9-10] {c0c0c0}/sc {ffffff}- Заспавнить транспорт", -1)
+
+sampAddChatMessage("{00ffff}[9-10] {c0c0c0}/nabor {ffffff}- Пиар в VIP-chat о наборе", -1)
+sampAddChatMessage("{00ffff}[9-10] {c0c0c0}/povish {ffffff}- Флудилка о том, как повыситься", -1) ]]
+
+function lidzam_menu()
+    sampShowDialog(2741, '{fff000}Режим лидера/зама', string.format([[
+Режим лидера/зама %s
+Банда: %s
+|
+Пиар набора %s
+{C71585}%s сек.
+{7FFFD4}%s
+|
+Принять в банду на 5 ранг - ПКМ+[
+Принять в банду на 8 ранг - ПКМ+]
+Сменить скин - ПКМ+= или /gs id skinid
+Изменить ранг - ПКМ+- или /gr id rank]], 
+    mainini.lidzam.devyatka and '{00ff00}ON' or '{777777}OFF', 
+    mainini.lidzam.band,
+    naboron and '{00ff00}ON' or '{777777}OFF', 
+    mainini.lidzam.naborwait,
+    mainini.lidzam.nabortext),
+        'Выбрать', 'Закрыть', 2)
+end
+
 function flood_menu()
     sampShowDialog(2787, '{fff000}Флудерка', string.format([[
-    Flood 1 %s
-    {C71585}%s сек.
-    {7FFFD4}%s
-    Flood 2 %s
-    {C71585}%s сек.
-    {7FFFD4}%s
-    Flood 3 %s
-    {C71585}%s сек.
-    {7FFFD4}%s]], 
+Flood 1 %s
+{C71585}%s сек.
+{7FFFD4}%s
+Flood 2 %s
+{C71585}%s сек.
+{7FFFD4}%s
+Flood 3 %s
+{C71585}%s сек.
+{7FFFD4}%s]], 
     floodon1 and '{00ff00}ON' or '{777777}OFF', 
     mainini.flood.flwait1,
     mainini.flood.fltext1, 
@@ -1175,33 +1225,52 @@ function flood_menu()
         'Выбрать', 'Закрыть', 2)
 end
 
+function piss_menu()
+    sampShowDialog(4169, '{fff000}Обоссывалка', string.format([[
+{ff0000}[ВАЖНО] {ffffff}Из списка ниже нужно выбрать что-то одно
+Использовать {c0c0c0}Имя %s
+Использовать {c0c0c0}Имя Фамилия %s
+Использовать {c0c0c0}Имя_Фамилия %s
+{ff4500}Текст обоссывался
+Активация обоссывалки: {9370DB}ПКМ + {00ffff}%s
+Активация РП /anim 85:{00ffff} %s
+Активация нонРП /piss: {00ffff}%s]], 
+    mainini.oboss.piss1 and '{00ff00}ON' or '{777777}OFF', 
+    mainini.oboss.piss2 and '{00ff00}ON' or '{777777}OFF', 
+    mainini.oboss.piss3 and '{00ff00}ON' or '{777777}OFF', 
+    mainini.oboss.obossactiv,
+    mainini.oboss.animactiv,
+    mainini.oboss.pissactiv),
+        'Выбрать', 'Закрыть', 2)
+end
+
 function binder_menu()
 	sampShowDialog(2338, '{Fff000}Биндер', string.format([[
-        {ffffff}В биндере скрипта {fff000}\\moonloader\\config\\binds.bind {ffffff}настройка следующая:
-        Чтобы добавить биндер нужно в конце строки поставить запятую перед закрывающей квадратной скобкой и вписать:
-        {FFA07A}{"text":"МАТЬ ЕБАЛ[enter]","v":[82]}
-        {ffffff}Здесь: текст бинда это МАТЬ ЕБАЛ ([enter] - нажмимает интер, если не писать то биндер просто введется в чате), 82 - это ID клавиши. В данном случае клавиша R.
-        
-        Чтобы добавить биндер на команду нужно ввести обратный слэш "\" перед самой командой:
-        {FFA07A}{"text":"\/mask[enter]","v":[82]}
+{ffffff}В биндере скрипта {fff000}\\moonloader\\config\\binds.bind {ffffff}настройка следующая:
+Чтобы добавить биндер нужно в конце строки поставить запятую перед закрывающей квадратной скобкой и вписать:
+{FFA07A}{"text":"МАТЬ ЕБАЛ[enter]","v":[82]}
+{ffffff}Здесь: текст бинда это МАТЬ ЕБАЛ ([enter] - нажмимает интер, если не писать то биндер просто введется в чате), 82 - это ID клавиши. В данном случае клавиша R.
 
-                {9ACD32}Биндеры по умолчанию:
-                    {ffffff}/lock - {9370DB}L
-                    {ffffff}/armour - {9370DB}4
-                    {ffffff}/time - {9370DB}B
-                    {ffffff}/mask - {9370DB}5
-                    {ffffff}/usedrugs 3 - {9370DB}X
-                    {ffffff}/anim 3 - {9370DB}ALT+C
-                    {ffffff}/anim 9 - {9370DB}3
-                    {ffffff}/style - {9370DB}J
-                    {ffffff}/key - {9370DB}K
-                    {ffffff}/fillcar - {9370DB}CTRL+2
-                    {ffffff}/repcar - {9370DB}CTRL+1
-                    {ffffff}/usemed - {9370DB}6
-                    {ffffff}/cars - {9370DB}O
-                    {ffffff}Распальцовка (q) - {9370DB}R
+Чтобы добавить биндер на команду нужно ввести обратный слэш "\" перед самой командой:
+{FFA07A}{"text":"\/mask[enter]","v":[82]}
 
-        ]]),  
+        {9ACD32}Биндеры по умолчанию:
+            {ffffff}/lock - {9370DB}L
+            {ffffff}/armour - {9370DB}4
+            {ffffff}/time - {9370DB}B
+            {ffffff}/mask - {9370DB}5
+            {ffffff}/usedrugs 3 - {9370DB}X
+            {ffffff}/anim 3 - {9370DB}ALT+C
+            {ffffff}/anim 9 - {9370DB}3
+            {ffffff}/style - {9370DB}J
+            {ffffff}/key - {9370DB}K
+            {ffffff}/fillcar - {9370DB}CTRL+2
+            {ffffff}/repcar - {9370DB}CTRL+1
+            {ffffff}/usemed - {9370DB}6
+            {ffffff}/cars - {9370DB}O
+            {ffffff}Распальцовка (q) - {9370DB}R
+
+]]),  
     'Закрыть', _, 0)
 end
 
@@ -1238,6 +1307,7 @@ Cбив анимки. Активация:{00ffff} %s
 Самоубийство. Активация:{00ffff} %s
 WallHack. Активация:{00ffff} %s
 SprintHook. Активация:{00ffff} %s
+Трамплин. Активация:{00ffff} %s
 {DAA520}Остальной функционал]], 
 	mainini.functions.fish and '{00ff00}ON' or '{777777}OFF', 
 	mainini.functions.bott and '{00ff00}ON' or '{777777}OFF',
@@ -1248,7 +1318,8 @@ SprintHook. Активация:{00ffff} %s
     mainini.config.allsbiv,
     mainini.config.suicide,
     mainini.config.wh,
-    mainini.config.shook),
+    mainini.config.shook,
+    mainini.config.tramp),
     'Выбрать', 'Закрыть', 2)
 end
 
@@ -1273,6 +1344,15 @@ function edit_shook()
 {ffffff}Напишите в поле ниже название кнопки для активации
 Текущая активация: {00ffff}%s]], 
 mainini.config.shook), 
+'Сохранить', 'Закрыть', 1)
+end
+
+
+function edit_tramp()
+	sampShowDialog(2299, '{fff000}Настройки', string.format([[
+{ffffff}Напишите в поле ниже название кнопки для активации
+Текущая активация: {00ffff}%s]], 
+mainini.config.tramp), 
 'Сохранить', 'Закрыть', 1)
 end
 
@@ -1471,20 +1551,7 @@ end
 
 
 
-if onfp then
-    lua_thread.create(function()
-        for _,vv in pairs(maintxt.pidors) do
-            local idpidra = sampGetPlayerIdByNickname(vv)
-            if idpidra ~= nil and idpidra ~= -1 and idpidra ~= false then
-                local resfp, handle = sampGetCharHandleBySampPlayerId(idpidra)
-                if resfp then
-                    screen_text = '~P~Пидорас ~W~'..vv..' ~R~('..idpidra..') ~Y~рядом!'
-                    printStringNow(conv(screen_text),1)
-                end
-            end
-        end
-    end)
-end
+
 
 if mainini.functions.chatvipka and not sampIsDialogActive() then
     rposX, rposY = 650, 800
@@ -1499,6 +1566,9 @@ if mainini.functions.chatvipka and not sampIsDialogActive() then
 end
 
 wait(0)
+
+
+
 
 
             local result, button, list, _ = sampHasDialogRespond(2138)
@@ -1522,7 +1592,7 @@ wait(0)
                     flood_menu()
                 end
                 if list == 6 then
-                    flood_menu()
+                    lidzam_menu()
                 end
                 if list == 7 then
                     binder_menu()
@@ -1536,7 +1606,86 @@ wait(0)
                 if list == 10 then
                     chatlog_menu()
                 end
+                if list == 11 then
+                    piss_menu()
+                end
 			end
+
+            local result, button, list, lop = sampHasDialogRespond(4169)
+			if result and button == 1 then
+                if list == 1 then
+                    mainini.oboss.piss1 = not mainini.oboss.piss1
+					inicfg.save(mainini, 'bd')
+					piss_menu()
+                end
+                if list == 2 then
+                    mainini.oboss.piss2 = not mainini.oboss.piss2
+					inicfg.save(mainini, 'bd')
+					piss_menu()
+                end
+                if list == 3 then
+                    mainini.oboss.piss3 = not mainini.oboss.piss3
+					inicfg.save(mainini, 'bd')
+					piss_menu()
+                end
+                if list == 4 then
+                    sampShowDialog(41691, '{fff000}Настройки', string.format([[
+{ffffff}Для отображения ника игрока нужно ввести знак процента и букву s
+Текущий текст обоссывалки:
+{20B2AA}%s]], 
+                        mainini.oboss.pisstext), 
+                        'Сохранить', 'Закрыть', 1)
+                end
+                if list == 5 then
+                    sampShowDialog(44169, '{fff000}Настройки', string.format([[
+{ffffff}Напишите в поле ниже название кнопки для активации
+Текущая активация: {00ffff}%s]], 
+                        mainini.oboss.obossactiv), 
+                        'Сохранить', 'Закрыть', 1)
+                end
+                if list == 6 then
+                    sampShowDialog(43169, '{fff000}Настройки', string.format([[
+{ffffff}Напишите в поле ниже название кнопки для активации
+Текущая активация: {00ffff}%s]], 
+                        mainini.oboss.animactiv), 
+                        'Сохранить', 'Закрыть', 1)
+                end
+                if list == 7 then
+                    sampShowDialog(42169, '{fff000}Настройки', string.format([[
+{ffffff}Напишите в поле ниже название кнопки для активации
+Текущая активация: {00ffff}%s]], 
+                        mainini.oboss.pissactiv), 
+                        'Сохранить', 'Закрыть', 1)
+                end
+			end
+
+            local result, button, _, lop = sampHasDialogRespond(44169)
+            if result and button == 1 then
+                mainini.oboss.obossactiv = lop
+                inicfg.save(mainini, 'bd')
+                piss_menu()
+            end
+
+            local result, button, _, lop = sampHasDialogRespond(43169)
+            if result and button == 1 then
+                mainini.oboss.animactiv = lop
+                inicfg.save(mainini, 'bd')
+                piss_menu()
+            end
+
+            local result, button, _, lop = sampHasDialogRespond(41691)
+            if result and button == 1 then
+                mainini.oboss.pisstext = lop
+                inicfg.save(mainini, 'bd')
+                piss_menu()
+            end
+
+            local result, button, _, lop = sampHasDialogRespond(42169)
+            if result and button == 1 then
+                mainini.oboss.pissactiv = lop
+                inicfg.save(mainini, 'bd')
+                piss_menu()
+            end
 
             local result, button, list, lop = sampHasDialogRespond(2787)
 			if result and button == 1 then
@@ -1559,7 +1708,7 @@ wait(0)
                 if list == 2 then
                     sampShowDialog(27872, '{fff000}Настройки', string.format([[
 {ffffff}Введите текст для флуда
-Текущая текст:
+Текущий текст:
 {20B2AA}%s]], 
                         mainini.flood.fltext1), 
                         'Сохранить', 'Закрыть', 1)
@@ -1583,7 +1732,7 @@ wait(0)
                 if list == 5 then
                     sampShowDialog(27874, '{fff000}Настройки', string.format([[
 {ffffff}Введите текст для флуда
-Текущая текст:
+Текущий текст:
 {20B2AA}%s]], 
                         mainini.flood.fltext2), 
                         'Сохранить', 'Закрыть', 1)
@@ -1607,7 +1756,7 @@ wait(0)
                 if list == 8 then
                     sampShowDialog(27876, '{fff000}Настройки', string.format([[
 {ffffff}Введите текст для флуда
-Текущая текст:
+Текущий текст:
 {20B2AA}%s]], 
                         mainini.flood.fltext3), 
                         'Сохранить', 'Закрыть', 1)
@@ -1657,6 +1806,9 @@ wait(0)
 					edit_shook()
 				end
                 if list == 10 then
+					edit_tramp()
+				end
+                if list == 11 then
 					drugoesoft_menu()
 				end
 			end
@@ -1705,6 +1857,70 @@ wait(0)
                     drugoenosoft_menu()
                 end
 			end
+
+            
+            local result, button, _, lop = sampHasDialogRespond(2741)
+            if result and button == 1 then
+                if list == 0 then
+                    mainini.lidzam.devyatka = not mainini.lidzam.devyatka 
+                    inicfg.save(mainini, 'bd')
+                    lidzam_menu()
+                end
+                if list == 1 then
+                    sampShowDialog(27411, '{fff000}Настройки', string.format([[
+{ffffff}Напишите название вашей банды
+Текущие название: {F08080}%s сек.]], 
+                        mainini.lidzam.band), 
+                        'Сохранить', 'Закрыть', 1)
+                end
+                if list == 3 then
+                    naboron = not naboron
+                    --inicfg.save(mainini, 'bd')
+                    if naboron then 
+                        naborka = lua_thread.create(nabor) 
+                    else
+                        lua_thread.terminate(naborka) 
+                    end
+                    lidzam_menu()
+                end
+                if list == 4 then
+                    sampShowDialog(27418, '{fff000}Настройки', string.format([[
+{ffffff}Напишите количество секунд для задержки
+Текущая задержка: {F08080}%s сек.]], 
+                        mainini.lidzam.naborwait), 
+                        'Сохранить', 'Закрыть', 1)
+                end
+                if list == 5 then
+                    sampShowDialog(27417, '{fff000}Настройки', string.format([[
+{ffffff}Введите текст для флуда о наборе
+Текущий текст:
+{20B2AA}%s]], 
+                        mainini.lidzam.nabortext), 
+                        'Сохранить', 'Закрыть', 1)
+                end
+
+            end
+
+            local result, button, _, lop = sampHasDialogRespond(27417)
+            if result and button == 1 then
+                mainini.lidzam.nabortext = lop
+                inicfg.save(mainini, 'bd')
+                lidzam_menu()
+            end
+
+            local result, button, _, lop = sampHasDialogRespond(27411)
+            if result and button == 1 then
+                mainini.lidzam.band = lop
+                inicfg.save(mainini, 'bd')
+                lidzam_menu()
+            end
+
+            local result, button, _, lop = sampHasDialogRespond(27418)
+            if result and button == 1 then
+                mainini.lidzam.naborwait = lop
+                inicfg.save(mainini, 'bd')
+                lidzam_menu()
+            end
 
             local result, button, _, lop = sampHasDialogRespond(27871)
             if result and button == 1 then
@@ -1776,6 +1992,13 @@ wait(0)
                 menu()
             end
 
+            local result, button, _, lop = sampHasDialogRespond(2299)
+            if result and button == 1 then
+                mainini.config.tramp = lop
+                inicfg.save(mainini, 'bd')
+                menu()
+            end
+
             local result, button, _, lop = sampHasDialogRespond(2253)
             if result and button == 1 then
                 mainini.config.sbiv = lop
@@ -1810,6 +2033,8 @@ wait(0)
                 menu()
             end
 
+ 
+
 if toggle then --params that not declared has a nil value that same as false
     for a = 0, 2304	do --cycle trough all textdeaw id
         if sampTextdrawIsExists(a) then --if textdeaw exists then
@@ -1842,7 +2067,7 @@ if mainini.functions.bott and trigbott then
     end
 end
 
-if isKeyDown(18) and isKeyJustPressed(86) and isKeyCheckAvailable() then trigbott = not trigbott end
+if isKeyDown(18) and isKeyJustPressed(57) and isKeyCheckAvailable() then trigbott = not trigbott end
 if not trigbott then 
     --local clr = join_argb(0, 220, 20, 60)
     local clr = join_argb(0, 178, 34, 34)
@@ -1971,19 +2196,37 @@ if valid and doesCharExist(ped) then
         if isKeyJustPressed(20) and isKeyCheckAvailable() then 
             sampSendChat(string.format('/free %s', id))
         end
-        if isKeyJustPressed(81) and isKeyCheckAvailable() then 
-            sampSendChat(string.format('/me обоссал жертву рваного дюрекса по кличке %s', nickk))
-            poss = true
+        if mainini.oboss.piss1 then
+            if isKeyJustPressed(_G['VK_'..mainini.oboss.obossactiv]) and isKeyCheckAvailable() then 
+                sampSendChat(string.format(mainini.oboss.pisstext, nickk))
+                poss = true
+            end
+        elseif mainini.oboss.piss2 then
+            if isKeyJustPressed(_G['VK_'..mainini.oboss.obossactiv]) and isKeyCheckAvailable() then 
+                sampSendChat(string.format(mainini.oboss.pisstext, namee))
+                poss = true
+            end
+        elseif mainini.oboss.piss3 then
+            if isKeyJustPressed(_G['VK_'..mainini.oboss.obossactiv]) and isKeyCheckAvailable() then 
+                sampSendChat(string.format(mainini.oboss.pisstext, name))
+                poss = true
+            end
         end
-        if mainini.functions.devyatka and isKeyJustPressed(219) and isKeyCheckAvailable() then
-            sampSendChat(string.format("/todo Надень вот это на себя*кинув в руки %s бандану The Rifa номер 5", namee))
-            wait(500)
-            sampSendChat(string.format('/invite %s', name))
-            wait(3000)
-            sampSendChat(string.format('/giverank %s 5', name))
+
+        if mainini.lidzam.devyatka and isKeyJustPressed(219) and isKeyCheckAvailable() then
+            if sampGetPlayerScore(id) >= 5 then
+                sampSendChat(string.format("/todo Надень вот это на себя*кинув в руки %s поношенную(5) бандану %s", namee, mainini.lidzam.band))
+                wait(500)
+                sampSendChat(string.format('/invite %s', name))
+                wait(3000)
+                sampSendChat(string.format('/giverank %s 5', name))
+            else
+                sampSendChat(string.format("/todo Надень вот это на себя*кинув в руки %s безымянную(1) бандану %s", namee, mainini.lidzam.band))
+                wait(500)
+                sampSendChat(string.format('/invite %s', name)) end
         end
-        if mainini.functions.devyatka and isKeyJustPressed(221) and isKeyCheckAvailable() then
-            sampSendChat(string.format("/todo Надень вот это на себя*кинув в руки %s бандану The Rifa номер 8", namee))
+        if mainini.lidzam.devyatka and isKeyJustPressed(221) and isKeyCheckAvailable() then
+            sampSendChat(string.format("/todo Надень вот это на себя*кинув в руки %s легендарную(8) бандану %s", namee, mainini.lidzam.band))
             wait(500)
             sampSendChat(string.format('/invite %s', name))
             wait(3000)
@@ -1991,11 +2234,11 @@ if valid and doesCharExist(ped) then
             -- принял ваше предложение вступить к вам в организацию
 
         end
-        if mainini.functions.devyatka and isKeyJustPressed(187) and isKeyCheckAvailable() then
+        if mainini.lidzam.devyatka and isKeyJustPressed(187) and isKeyCheckAvailable() then
             sampSetChatInputText(string.format('/giveskin %s ', id))
             sampSetChatInputEnabled(true)
         end
-        if mainini.functions.devyatka and isKeyJustPressed(189) and isKeyCheckAvailable() then
+        if mainini.lidzam.devyatka and isKeyJustPressed(189) and isKeyCheckAvailable() then
             sampSetChatInputText(string.format('/giverank %s ', id))
             sampSetChatInputEnabled(true)
         end
@@ -2003,11 +2246,11 @@ if valid and doesCharExist(ped) then
 end
 
 
-if poss and isKeyJustPressed(50) and isKeyCheckAvailable() then 
+if poss and isKeyJustPressed(_G['VK_'..mainini.oboss.pissactiv]) and isKeyCheckAvailable() then 
     sampSetSpecialAction(68)
     poss = false
 end
-if poss and isKeyJustPressed(49) and isKeyCheckAvailable() then 
+if poss and isKeyJustPressed(_G['VK_'..mainini.oboss.animactiv]) and isKeyCheckAvailable() then 
     sampSendChat('/anim 85')
     poss = false
 end
@@ -2087,9 +2330,34 @@ if isKeyDown(16) and isKeyJustPressed(116) and isKeyCheckAvailable() then
 end
 if isKeyDown(16) and isKeyJustPressed(113) and isKeyCheckAvailable() then
     captureon = not captureon 
-    if captureon then
+    if captureon and wh then
         printStringNow("~P~LEGAL ~G~ON", 1500, 5)
         nameTagOff()
+        wh = false
+        musorasosat = false
+        sound = false
+        sound1 = false
+        onfp = false
+        cameraRestorePatch(false)
+        activeextra = false
+        musora = false
+        obideli = false
+        ScriptState = false
+        ScriptState2 = false
+        ScriptState3 = false
+        ScriptState4 = false
+        enabled = false
+        olenina = false
+        status = false
+        graffiti = false
+        autoaltrend = false
+
+        on = false
+        draw_suka = false
+        inicfg.save(mainini, 'bd') 
+    elseif captureon then
+        printStringNow("~P~LEGAL ~G~ON", 1500, 5)
+        --nameTagOff()
         wh = false
         musorasosat = false
         sound = false
@@ -2278,13 +2546,20 @@ function ReloadMarkers()
     end
     if checkpoint ~= nil then deleteCheckpoint(checkpoint) checkpoint = nil end
 end
+
+local logging = false
 function sp.onPlayerJoin(playerId, color, isNpc, nickname)
-	if logging then
-        local nameN = string.gsub(nickname, "_", " ");
-        if nameN == "Nuestra" then
-        sampAddChatMessage(nickname.."("..playerId..") вошел в игру.", -1)
+    if logging then
+    lua_thread.create(function()
+        wait(15000)
+         
+	if sampGetPlayerScore(playerId) < 4 then
+        wait(5000)
+    sampSendChat("/id "..nickname)
+        --sampAddChatMessage('Возможно долбаеб '..nickname.."("..playerId..") вошел в игру.", -1)
         --notf.addNotification(string.format("%s \nКакой-то хуй с фамилией Nuestra\n\n"..nickname.."("..playerId..") вошел в игру." , os.date()), 10)
 	end
+end)
 end
 end
 function sp.onPlayerQuit(playerId, reason)
@@ -2313,6 +2588,9 @@ function trpay()
         sampCloseCurrentDialogWithButton(1)
     end)    
 end
+
+
+
 
 function musora_detector()
     --skins = Set { 175, 174, 102, 103, 104 }
@@ -2346,6 +2624,20 @@ function musora_detector()
             musora = false
             obideli = false
         end
+    end
+    if onfp then
+        lua_thread.create(function()
+            for _,vv in pairs(maintxt.pidors) do
+                local idpidra = sampGetPlayerIdByNickname(vv)
+                if idpidra ~= nil and idpidra ~= -1 and idpidra ~= false then
+                    local resfp, handle = sampGetCharHandleBySampPlayerId(idpidra)
+                    if resfp then
+                        screen_text = '~P~Пидорас ~W~'..vv..' ~R~('..idpidra..') ~Y~рядом!'
+                        printStringNow(conv(screen_text),1)
+                    end
+                end
+            end
+        end)
     end
 end
 
@@ -2902,6 +3194,25 @@ function tormoz()
                     wait(0)
                 until speed > 0
             end
+            if isCharInAnyCar(playerPed) then 
+                local car = storeCarCharIsInNoSave(playerPed)
+                local speed = getCarSpeed(car)
+               -- isCarInAirProper(car)
+                setCarCollision(car, true)
+                    if isKeyDown(VK_LMENU) and isVehicleOnAllWheels(car) and doesVehicleExist(car) and speed > 5.0 then
+                   setCarCollision(car, false)
+                        if isCarInAirProper(car) then setCarCollision(car, true)
+                        if isKeyDown(VK_A)
+                        then 
+                        addToCarRotationVelocity(car, 0, 0, 0.13)
+                        end
+                        if isKeyDown(VK_D)
+                        then 			
+                        addToCarRotationVelocity(car, 0, 0, -0.13)	
+                        end
+                    end
+                end
+            end
             if isCharInAnyCar(PLAYER_PED) and not sampIsChatInputActive() and not isSampfuncsConsoleActive() and not sampIsDialogActive() and not isCharOnAnyBike(PLAYER_PED) then
                 if isKeyJustPressed(56) and isKeyCheckAvailable() and not sampIsChatInputActive() and not isSampfuncsConsoleActive() and not sampIsDialogActive() then cruise = not cruise end
                 if cruise then
@@ -2910,7 +3221,7 @@ function tormoz()
                     setGameKeyState(16, 255)
                 end  
             end 
-            if isCharInAnyCar(PLAYER_PED) and isKeyJustPressed(55) and isKeyCheckAvailable() and not sampIsChatInputActive() and not isSampfuncsConsoleActive() and not sampIsDialogActive() then
+            if isCharInAnyCar(PLAYER_PED) and isKeyJustPressed(_G['VK_'..mainini.config.tramp]) and isKeyCheckAvailable() and not sampIsChatInputActive() and not isSampfuncsConsoleActive() and not sampIsDialogActive() then
                 local veh = storeCarCharIsInNoSave(PLAYER_PED)
                 local vle = getCarHeading(veh)
                 local ofX, ofY, ofZ = getOffsetFromCarInWorldCoords(veh, 0.0, 24.5, -1.3)
@@ -3053,6 +3364,14 @@ function fastrun()
     end
 end
 end
+function nabor(arg)
+	while true do wait(0)
+		if naboron then
+			sampSendChat(mainini.lidzam.nabortext)
+			wait(mainini.lidzam.naborwait * 1000)
+		end
+	end
+end
 function flood1(arg)
 	while true do wait(0)
 		if floodon1 then
@@ -3135,10 +3454,10 @@ function nameTagOn()
 	mem.setint8(pStSet + 56, 1)
 end
 function nameTagOff()
-	local pStSet = sampGetServerSettingsPtr()
-	mem.setfloat(pStSet + 39, NTdist)
-	mem.setint8(pStSet + 47, NTwalls)
-	mem.setint8(pStSet + 56, NTshow)
+    local pStSet = sampGetServerSettingsPtr()
+    mem.setfloat(pStSet + 39, NTdist)
+    mem.setint8(pStSet + 47, NTwalls)
+    mem.setint8(pStSet + 56, NTshow)
 end
 function onExitScript()
 	if NTdist then
@@ -3564,7 +3883,14 @@ function rltao()
 end
 
 
-
+--[[ function sp.onSendGiveDamage()
+    for i = 1, 10 do
+        local audio = loadAudioStream('moonloader/config/4.mp3')
+        setAudioStreamState(audio, 1)
+        setAudioStreamVolume(audio, math.floor(2))
+    end
+end
+ ]]
 
 
 --[[ function sp.onSendGiveDamage(playerId, damage, weapon, bodypart)
@@ -3662,7 +3988,7 @@ end ]]
 
 
 function sampGetListboxItemByText(text, plain)
-    if not sampIsDialogActive() then return -1 end
+    --if not sampIsDialogActive() then return -1 end
         plain = not (plain == false)
     for i = 0, sampGetListboxItemsCount() - 1 do
         if sampGetListboxItemText(i):find(text, 1, plain) then
@@ -4020,7 +4346,9 @@ function sp.onShowDialog(id, style, title, button1, button2, text)
 
     if id == 162 and fixbike then
         lua_thread.create(function()
-            sampSendDialogResponse(162,1,nil,nil)
+            local index = sampGetListboxItemByText('Mountain')
+            --local index = sampGetListboxItemByText('%Mountain.-%a+', false)
+            sampSendDialogResponse(162,1, index,nil)
             sampSendDialogResponse(163,1,9,nil)
             --sampSendDialogResponse(ид диалога, ид кнопки (0 / 1) , номер элемента списка (от 0), текст введенный в поле)
             fixbike = false
@@ -4774,8 +5102,8 @@ function sp.onSendCommand(cmd)
         return false
     end
     if cmd:find('/9') then
-        mainini.functions.devyatka = not mainini.functions.devyatka
-        if mainini.functions.devyatka then
+        mainini.lidzam.devyatka = not mainini.functions.devyatka
+        if mainini.lidzam.devyatka then
             sampAddChatMessage("Режим заместителя в банде {228b22}on {ffffff}| /h9 - помощь ", -1)
             inicfg.save(mainini, 'bd') 
         else
@@ -4784,25 +5112,26 @@ function sp.onSendCommand(cmd)
         end
         return false
     end
-    if cmd:find("/h9") and mainini.functions.devyatka then
-        sampAddChatMessage("{00ffff}[9-10] {c0c0c0}ПКМ+1 {ffffff}- Принять в банду на 5", -1)
-        sampAddChatMessage("{00ffff}[9-10] {c0c0c0}ПКМ+2 {ffffff}- Принять в банду на 8", -1)
-        sampAddChatMessage("{00ffff}[9-10] {c0c0c0}/fu id {ffffff}- Уволить с причиной 'выселен'", -1)
-        sampAddChatMessage("{00ffff}[9-10] {c0c0c0}/gr id rank {ffffff}- Выдать ранг", -1)
-        sampAddChatMessage("{00ffff}[9-10] {c0c0c0}/st id skinid {ffffff}- Выдать скин", -1)
-        sampAddChatMessage("{00ffff}[9-10] {c0c0c0}/sk {ffffff}- Открыть/Закрыть общак", -1)
-        sampAddChatMessage("{00ffff}[9-10] {c0c0c0}/fc {ffffff}- Заправить транспорт", -1)
-        sampAddChatMessage("{00ffff}[9-10] {c0c0c0}/sc {ffffff}- Заспавнить транспорт", -1)
-        
-        sampAddChatMessage("{00ffff}[9-10] {c0c0c0}/nabor {ffffff}- Пиар в VIP-chat о наборе", -1)
-        sampAddChatMessage("{00ffff}[9-10] {c0c0c0}/povish {ffffff}- Флудилка о том, как повыситься", -1)
+    if cmd:find("/h9") and mainini.lidzam.devyatka then
+        lidzam_menu()
         return false
     end
-    if cmd:find("/nabor") and mainini.functions.devyatka then
+--[[     if cmd:find("/nabor") and mainini.lidzam.devyatka then
         sampSendChat("/vr Набор в ФК 'The Rifa'. /smug /port | Желающих ждём на площадке.")
         return false
+    end ]]
+    if cmd:find('/nabor') then
+        naboron = not naboron
+		if naboron then 
+            sampAddChatMessage('{ff4500}nabor {228b22}on',-1)
+			naborka = lua_thread.create(nabor) 
+		else
+            sampAddChatMessage('{ff4500}nabor {ff0000}off',-1)
+			lua_thread.terminate(naborka) 
+		end
+        return false
     end
-    if cmd:find("/povish") and mainini.functions.devyatka then
+    if cmd:find("/povish") and mainini.lidzam.devyatka then
         lua_thread.create(function()
             sampSendChat("/f Чтобы повыситься на 6-7 ранг: активно ездить на порты, проявлять себя любыми способами...")
             wait(1000)
@@ -4812,32 +5141,36 @@ function sp.onSendCommand(cmd)
         end)
         return false
     end
-    if cmd:find('/fu') and mainini.functions.devyatka then 
+    if cmd:find('/fu') and mainini.lidzam.devyatka then 
         local arguninv = cmd:match('/fu (.+)')
         sampSendChat('/uninvite '..arguninv..' Выселен.')
         return false
     end
-    if cmd:find('/skl') and mainini.functions.devyatka then 
-        sampSendChat('/lmenu')
-        sampSendDialogResponse(1214, 1, 2, -1)
+    if cmd:find('/skl') and mainini.lidzam.devyatka then 
+        lua_thread.create(function()
+            sampSendChat('/lmenu')
+            sampSendDialogResponse(1214, 1, 2, -1)
+   --[[          wait(250)
+            closeDialog() ]]
+        end)
         return false
     end
---[[     if cmd:find('/fc') and mainini.functions.devyatka then 
+--[[     if cmd:find('/fc') and mainini.lidzam.devyatka then 
         sampSendChat('/lmenu')
         sampSendDialogResponse(1214, 1, 4, -1)
         return false
     end
-    if cmd:find('/sc') and mainini.functions.devyatka then 
+    if cmd:find('/sc') and mainini.lidzam.devyatka then 
         sampSendChat('/lmenu')
         sampSendDialogResponse(1214, 1, 3, -1)
         return false
     end ]]
-    if cmd:find('/gr') and mainini.functions.devyatka then 
+    if cmd:find('/gr') and mainini.lidzam.devyatka then 
         local argidgr = cmd:match('/gr (.+)')
         sampSendChat('/giverank '..argidgr)
         return false
     end
-    if cmd:find('/gs') and mainini.functions.devyatka then 
+    if cmd:find('/gs') and mainini.lidzam.devyatka then 
         local argskin = cmd:match('/gs (.+)')
         sampSendChat('/giveskin '..argskin)
         return false
@@ -4847,8 +5180,16 @@ function sp.onSendCommand(cmd)
         return false
     end ]]
     if cmd:find('/spb') then
-        sampSendChat("/cars")
-        fixbike = true
+        lua_thread.create(function()
+            sampSendChat("/cars")
+            wait(500)
+            local index = sampGetListboxItemByText('Mountain')
+            --local index = sampGetListboxItemByText('%Mountain.-%a+', false)
+            sampSendDialogResponse(162,1, index,nil)
+            sampSendDialogResponse(163,1,9,nil)
+            wait(300)
+            closeDialog()
+        end)
         return false
     end
     if cmd:find('/sliv') then
@@ -4979,7 +5320,7 @@ function sp.onSendCommand(cmd)
             inicfg.save(mainini, 'bd')
 		end
         return false
-    end
+    end ]]
     if cmd:find('/colorchat') then
         mainini.functions.colorchat = not mainini.functions.colorchat
 		if mainini.functions.colorchat then 
@@ -5016,7 +5357,7 @@ function sp.onSendCommand(cmd)
 		end
         return false
     end
-    if cmd:find('/dotmoney') then
+    --[[if cmd:find('/dotmoney') then
         mainini.functions.dotmoney = not mainini.functions.dotmoney
 		if mainini.functions.dotmoney then 
             sampAddChatMessage('Разделение точками деньги {228b22}on',-1)
@@ -5471,6 +5812,7 @@ end
             menu()
         return false
     end  
+
     if cmd:find('/bind_menu') then
             binder_menu()
         return false
@@ -5958,7 +6300,7 @@ function sp.onServerMessage(color, text)
             sendvknotf(t00ext)
 		end ]]
 
-   print(text, color)
+  -- print(text, color)
 
         if text:find("Вам пришло новое сообщение!") and not text:find("говорит") and not text:find('- |') then
             sampAddChatMessage("{fff000}Вам пришло новое {FFFFFF}SMS{fff000}-сообщение!", -1)
