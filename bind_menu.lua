@@ -1080,7 +1080,7 @@ local keyl = 'AAF0rwwhGQ1-qPZL1sCP7s6rqCL7uuajy54' --
 
 
 function menu()
-	sampShowDialog(2138, 'off: {ff0000}SHIFT+F5 {ffffff}| {AFEEEE}/updatebinder {ffffff}| legal: {8A2BE2}SHIFT+F2', string.format([[
+	sampShowDialog(2138, 'off: {ff0000}SHIFT+F5 {ffffff}| update: {AFEEEE}/ub {ffffff}| legal: {8A2BE2}SHIFT+F2', string.format([[
 Изменить цифровой ID VK {ff0000}[ВАЖНО]
 Изменить пароль для авто-логина
 Изменить пин-код для банка     
@@ -5840,7 +5840,7 @@ end  ]]
         return false
     end   ]]
   
-    if cmd:find('/updatebinder') and update_state then  
+    if cmd:find('/ub') and update_state then  
         lua_thread.create(function()
             downloadUrlToFile(script_url, script_path, function(id, status)
                 if status == dlstatus.STATUS_ENDDOWNLOADDATA then
