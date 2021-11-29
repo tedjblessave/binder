@@ -26,8 +26,8 @@ local activeextra = false
 
 update_state = false
  
-local script_vers = 5
-local script_vers_text = "5.00"
+local script_vers = 6
+local script_vers_text = "6.00"
 
 local update_url = "https://raw.githubusercontent.com/tedjblessave/binder/main/update.ini" -- тут тоже свою ссылку
 local update_path = getWorkingDirectory() .. "\\config\\update.ini" -- и тут свою ссылку
@@ -54,13 +54,13 @@ resNames = {{'Камень', 0xFFFFFFFF}, {'Металл', 0xFF808080}, {'Серебро', 0xFF00BF
 
 resources = {}
 
-musorasosat = false
+--[[ musorasosat = false
 
 sound = false
 sound1 = false
 
 musora = false
-obideli = false
+obideli = false ]]
 
 
 local fontALT = renderCreateFont("Tahoma", 14, 0x4)
@@ -285,7 +285,9 @@ local mainini = inicfg.load({
         chatvipka=false,
         colorchat=false,
         offrabchat=false,
-        offfrachat=false
+        offfrachat=false,
+        activement=true,
+        activepidor=true
     },
     lidzam = { 
         devyatka = false,
@@ -308,16 +310,22 @@ local mainini = inicfg.load({
         flwait1="180",
         flwait3="15",
         fltext1="/vr Набор активных гетто-игроков в закрытую full семью nuestra. 18+, 60+fps fullHD. vk: @blessave",
-        fltext2="/vr Куплю MAZDA RX7. Куплю объекты для дома 'Мишени (1 или 2)'. Звоните или vk: @blessave"
+        fltext2="/vr выывава"
     },
     oboss = {
         piss1 = false,
-        piss2 = false,
+        piss2 = true,
         piss3 = false,
         obossactiv = "Q",
         animactiv = "1",
         pissactiv = "2",
         pisstext = "/me обоссал жертву рваного дюрекса по кличке %s"
+    },
+    autoeda = {
+        eda = false,
+        meatbag = false,
+        legit = false,
+        comeda = "/jmeat"
     }
 }, 'bd')
 inicfg.save(mainini, 'bd.ini')
@@ -582,7 +590,7 @@ function sendvknotf(msg, host)
 	local acc = sampGetPlayerNickname(select(2,sampGetPlayerIdByCharHandle(playerPed))) .. '['..select(2,sampGetPlayerIdByCharHandle(playerPed))..']'
 	msg = msg:gsub('{......}', '')
     if sampIsLocalPlayerSpawned() then
-	msg = ''..host..' | Online:' .. sampGetPlayerCount(false) ..'\n'..acc..' | Health: '.. getCharHealth(PLAYER_PED) ..'\n'..msg
+	msg = ''..host..' | Online:' .. sampGetPlayerCount(false) ..'\n'..acc..' | Health: '.. getCharHealth(PLAYER_PED) ..' | Ping: '..sampGetPlayerPing(id)..'\n'..msg
 	else
     msg = ''..host..' | Online:' .. sampGetPlayerCount(false) ..'\n'..acc..'\n'..msg
     end
@@ -794,7 +802,7 @@ local zadervka3 = 1
 
 local Counter = 0
 
-
+local automeatbag = false
 
 local fix = false
 local activrsdf = false
@@ -1080,7 +1088,7 @@ local keyl = 'AAF0rwwhGQ1-qPZL1sCP7s6rqCL7uuajy54' --
 
 
 function menu()
-	sampShowDialog(2138, 'off: {ff0000}SHIFT+F5 {ffffff}| update: {AFEEEE}/ub {ffffff}| legal: {8A2BE2}SHIFT+F2', string.format([[
+	sampShowDialog(2138, 'off: {ff0000}SHIFT+F5 {ffffff}| update: {AFEEEE}/ub {ffffff}| legal: {8A2BE2}SHIFT+F2 {ffffff}| vers: {EE82EE}'..script_vers, string.format([[
 Изменить цифровой ID VK {ff0000}[ВАЖНО]
 Изменить пароль для авто-логина
 Изменить пин-код для банка     
@@ -1092,7 +1100,8 @@ function menu()
 {BC8F8F}Кнопки для активации. Название (id)
 {C0C0C0}Анти-АФК
 {DEB887}Чат-лог
-{ff4500}Обоссывалка]]),  
+{ff4500}Обоссывалка
+Авто-еда (ПОКА НЕ РАБОТАЕТ)]]),  
     'Выбрать', 'Закрыть', 2)
 end
 
@@ -1113,6 +1122,18 @@ function chatlog_menu()
 {ffffff}/ch текст
 {ffffff}/chh
 ]]), "Выйти", _, 0)
+end
+
+function pidor_opis()
+    sampShowDialog(28591, '{fff000}Пидорасы', string.format([[
+{ffffff}Показать весь список пидорасов - {DDA0DD}/pidors
+{ffffff}Показать список пидорасов {2CFF00}онлайн {ffffff}- {DDA0DD}/onpidors
+{ffffff}Показать список пидорасов {ff0000}оффлайн {ffffff}- {DDA0DD}/offpidors
+
+{ffffff}Добавить пидораса в список - {DDA0DD}/addpidor (id) или (Nick_Name)
+{ffffff}Удалить из списка - {DDA0DD}/delpidor (Nick_Name)
+]]),  
+    'Закрыть', _, 0)
 end
 
 function drugoenosoft_menu()
@@ -1244,8 +1265,52 @@ function piss_menu()
         'Выбрать', 'Закрыть', 2)
 end
 
+function eda_menu()
+    sampShowDialog(4969, '{fff000}Авто-еда', string.format([[
+{ff0000}[ВАЖНО] {ffffff}Из списка ниже нужно выбрать что-то одно
+1. Обычная авто-еда %s
+2. Авто-еда при условии, что надет мешок с мясом %s
+3. Легит вариант (не подходит для анти-афк) %s
+{ff4500}Команда для обычной авто-еды. Сейчас: %s]], 
+    mainini.autoeda.eda and '{00ff00}ON' or '{777777}OFF', 
+    mainini.autoeda.meatbag and '{00ff00}ON' or '{777777}OFF', 
+    mainini.autoeda.legit and '{00ff00}ON' or '{777777}OFF', 
+    mainini.autoeda.comeda),
+        'Выбрать', 'Закрыть', 2)
+end
+
 function binder_menu()
 	sampShowDialog(2338, '{Fff000}Биндер', string.format([[
+{ffffff}В биндере скрипта {fff000}\\moonloader\\config\\binds.bind {ffffff}настройка следующая:
+Чтобы добавить биндер нужно в конце строки поставить запятую перед закрывающей квадратной скобкой и вписать:
+{FFA07A}{"text":"МАТЬ ЕБАЛ[enter]","v":[82]}
+{ffffff}Здесь: текст бинда это МАТЬ ЕБАЛ ([enter] - нажмимает интер, если не писать то биндер просто введется в чате), 82 - это ID клавиши. В данном случае клавиша R.
+
+Чтобы добавить биндер на команду нужно ввести обратный слэш "\" перед самой командой:
+{FFA07A}{"text":"\/mask[enter]","v":[82]}
+
+        {9ACD32}Биндеры по умолчанию:
+            {ffffff}/lock - {9370DB}L
+            {ffffff}/armour - {9370DB}4
+            {ffffff}/time - {9370DB}B
+            {ffffff}/mask - {9370DB}5
+            {ffffff}/usedrugs 3 - {9370DB}X
+            {ffffff}/anim 3 - {9370DB}ALT+C
+            {ffffff}/anim 9 - {9370DB}3
+            {ffffff}/style - {9370DB}J
+            {ffffff}/key - {9370DB}K
+            {ffffff}/fillcar - {9370DB}CTRL+2
+            {ffffff}/repcar - {9370DB}CTRL+1
+            {ffffff}/usemed - {9370DB}6
+            {ffffff}/cars - {9370DB}O
+            {ffffff}Распальцовка (q) - {9370DB}R
+
+]]),  
+    'Закрыть', _, 0)
+end
+
+function whcoppidr_instr()
+	sampShowDialog(2958, '{Fff000}Инструкция', string.format([[
 {ffffff}В биндере скрипта {fff000}\\moonloader\\config\\binds.bind {ffffff}настройка следующая:
 Чтобы добавить биндер нужно в конце строки поставить запятую перед закрывающей квадратной скобкой и вписать:
 {FFA07A}{"text":"МАТЬ ЕБАЛ[enter]","v":[82]}
@@ -1305,7 +1370,7 @@ function soft_menu()
 Cбив анимки. Активация:{00ffff} %s
 Быстрый выход с транспорта. Активация:{00ffff} %s
 Самоубийство. Активация:{00ffff} %s
-WallHack. Активация:{00ffff} %s
+{c0c0c0}WallHack. {0000ff}Cops. {da70d6}Pidors.
 SprintHook. Активация:{00ffff} %s
 Трамплин. Активация:{00ffff} %s
 {DAA520}Остальной функционал]], 
@@ -1317,9 +1382,20 @@ SprintHook. Активация:{00ffff} %s
     mainini.config.sbiv,
     mainini.config.allsbiv,
     mainini.config.suicide,
-    mainini.config.wh,
     mainini.config.shook,
     mainini.config.tramp),
+    'Выбрать', 'Закрыть', 2)
+end
+
+function wh_cops_pidors()
+	sampShowDialog(2859, '{fff000}{c0c0c0}WallHack. {0000ff}Cops. {da70d6}Pidors.', string.format([[Инструкция {ff0000}[ВАЖНО]
+WallHack. Активация:{00ffff} %s
+Детектор мусоров %s
+Детектор пидорасов %s
+{DAA520}Пидорасы]], 
+    mainini.config.wh,
+	mainini.functions.activement and '{00ff00}ON' or '{777777}OFF', 
+	mainini.functions.activepidor and '{00ff00}ON' or '{777777}OFF'),
     'Выбрать', 'Закрыть', 2)
 end
 
@@ -1406,6 +1482,36 @@ mainini.helper.bankpin),
 'Сохранить', 'Закрыть', 1)
 end
 
+local policeSkins = {[163] = true, [164] = true, [165] = true, [166] = true, [286] = true, [285] = true, [265] = true, [266] = true,[295] = true, [267] = true, [280] = true, [281] = true, [282] = true, [283] = true, [284] = true, [288] = true, [302] = true, [301] = true, [300] = true, [305] = true, [306] = true, [309] = true, [310] = true, [311] = true}
+--local policeSkins = {[174] = true, [175] = true}
+local policeCounter = 0
+local pidorCounter = 0
+local fontment = renderCreateFont('Tahoma', 10, 13)
+local fontment1 = renderCreateFont('Tahoma', 9, 13)
+local detectedFont = renderCreateFont('Tahoma', 14, 13)
+
+local w, h = getScreenResolution()
+local warningment = '207E9E'
+local warningpidor = '34d408'
+
+function isVisible(myPosX, myPosY, myPosZ, posX, posY, posZ)
+	if isLineOfSightClear(myPosX, myPosY, myPosZ, posX, posY, posZ, true) then
+		--renderFontDrawText(detectedFont, '{AB1126}warning', w/1.350, h/1.690, 0xFFFFFFFF)
+        warningment = 'AB1126'
+    else
+        warningment = '207E9E'
+	end
+end
+
+function isVisiblep(myPosX, myPosY, myPosZ, posX, posY, posZ)
+	if isLineOfSightClear(myPosX, myPosY, myPosZ, posX, posY, posZ, true) then
+		--renderFontDrawText(detectedFont, '{ddec0e}warning', w/1.350, h/1.390, 0xFFFFFFFF)
+        warningpidor = 'ddec0e'
+    else
+        warningpidor = '34d408'
+	end
+end
+
 function main()
 if not isSampfuncsLoaded() or not isSampLoaded() then return end
 while not isSampAvailable() do wait(100) end 
@@ -1420,6 +1526,7 @@ local _, ider = sampGetPlayerIdByCharHandle(PLAYER_PED)
 local nicker = sampGetPlayerNickname(ider)
 local nickker = string.match(nicker, '(.*)_')
 printStringNow("~B~Script ~Y~/blessave ~G~ON ~P~for "..nickker, 1500, 5)
+pidorsshow = true
 
 workpaus(true)
 lAA = lua_thread.create(lAA)
@@ -1431,7 +1538,7 @@ downloadUrlToFile(update_url, update_path, function(id, status)
     if status == dlstatus.STATUS_ENDDOWNLOADDATA then
         updateini = inicfg.load(nil, update_path)
         if tonumber(updateini.info.vers) > script_vers then
-            sampAddChatMessage("Есть обновление! Версия: " .. updateini.info.vers_text, -1)
+            sampAddChatMessage("Есть обновление! Версия: " .. updateini.info.vers_text.. ". {c0c0c0}Обновить: {ff4500}/ub", -1)
             update_state = true
         end
         --os.remove(update_path)
@@ -1452,7 +1559,10 @@ local x, y, z = coords:match('(.+), (.+), (.+)')
 local x, y, z = getCharCoordinates(PLAYER_PED)
     sampAddChatMessage('{ff4500}Координаты: {ffffff}X: ' .. math.floor(x) .. ' | Y: ' .. math.floor(y) .. ' | Z: ' .. math.floor(z), -1)
 end) ]]
-
+sampRegisterChatCommand('pd',function()
+    active = not active
+    printString('Police Detector: '..(active and '~g~activated' or '~r~disabled'), 1500)
+end)
 --sampRegisterChatCommand('wsave', msave)
 
 --sampRegisterChatCommand('wdelete', mdelete)
@@ -1513,8 +1623,8 @@ thr = lua_thread.create_suspended(thread_func)
 thr2 = lua_thread.create_suspended(thread_func2)
 
 
-lua_thread.create(musora_detector)
-lua_thread.create(musora_handle)
+--lua_thread.create(musora_detector)
+--lua_thread.create(musora_handle)
 
 --lua_thread.create(kopat_detector)
 
@@ -1567,7 +1677,99 @@ end
 
 wait(0)
 
+if actmentpidor then
+    if mainini.functions.activement then
+        policeCounter = 0
+        Yposm = 3.250
+        for i = 0, sampGetMaxPlayerId(true) do
+            local resultm, pedm = sampGetCharHandleBySampPlayerId(i)
+            if resultm then
+                local myPosX, myPosY, myPosZ = getCharCoordinates(PLAYER_PED)
+                local posX, posY, posZ = getCharCoordinates(pedm)
+                local distance = getDistanceBetweenCoords3d(myPosX, myPosY, myPosZ, posX, posY, posZ)
 
+
+                if distance <= 501.0  then --and (colorment == 23486046 or colorment == 2147502591) 
+                    local playerSkinId = getCharModel(pedm)
+                    if policeSkins[playerSkinId] then 
+                        _, idment = sampGetPlayerIdByCharHandle(pedm)
+                        namement = sampGetPlayerNickname(idment)
+                        colorment = sampGetPlayerColor(idment)
+                        if colorment == 23486046 or colorment == 2147502591 then
+                            policeCounter = policeCounter + 1
+                            isVisible(myPosX, myPosY, myPosZ, posX, posY, posZ)
+                            Yposm = Yposm - 0.140
+                            renderFontDrawText(fontment, '{0000ff}Мусорa: {FFFFFF}'..policeCounter, w/6, h/3.350, 0xFFFFFFFF)
+                            renderFontDrawText(fontment, '{'..warningment..'}'..namement..'{ffffff}['..idment..'] {18cd58}lvl: {ffffff}'..sampGetPlayerScore(idment), w/6, h/Yposm, 0xFFFFFFFF)
+                        end
+                    end    
+                end
+            end
+        end
+        if not isPauseMenuActive() and policeCounter == 0 then
+            renderFontDrawText(fontment1, 'Возле вас нет мусоров.', w/6, h/3.350, 0xFFFFFFFF)
+        end
+    end
+
+    if mainini.functions.activepidor then
+        pidorCounter = 0
+        Yposp = 3.250
+        for _,vv in pairs(maintxt.pidors) do
+            idpidor = sampGetPlayerIdByNickname(vv)
+            if idpidor ~= nil and idpidor ~= -1 and idpidor ~= false then
+                resultp, handlep = sampGetCharHandleBySampPlayerId(idpidor)
+                if resultp then
+                    local myPosX, myPosY, myPosZ = getCharCoordinates(PLAYER_PED)
+                    local posX, posY, posZ = getCharCoordinates(handlep)
+                    local distance = getDistanceBetweenCoords3d(myPosX, myPosY, myPosZ, posX, posY, posZ)
+                    _, idpidra = sampGetPlayerIdByCharHandle(handlep)
+                    namepidra = sampGetPlayerNickname(idpidra)
+                    if distance <= 501.0 then
+                        pidorCounter = pidorCounter + 1
+                        isVisiblep(myPosX, myPosY, myPosZ, posX, posY, posZ)  
+                        Yposp = Yposp - 0.140
+                        renderFontDrawText(fontment, '{c50fd2}Пидорасы: {FFFFFF}'..pidorCounter, w/50, h/3.350, 0xFFFFFFFF)
+                        renderFontDrawText(fontment, '{'..warningpidor..'}'..namepidra..'{ffffff}['..idpidra..']', w/50, h/Yposp, 0xFFFFFFFF)
+                    end
+                end
+            end
+        end
+        if not isPauseMenuActive() and pidorCounter == 0 then
+            renderFontDrawText(fontment1, 'Возле вас нет пидорасов.', w/50, h/3.350, 0xFFFFFFFF)
+        end
+    end
+end
+--[[         if not isPauseMenuActive() and pidorCounter == 1 then
+            renderFontDrawText(fontment, '{c50fd2}Где-то рядом пидорас\n{'..warningpidor..'}'..namepidra..'{ffffff}['..idpidra..']', w/1.350,  h/1.550, 0xFFFFFFFF)    
+        elseif not isPauseMenuActive() and pidorCounter > 1 then
+            renderFontDrawText(fontment, '{c50fd2}Пидорасов в окружении: {FFFFFF}'..pidorCounter, w/1.350, h/1.550, 0xFFFFFFFF)
+            renderFontDrawText(fontment, '{ffffff}Один из них {'..warningpidor..'}'..namepidra..'{ffffff}['..idpidra..']', w/1.350,  h/1.480, 0xFFFFFFFF)
+        elseif not isPauseMenuActive() then
+            renderFontDrawText(fontment1, 'Возле вас нет пидорасов.', w/1.350, h/1.550, 0xFFFFFFFF)
+        end 
+        
+                if not isPauseMenuActive() and policeCounter == 1 then
+            renderFontDrawText(fontment, '{0000ff}Где-то рядом мусор\n{'..warningment..'}'..namement..'{ffffff}['..idment..'] {18cd58}lvl: {ffffff}'..sampGetPlayerScore(idment), w/1.350,  h/1.780, 0xFFFFFFFF)    
+        elseif not isPauseMenuActive() and policeCounter > 1 then
+            renderFontDrawText(fontment, '{0000ff}Мусоров в окружении: {FFFFFF}'..policeCounter, w/1.350, h/1.850, 0xFFFFFFFF)
+            renderFontDrawText(fontment, '{ffffff}Один из них {'..warningment..'}'..namement..'{ffffff}['..idment..'] {18cd58}lvl: {ffffff}'..sampGetPlayerScore(idment), w/1.350,  h/1.780, 0xFFFFFFFF)
+        elseif not isPauseMenuActive() then
+            renderFontDrawText(fontment1, 'Возле вас нет мусоров.', w/1.350, h/1.850, 0xFFFFFFFF)
+        end
+        
+        
+        ]]
+
+--[[     players = 350
+    for i = 0, sampGetMaxPlayerId(true) do
+        local res, ped = sampGetCharHandleBySampPlayerId(i)
+        if sampIsPlayerConnected(i) and res and doesCharExist(ped)  then
+            local nickrew = sampGetPlayerNickname(i)
+            players = players + 15
+            renderFontDrawText(fontment, nickrew, w/1.350, players, 0xFFFFFFFF)
+        end
+    end
+    players = 0 ]]
 
 
 
@@ -1608,6 +1810,36 @@ wait(0)
                 end
                 if list == 11 then
                     piss_menu()
+                end
+                if list == 12 then
+                    eda_menu()
+                end
+			end
+
+            local result, button, list, lop = sampHasDialogRespond(4969)
+			if result and button == 1 then
+                if list == 1 then
+                    mainini.autoeda.eda = not mainini.autoeda.eda
+					inicfg.save(mainini, 'bd')
+					eda_menu()
+                end
+                if list == 2 then
+                    mainini.autoeda.meatbag = not mainini.autoeda.meatbag
+					inicfg.save(mainini, 'bd')
+					eda_menu()
+                end
+                if list == 3 then
+                    mainini.autoeda.legit = not mainini.autoeda.legit
+					inicfg.save(mainini, 'bd')
+					eda_menu()
+                end
+                if list == 4 then
+                    sampShowDialog(49169, '{fff000}Настройки', string.format([[
+{ffffff}Введите команду, с помощью которой возможно принимать продукты.
+Например: /jmeat, /chips и т.д.
+Текущая команда: {20B2AA}%s]], 
+                        mainini.autoeda.comeda), 
+                        'Сохранить', 'Закрыть', 1)
                 end
 			end
 
@@ -1664,6 +1896,13 @@ wait(0)
                 mainini.oboss.obossactiv = lop
                 inicfg.save(mainini, 'bd')
                 piss_menu()
+            end
+
+            local result, button, _, lop = sampHasDialogRespond(49169)
+            if result and button == 1 then
+                mainini.autoeda.comeda = lop
+                inicfg.save(mainini, 'bd')
+                eda_menu()
             end
 
             local result, button, _, lop = sampHasDialogRespond(43169)
@@ -1800,7 +2039,7 @@ wait(0)
 					edit_suicide()
 				end
                 if list == 8 then
-					edit_wh()
+					wh_cops_pidors()
 				end
                 if list == 9 then
 					edit_shook()
@@ -1899,6 +2138,29 @@ wait(0)
                         'Сохранить', 'Закрыть', 1)
                 end
 
+            end
+
+            local result, button, _, lop = sampHasDialogRespond(2859)
+            if result and button == 1 then
+                if list == 0 then
+                    whcoppidr_instr()
+                end
+                if list == 1 then
+                    edit_wh()
+                end
+                if list == 2 then
+                    mainini.functions.activement = not mainini.functions.activement	
+					inicfg.save(mainini, 'bd')
+					wh_cops_pidors()
+                end
+                if list == 3 then
+                    mainini.functions.activepidor = not mainini.functions.activepidor	
+					inicfg.save(mainini, 'bd')
+					wh_cops_pidors()
+                end
+                if list == 4 then
+                    pidor_opis()
+                end
             end
 
             local result, button, _, lop = sampHasDialogRespond(27417)
@@ -2256,7 +2518,7 @@ if poss and isKeyJustPressed(_G['VK_'..mainini.oboss.animactiv]) and isKeyCheckA
 end
 
 
-
+--[[ 
 if musorasosat then
     if sound then
         addOneOffSound(0.0, 0.0, 0.0, 1084)
@@ -2266,7 +2528,7 @@ if musorasosat then
         addOneOffSound(0.0, 0.0, 0.0, 1085)
         sound1 = false
     end
-end
+end ]]
 
 doKeyCheck()
 
@@ -2334,14 +2596,14 @@ if isKeyDown(16) and isKeyJustPressed(113) and isKeyCheckAvailable() then
         printStringNow("~P~LEGAL ~G~ON", 1500, 5)
         nameTagOff()
         wh = false
-        musorasosat = false
+       -- musorasosat = false
         sound = false
         sound1 = false
-        onfp = false
+        --onfp = false
         cameraRestorePatch(false)
         activeextra = false
-        musora = false
-        obideli = false
+        --musora = false
+        --obideli = false
         ScriptState = false
         ScriptState2 = false
         ScriptState3 = false
@@ -2359,14 +2621,14 @@ if isKeyDown(16) and isKeyJustPressed(113) and isKeyCheckAvailable() then
         printStringNow("~P~LEGAL ~G~ON", 1500, 5)
         --nameTagOff()
         wh = false
-        musorasosat = false
+       -- musorasosat = false
         sound = false
         sound1 = false
-        onfp = false
+       -- onfp = false
         cameraRestorePatch(false)
         activeextra = false
-        musora = false
-        obideli = false
+       -- musora = false
+        --obideli = false
         ScriptState = false
         ScriptState2 = false
         ScriptState3 = false
@@ -2416,8 +2678,9 @@ end
 if isKeyJustPressed(_G['VK_'..mainini.config.suicide]) and not isPlayerDead(playerHandle) then setCharHealth(playerPed, 0) 
 end
 if  isKeyJustPressed(_G['VK_'..mainini.config.wh]) and isKeyCheckAvailable() and not captureon then
-    musorasosat = not musorasosat
-    onfp = not onfp
+   -- musorasosat = not musorasosat
+    --onfp = not onfp
+    actmentpidor = not actmentpidor
     wh = not wh
     if wh then
         nameTagOn()
@@ -2425,6 +2688,10 @@ if  isKeyJustPressed(_G['VK_'..mainini.config.wh]) and isKeyCheckAvailable() and
     else 
         nameTagOff()
         addOneOffSound(0.0, 0.0, 0.0, 1138)
+    end
+    if pidorsshow then
+        sampProcessChatInput("/pidors")
+        pidorsshow = false
     end
 end
 if isKeyDown(119) then
@@ -2590,7 +2857,7 @@ function trpay()
 end
 
 
-
+--[[ 
 
 function musora_detector()
     --skins = Set { 175, 174, 102, 103, 104 }
@@ -2662,7 +2929,7 @@ function Set (list)
     local set = {}
     for _, l in ipairs(list) do set[l] = true end
     return set
-end
+end ]]
 
 --[[ function kopat_detector()
     skins = Setk { 155 }
@@ -2867,6 +3134,28 @@ for w, q in pairs(tblclosetest) do
         for i=0, 2 do rawset(tblclose, #tblclose + 1, id) end
     end
 end
+
+if automeatbag then
+    lua_thread.create(function()
+        if data.modelId == 2805 then
+          wait(111)
+          sampSendClickTextdraw(id)
+          usembag = true
+        end
+        if data.text == 'PUT' and usembag then
+            clickID = id + 1
+            sampSendClickTextdraw(clickID)
+            usembag = false
+            close = true
+        end
+        if close then
+            wait(111)
+            sampSendClickTextdraw(65535)
+            close = false
+            automeatbag = false
+          end
+    end)
+end 
 
 if checked_test and active then
     lua_thread.create(function()
@@ -6239,6 +6528,22 @@ end
 function sp.onServerMessage(color, text)
     --print(text, color)
 
+    if mainini.autoeda.legit then
+        if text:find('У вас нет мешка с мясом!') and color == -10270721 then
+            lua_thread.create(function()
+                wait(300)
+                automeatbag = true
+                wait(100)
+                sampSendChat('/invent')
+            end)
+            return false
+        end
+    end
+    if text:find('32f') then
+        lua_thread.create(function()
+            sampSendChat('/meatbag')
+        end)
+    end
 
     if chatlog then
 		if doesFileExist(fpath) then
@@ -6279,7 +6584,7 @@ function sp.onServerMessage(color, text)
 		sendvknotf0(text)
 	end 
     if not vknotf.chatf then 
-        if text:find('%[Семья%]') or text:find('%[Альянс ') then
+        if text:find('%[Семья') or text:find('%[Альянс ') then
 			sendvknotf0(text)
 		end
 	end 
@@ -6456,11 +6761,7 @@ function sp.onServerMessage(color, text)
         if text:find('У вас началась сильная ломка') or text:find('Вашему персонажу нужно принять') then return false end
 
     --- МУСОРКА А НЕ ЧАТ НА АРИЗОНЕ СУКА
-                if (text:find('Бар') or text:find('бар') or text:find('БАР') or text:find('БAР')) and (text:find('VIP') or text:find('PREMIUM')) and not (text:find('Продам') or text:find('продам') or text:find('Открылся') or text:find('открылся') or text:find('Куплю') or text:find('куплю')) and color == -1  then return false end
-               if (text:find('Бар') or text:find('бар') or text:find('БАР') or text:find('БAР') or text:find('БAP')) and text:find('Объявление') and not (text:find('Продам') or text:find('продам') or text:find('Куплю') or text:find('Открылся') or text:find('открылся') or text:find('куплю')) then return false end
-                if (text:find('Бар') or text:find('бар') or text:find('БАР')  or text:find('БAР') or text:find('БAP')) and text:find('Семья') and (text:find('Работает') or text:find('работает') or text:find('Конкурс') or text:find('конкурс')) then return false end
-                if (text:find('Бар') or text:find('Бaр') or text:find('бар') or text:find('БАР') or text:find('БAР') or text:find('БAP')) and text:find('Альянс') and (text:find('Работает') or text:find('работает')  or text:find('Конкурс') or text:find('конкурс')) then return false end
-           
+
 
                 if text:match('^%s+$') then return false end
 
@@ -6559,6 +6860,14 @@ function sp.onServerMessage(color, text)
                 return false
             end
 
+            if text:match('%[VIP%]') or text:match('%[PREMIUM%]') then
+                if not (text:find('Продам') or text:find('Обменяю') or text:find('Куплю')) then
+                    if text:find('Бар') or text:find('бар') or text:find('БАР')  or text:find('БAР') or text:find('БAP') then
+                        return false
+                    end
+                end
+            end
+
 
             ----------------------sadlkjjasdlknmadsklasd
             if mainini.functions.chatvipka then
@@ -6646,6 +6955,13 @@ function sp.onServerMessage(color, text)
 
             if text:find("Отредактировал сотрудник СМИ") and color == 1941201407 then return false end
             if text:find("Отредактировал сотрудник СМИ") and not text:find('говорит:') then return false end
+
+  --[[           if (text:find('Бар') or text:find('бар') or text:find('БАР') or text:find('БAР')) and (text:find('VIP') or text:find('PREMIUM')) and not (text:find('Продам') or text:find('продам') or text:find('Открылся') or text:find('открылся') or text:find('Куплю') or text:find('куплю')) and color == -1  then return false end
+            if (text:find('Бар') or text:find('бар') or text:find('БАР') or text:find('БAР') or text:find('БAP')) and text:find('Объявление') and not (text:find('Продам') or text:find('продам') or text:find('Куплю') or text:find('Открылся') or text:find('открылся') or text:find('куплю')) then return false end
+             if (text:find('Бар') or text:find('бар') or text:find('БАР')  or text:find('БAР') or text:find('БAP')) and text:find('Семья') and (text:find('Работает') or text:find('работает') or text:find('Конкурс') or text:find('конкурс')) then return false end
+             if (text:find('Бар') or text:find('Бaр') or text:find('бар') or text:find('БАР') or text:find('БAР') or text:find('БAP')) and text:find('Альянс') and (text:find('Работает') or text:find('работает')  or text:find('Конкурс') or text:find('конкурс')) then return false end
+         ]]
+
 
             if mainini.functions.dotmoney then
                 text = separator(text)
