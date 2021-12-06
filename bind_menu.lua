@@ -26,8 +26,8 @@ local activeextra = false
 
 update_state = false
  
-local script_vers = 6
-local script_vers_text = "6.00"
+local script_vers = 11
+local script_vers_text = "11.00"
 
 local update_url = "https://raw.githubusercontent.com/tedjblessave/binder/main/update.ini" -- тут тоже свою ссылку
 local update_path = getWorkingDirectory() .. "\\config\\update.ini" -- и тут свою ссылку
@@ -35,12 +35,6 @@ local update_path = getWorkingDirectory() .. "\\config\\update.ini" -- и тут сво
 local script_url = "https://raw.githubusercontent.com/tedjblessave/binder/main/bind_menu.lua" -- тут свою ссылку
 local script_path = thisScript().path
 
---[[ local salosalo = false
-
-local missRatio = 25
-local silentMaxDist = 70
-local silentFov = 0
-local silentShootWalls = false ]]
 
 textures = {
 	['cs_rockdetail2'] = 1,  -- камень
@@ -54,13 +48,7 @@ resNames = {{'Камень', 0xFFFFFFFF}, {'Металл', 0xFF808080}, {'Серебро', 0xFF00BF
 
 resources = {}
 
---[[ musorasosat = false
 
-sound = false
-sound1 = false
-
-musora = false
-obideli = false ]]
 
 
 local fontALT = renderCreateFont("Tahoma", 14, 0x4)
@@ -287,7 +275,10 @@ local mainini = inicfg.load({
         offrabchat=false,
         offfrachat=false,
         activement=true,
-        activepidor=true
+        activepidor=true,
+        binder = false,
+        autott = false,
+        arecc = false
     },
     lidzam = { 
         devyatka = false,
@@ -324,7 +315,6 @@ local mainini = inicfg.load({
     autoeda = {
         eda = false,
         meatbag = false,
-        legit = false,
         comeda = "/jmeat"
     }
 }, 'bd')
@@ -473,32 +463,6 @@ function longpollResolve(result)
 						end
 						return
 					end
---[[ 					local objsend = tblfromstr(v.object.text)
-					if objsend[1] == '!getplstats' then
-						getPlayerArzStats()
-					elseif objsend[1] == '!recon' then
-                        sendvknotf('Переподключаемся на сервер!')
-                        reconnect()
-					elseif objsend[1] == '!gethun' then
-						getPlayerArzHun()
-					elseif objsend[1] == '!' then
-						local args = table.concat(objsend, " ", 2, #objsend) 
-						if #args > 0 then
-							args = u8:decode(args)
-							sampProcessChatInput(args)
-							sendvknotf('Сообщение "' .. args .. '" отправлено')
-						else
-							sendvknotf('Неправильный аргумент! Пример: ! [text]')
-						end
-                    elseif objsend[1] == '.' then
-						local args = table.concat(objsend, " ", 2, #objsend) 
-						if #args > 0 then
-							args = u8:decode(args)
-							sampProcessChatInput(args)
-						else
-							sendvknotf('Неправильный аргумент! Пример: . [text]')
-						end
-					end ]]
 					if v.object.message.text then
 						local text = v.object.message.text .. ' ' --костыль на случай если одна команда является подстрокой другой (!d и !dc как пример)
 						if text:match('^%s-%d+%s') then
@@ -765,7 +729,6 @@ local random = 0
 local ammo = 1
 local td_exist = 0
 
---local bitkiSTATE = false
 local ScriptState = false
 local ScriptState2 = false
 local ScriptState3 = false
@@ -843,11 +806,6 @@ createDirectory(fpapka)
 if not doesFileExist(fpath) then 
 	local fw = io.open(fpath, 'w+')
 	if fw then fw:write():close() end
---[[ else
-	local fw = io.open(fpath, 'w+')
-	if fw then fw:write():close() end 
---[[ 	local fr = io.open(fpath, 'r')
-	if fr then defString = fr:read('*a') fr:close() end ]]
 end
 
 
@@ -856,49 +814,7 @@ local icons = {
     cords = {
     }
 }
- --[[   "Y":969.45849609375,"X":518.62060546875,"Z":-24.017101287842
-        {"Y":924.79602050781,"X":508.57431030273,"Z":-28.802114486694},
-        {"Y":896.86645507813,"X":488.56677246094,"Z":-30.675764083862},
-        {"Y":959.25762939453,"X":528.65753173828,"Z":-22.163450241089},
-        "Y":949.86871337891,"X":584.56866455078,"Z":-30.890481948853, 
-        "Y":944.93212890625,"X":563.93872070313,"Z":-29.804889678955, 
-        "Y":944.80871582031,"X":518.88824462891,"Z":-24.8971118927, 
-        "Y":880.00518798828,"X":476.39981079102,"Z":-30.168491363525, 
-        "Y":938.78778076172,"X":508.33227539063,"Z":-27.438257217407, 
-        "Y":908.40637207031,"X":490.27337646484,"Z":-30.097179412842, 
-        "Y":888.46685791016,"X":484.85659790039,"Z":-30.315467834473, 
-        "Y":917.66320800781,"X":496.69097900391,"Z":-30.066947937012, 
-        "Y":968.89794921875,"X":532.23193359375,"Z":-22.030118942261, 
-        "Y":953.41711425781,"X":632.56195068359,"Z":-34.737201690674, 
-        "Y":941.20916748047,"X":647.29693603516,"Z":-35.584941864014, 
-        "Y":947.06243896484,"X":629.54083251953,"Z":-35.332775115967, 
-        "Y":949.59338378906,"X":606.66931152344,"Z":-33.062973022461, 
-        "Y":850.59051513672,"X":496.82528686523,"Z":-29.898014068604, 
-        "Y":799.89123535156,"X":562.17401123047,"Z":-28.308031082153, 
-        "Y":822.28552246094,"X":525.43640136719,"Z":-25.52254486084, 
-        "Y":792.00616455078,"X":500.41354370117,"Z":-21.567844390869, 
-        "Y":780.25555419922,"X":554.48327636719,"Z":-17.711265563965, 
-        "Y":789.52264404297,"X":601.30999755859,"Z":-32.068206787109, 
-        "Y":777.28668212891,"X":616.30914306641,"Z":-32.101264953613, 
-        "Y":777.83294677734,"X":648.51092529297,"Z":-29.977233886719, 
-        "Y":787.9345703125,"X":663.62817382813,"Z":-30.213798522949, 
-        "Y":789.30163574219,"X":686.13287353516,"Z":-29.950016021729, 
-        "Y":800.32189941406,"X":693.44476318359,"Z":-29.936937332153, 
-        "Y":847.44659423828,"X":718.64086914063,"Z":-29.914356231689, 
-        "Y":834.65539550781,"X":712.2099609375,"Z":-29.921224594116, 
-        "Y":805.2001953125,"X":506.47015380859,"Z":-21.686738967896, 
-        "Y":790.23608398438,"X":518.31451416016,"Z":-21.307481765747, 
-        "Y":821.77642822266,"X":515.5546875,"Z":-24.337631225586, 
-        "Y":790.98803710938,"X":584.28436279297,"Z":-29.943504333496, 
-        "Y":818.3388671875,"X":716.27630615234,"Z":-30.253126144409, 
-        "Y":955.14135742188,"X":644.61730957031,"Z":-34.354789733887, 
-        "Y":866.25604248047,"X":494.16189575195,"Z":-31.324489593506, 
-        "Y":870.33416748047,"X":470.46572875977,"Z":-28.64769744873, 
-        "Y":937.03601074219,"X":662.13812255859,"Z":-37.777637481689, 
-        "Y":808.60009765625,"X":518.22290039063,"Z":-23.172925949097, 
-        "Y":941.28930664063,"X":618.97619628906,"Z":-37.38431930542, 
-        "Y":769.96472167969,"X":565.70635986328,"Z":-16.364233016968 ]]
-    
+ 
 local mymark = {}
 local active = true
 local selected = nil
@@ -954,74 +870,7 @@ function getCarDrivenByPlayer(ped)
 end
 local Arial1g = renderCreateFont("Tahoma", 14, 0x4)
 
---[[ function rand() return math.random(-50, 50) / 100 end
 
-function getDamage(weap)
-	local damage = {
-        [22] = 8.25,
-        [23] = 13.2,
-        [24] = 46.2,
-        --[[ [25] = 3.3,
-        [26] = 3.3,
-        [27] = 4.95,
-        [28] = 6.6,
-        [29] = 8.25,
-        [30] = 9.9,
-        [31] = 9.9,
-        [32] = 6.6, 
-        [33] = 24.75,
-        [34] = 41.25,
-        [38] = 46.2 
-	}
-	return (damage[weap] or 0) + math.random(1e9)/1e15
-end
-
-
-
-
-
-function getpx()
-	return ((wwe / 2) / getCameraFov()) * silentFov
-end
-
-function getClosestPlayerFromCrosshair()
-	local R1, target = getCharPlayerIsTargeting(0)
-	local R2, player = sampGetPlayerIdByCharHandle(target)
-	if R2 then return player, target end
-	local minDist = getpx()
-	local closestId, closestPed = -1, -1
-	for i = 0, 999 do
-		local res, ped = sampGetCharHandleBySampPlayerId(i)
-		if res then
-			if getDistanceFromPed(ped) < silentMaxDist then
-                local xi, yi = convert3DCoordsToScreen(getCharCoordinates(ped))
-                local dist = math.sqrt( (xi - xc) ^ 2 + (yi - yc) ^ 2 )
-                if dist < minDist then
-                    minDist = dist
-                    closestId, closestPed = i, ped
-                end
-			end
-		end
-	end
-	return closestId, closestPed
-end
-
-function getDistanceFromPed(ped)
-	local ax, ay, az = getCharCoordinates(1)
-	local bx, by, bz = getCharCoordinates(ped)
-	return math.sqrt( (ax - bx) ^ 2 + (ay - by) ^ 2 + (az - bz) ^ 2 )
-end
-
-function canPedBeShot(ped)
-	local ax, ay, az = convertScreenCoordsToWorld3D(xc, yc, 0)
-	local bx, by, bz = getCharCoordinates(ped)
-	return not select(1, processLineOfSight(ax, ay, az, bx, by, bz + 0.7, true, false, false, true, false, true, false, false))
-end
-
-function getcond(ped)
-	if silentShootWalls then return true
-	else return canPedBeShot(ped) end
-end ]]
 local trigbott = true
 
 function sequent_async_http_request(method, url, args, resolve, reject)
@@ -1079,7 +928,6 @@ function iin(list, what_find, mode) -- vk.com/fottes
     end
 end
 
---pidoraso = false
 
 local dialogTabArr = {}
 local dialogTabStr = ""
@@ -1089,9 +937,6 @@ local keyl = 'AAF0rwwhGQ1-qPZL1sCP7s6rqCL7uuajy54' --
 
 function menu()
 	sampShowDialog(2138, 'off: {ff0000}SHIFT+F5 {ffffff}| update: {AFEEEE}/ub {ffffff}| legal: {8A2BE2}SHIFT+F2 {ffffff}| vers: {EE82EE}'..script_vers, string.format([[
-Изменить цифровой ID VK {ff0000}[ВАЖНО]
-Изменить пароль для авто-логина
-Изменить пин-код для банка     
 {7CFC00}Нейтральные функции
 {DC143C}Читерские функции
 {DA70D6}Флудерка
@@ -1101,19 +946,22 @@ function menu()
 {C0C0C0}Анти-АФК
 {DEB887}Чат-лог
 {ff4500}Обоссывалка
-Авто-еда (ПОКА НЕ РАБОТАЕТ)]]),  
+{E9967A}Авто-еда]]),  
     'Выбрать', 'Закрыть', 2)
 end
-
-function afk_menu()
-	sampShowDialog(2956, '{fff000}Анти-АФК', string.format([[
-{ffffff}1. Приходят различные уведомления (пейдей, наказания от админов, звонок по телефону и т.д.)
+--[[ {ffffff}1. Приходят различные уведомления (пейдей, наказания от админов, звонок по телефону и т.д.)
 {ffffff}2. Возможно включить все диалоги и управлять ими через VK. !d (text) !d (строка в диалоге)
 {ffffff}3. Включить весь чат
 {ffffff}4. Включить семейный чат, альянса
-5. Можно разговаривать по телефону (пока работает только на самсунгах)
+5. Можно разговаривать по телефону (пока работает только на самсунгах) ]]
+function afk_menu()
+	sampShowDialog(2956, '{fff000}Анти-АФК', string.format([[
+Изменить цифровой ID {00ffff}VK 
+Изменить токен
+Изменить цифровой ID VK группы
+Отправлять различные уведомления 
 ]]),  
-    'Закрыть', _, 0)
+    'Выбрать', 'Закрыть', 2)
 end
 
 function chatlog_menu()
@@ -1190,18 +1038,6 @@ function drugoesoft_menu()
     'Закрыть', _, 0)
 end
 
---[[ sampAddChatMessage("{00ffff}[9-10] {c0c0c0}ПКМ+1 {ffffff}- Принять в банду на 5", -1)
-sampAddChatMessage("{00ffff}[9-10] {c0c0c0}ПКМ+2 {ffffff}- Принять в банду на 8", -1)
-sampAddChatMessage("{00ffff}[9-10] {c0c0c0}/fu id {ffffff}- Уволить с причиной 'выселен'", -1)
-sampAddChatMessage("{00ffff}[9-10] {c0c0c0}/gr id rank {ffffff}- Выдать ранг", -1)
-sampAddChatMessage("{00ffff}[9-10] {c0c0c0}/st id skinid {ffffff}- Выдать скин", -1)
-sampAddChatMessage("{00ffff}[9-10] {c0c0c0}/sk {ffffff}- Открыть/Закрыть общак", -1)
-sampAddChatMessage("{00ffff}[9-10] {c0c0c0}/fc {ffffff}- Заправить транспорт", -1)
-sampAddChatMessage("{00ffff}[9-10] {c0c0c0}/sc {ffffff}- Заспавнить транспорт", -1)
-
-sampAddChatMessage("{00ffff}[9-10] {c0c0c0}/nabor {ffffff}- Пиар в VIP-chat о наборе", -1)
-sampAddChatMessage("{00ffff}[9-10] {c0c0c0}/povish {ffffff}- Флудилка о том, как повыситься", -1) ]]
-
 function lidzam_menu()
     sampShowDialog(2741, '{fff000}Режим лидера/зама', string.format([[
 Режим лидера/зама %s
@@ -1268,18 +1104,24 @@ end
 function eda_menu()
     sampShowDialog(4969, '{fff000}Авто-еда', string.format([[
 {ff0000}[ВАЖНО] {ffffff}Из списка ниже нужно выбрать что-то одно
-1. Обычная авто-еда %s
-2. Авто-еда при условии, что надет мешок с мясом %s
-3. Легит вариант (не подходит для анти-афк) %s
-{ff4500}Команда для обычной авто-еды. Сейчас: %s]], 
+Обычная авто-еда %s
+Авто-еда при условии, что надет мешок с мясом %s
+Команда для обычной авто-еды. Сейчас: {ff4500}%s]], 
     mainini.autoeda.eda and '{00ff00}ON' or '{777777}OFF', 
     mainini.autoeda.meatbag and '{00ff00}ON' or '{777777}OFF', 
-    mainini.autoeda.legit and '{00ff00}ON' or '{777777}OFF', 
     mainini.autoeda.comeda),
         'Выбрать', 'Закрыть', 2)
 end
 
 function binder_menu()
+	sampShowDialog(23388, '{fff000}Биндер меню', string.format([[
+Биндер %s
+Информация]], 
+	mainini.functions.binder and '{00ff00}ON' or '{777777}OFF'),
+    'Выбрать', 'Закрыть', 2)
+end
+
+function binder_info()
 	sampShowDialog(2338, '{Fff000}Биндер', string.format([[
 {ffffff}В биндере скрипта {fff000}\\moonloader\\config\\binds.bind {ffffff}настройка следующая:
 Чтобы добавить биндер нужно в конце строки поставить запятую перед закрывающей квадратной скобкой и вписать:
@@ -1349,6 +1191,9 @@ function nosoft_menu()
 Разделенный VIP-chat %s
 Фракционный чат %s
 Рабочий чат %s
+Авто-ТвинТурбо %s
+Изменить пароль для авто-логина
+Изменить пин-код для банка
 {DAA520}Остальной функционал]], 
 	mainini.functions.hphud and '{00ff00}ON' or '{777777}OFF', 
 	mainini.functions.dotmoney and '{00ff00}ON' or '{777777}OFF',
@@ -1357,7 +1202,8 @@ function nosoft_menu()
     mainini.functions.colorchat and '{00ff00}ON' or '{777777}OFF',
     mainini.functions.chatvipka and '{00ff00}ON' or '{777777}OFF',
     mainini.functions.offfrachat and '{777777}OFF' or '{00ff00}ON',
-    mainini.functions.offrabchat and '{777777}OFF' or '{00ff00}ON'),
+    mainini.functions.offrabchat and '{777777}OFF' or '{00ff00}ON',
+    mainini.functions.autott and '{00ff00}ON' or '{777777}OFF'),
     'Выбрать', 'Закрыть', 2)
 end
 
@@ -1373,6 +1219,7 @@ Cбив анимки. Активация:{00ffff} %s
 {c0c0c0}WallHack. {0000ff}Cops. {da70d6}Pidors.
 SprintHook. Активация:{00ffff} %s
 Трамплин. Активация:{00ffff} %s
+{ffffff}Рекконект: {ff4500}/hrec {ffffff}| Авто-рекконект %s
 {DAA520}Остальной функционал]], 
 	mainini.functions.fish and '{00ff00}ON' or '{777777}OFF', 
 	mainini.functions.bott and '{00ff00}ON' or '{777777}OFF',
@@ -1383,7 +1230,8 @@ SprintHook. Активация:{00ffff} %s
     mainini.config.allsbiv,
     mainini.config.suicide,
     mainini.config.shook,
-    mainini.config.tramp),
+    mainini.config.tramp,
+    mainini.functions.arecc and '{00ff00}ON' or '{777777}OFF'),
     'Выбрать', 'Закрыть', 2)
 end
 
@@ -1553,35 +1401,16 @@ if not doesFileExist("moonloader\\config\\waxta.json") then
     end)
 end
 
---sampRegisterChatCommand('blessave', menu)
---[[ sampRegisterChatCommand('coords', function(coords)
-local x, y, z = coords:match('(.+), (.+), (.+)')
-local x, y, z = getCharCoordinates(PLAYER_PED)
-    sampAddChatMessage('{ff4500}Координаты: {ffffff}X: ' .. math.floor(x) .. ' | Y: ' .. math.floor(y) .. ' | Z: ' .. math.floor(z), -1)
-end) ]]
+
 sampRegisterChatCommand('pd',function()
     active = not active
     printString('Police Detector: '..(active and '~g~activated' or '~r~disabled'), 1500)
 end)
---sampRegisterChatCommand('wsave', msave)
-
---sampRegisterChatCommand('wdelete', mdelete)
---sampRegisterChatCommand('wlist', mlist)
-
---sampRegisterChatCommand('wercv', runToPoint(518.62, 969.45))
-
---sampRegisterChatCommand("ch", chatut)
---sampRegisterChatCommand("log", function() logging = not logging end)
 
 local fontSF = renderCreateFont("Arial", 8, 5) --creating font
 sampfuncsRegisterConsoleCommand("deletetd", del)    --registering command to sampfuncs console, this will call delete function
 sampfuncsRegisterConsoleCommand("showtdid", show)   --registering command to sampfuncs console, this will call function that shows textdraw id's
 sampfuncsRegisterConsoleCommand("getdialoginfo", dialoginfo) --registering sf console command
-
-
---sampRegisterChatCommand("buttons", function() sampShowDialog(1905, "{00CC00}Список клавиш | Справка", buttonslist, "ОК", _, 2) end)
---[[ sampRegisterChatCommand("st", cmdSetTime)
-sampRegisterChatCommand("sw", cmdSetWeather) ]]
 
 sampRegisterChatCommand('calc', function(arg) 
 if #arg > 0 then 
@@ -1596,9 +1425,10 @@ end)
 lua_thread.create(vkget)
 
 
-for k, v in pairs(tBindList) do
-rkeys.registerHotKey(v.v, true, onHotKey)
-end
+    for k, v in pairs(tBindList) do
+        rkeys.registerHotKey(v.v, true, onHotKey)
+    end
+
 
 
 tormoz = lua_thread.create(tormoz)
@@ -1623,10 +1453,6 @@ thr = lua_thread.create_suspended(thread_func)
 thr2 = lua_thread.create_suspended(thread_func2)
 
 
---lua_thread.create(musora_detector)
---lua_thread.create(musora_handle)
-
---lua_thread.create(kopat_detector)
 
 flymode = 0  
 speed = 0.2
@@ -1637,23 +1463,7 @@ keyPressed = 0
 
 
 while true do
---[[         local pw, ph = getScreenResolution()
-renderFontDrawText(fo0nt, string.format('{FF4500}%d{ffffff}/{008000}%d {ffffff}- {00FFFF}%d', mainini.stats.shots, mainini.stats.hits, mainini.stats.shots ~= 0 and 100 / (mainini.stats.shots / mainini.stats.hits) or 0)..'{ffffff}%', 0, ph - 50, 0xFFFFFFFF)
-if 100 / (mainini.stats.shots / mainini.stats.hits) >= 0 and 100 / (mainini.stats.shots / mainini.stats.hits) <= 5 then
-renderFontDrawText(fo0nt, string.format('Zero'), 0, ph - 30,  0xFFFFFFFF)
-elseif 100 / (mainini.stats.shots / mainini.stats.hits) >= 6 and 100 / (mainini.stats.shots / mainini.stats.hits) <= 20 then
-renderFontDrawText(fo0nt, string.format('Low'), 0, ph - 30, 0xFFFFFFFF)
-elseif 100 / (mainini.stats.shots / mainini.stats.hits) >= 21 and 100 / (mainini.stats.shots / mainini.stats.hits) <= 30 then
-renderFontDrawText(fo0nt, string.format('Low+'), 0, ph - 30, 0xFFFFFFFF)
-elseif 100 / (mainini.stats.shots / mainini.stats.hits) >= 31 and 100 / (mainini.stats.shots / mainini.stats.hits) <= 50 then
-renderFontDrawText(fo0nt, string.format('Medium'), 0, ph - 30, 0xFFFFFFFF)
-elseif 100 / (mainini.stats.shots / mainini.stats.hits) >= 51 and 100 / (mainini.stats.shots / mainini.stats.hits) <= 70 then
-renderFontDrawText(fo0nt, string.format('Medium+'), 0, ph - 30, 0xFFFFFFFF)
-elseif 100 / (mainini.stats.shots / mainini.stats.hits) >= 71 and 100 / (mainini.stats.shots / mainini.stats.hits) <= 80 then
-renderFontDrawText(fo0nt, string.format('HARD'), 0, ph - 30, 0xFFFFFFFF)
-elseif 100 / (mainini.stats.shots / mainini.stats.hits) >= 81 and 100 / (mainini.stats.shots / mainini.stats.hits) <= 100 then
-renderFontDrawText(fo0nt, string.format('VERY HARD'), 0, ph - 30, 0xFFFFFFFF)
-end ]]
+
 
 if autoaltrend then
     renderFontDrawText(fontALT, "{ffffff}Auto{ff0000}ALT", 1400, 600, 0xDD6622FF)
@@ -1676,6 +1486,8 @@ if mainini.functions.chatvipka and not sampIsDialogActive() then
 end
 
 wait(0)
+
+
 
 if actmentpidor then
     if mainini.functions.activement then
@@ -1739,79 +1551,73 @@ if actmentpidor then
         end
     end
 end
---[[         if not isPauseMenuActive() and pidorCounter == 1 then
-            renderFontDrawText(fontment, '{c50fd2}Где-то рядом пидорас\n{'..warningpidor..'}'..namepidra..'{ffffff}['..idpidra..']', w/1.350,  h/1.550, 0xFFFFFFFF)    
-        elseif not isPauseMenuActive() and pidorCounter > 1 then
-            renderFontDrawText(fontment, '{c50fd2}Пидорасов в окружении: {FFFFFF}'..pidorCounter, w/1.350, h/1.550, 0xFFFFFFFF)
-            renderFontDrawText(fontment, '{ffffff}Один из них {'..warningpidor..'}'..namepidra..'{ffffff}['..idpidra..']', w/1.350,  h/1.480, 0xFFFFFFFF)
-        elseif not isPauseMenuActive() then
-            renderFontDrawText(fontment1, 'Возле вас нет пидорасов.', w/1.350, h/1.550, 0xFFFFFFFF)
-        end 
-        
-                if not isPauseMenuActive() and policeCounter == 1 then
-            renderFontDrawText(fontment, '{0000ff}Где-то рядом мусор\n{'..warningment..'}'..namement..'{ffffff}['..idment..'] {18cd58}lvl: {ffffff}'..sampGetPlayerScore(idment), w/1.350,  h/1.780, 0xFFFFFFFF)    
-        elseif not isPauseMenuActive() and policeCounter > 1 then
-            renderFontDrawText(fontment, '{0000ff}Мусоров в окружении: {FFFFFF}'..policeCounter, w/1.350, h/1.850, 0xFFFFFFFF)
-            renderFontDrawText(fontment, '{ffffff}Один из них {'..warningment..'}'..namement..'{ffffff}['..idment..'] {18cd58}lvl: {ffffff}'..sampGetPlayerScore(idment), w/1.350,  h/1.780, 0xFFFFFFFF)
-        elseif not isPauseMenuActive() then
-            renderFontDrawText(fontment1, 'Возле вас нет мусоров.', w/1.350, h/1.850, 0xFFFFFFFF)
-        end
-        
-        
-        ]]
 
---[[     players = 350
-    for i = 0, sampGetMaxPlayerId(true) do
-        local res, ped = sampGetCharHandleBySampPlayerId(i)
-        if sampIsPlayerConnected(i) and res and doesCharExist(ped)  then
-            local nickrew = sampGetPlayerNickname(i)
-            players = players + 15
-            renderFontDrawText(fontment, nickrew, w/1.350, players, 0xFFFFFFFF)
-        end
+
+local result, button, list, _ = sampHasDialogRespond(2956)
+if result and button == 1 then
+    if list == 0 then
+        edit_userid()
     end
-    players = 0 ]]
-
+    if list == 1 then
+        soft_menu()
+    end
+    if list == 2 then
+        flood_menu()
+    end
+    if list == 3 then
+        lidzam_menu()
+    end
+    if list == 4 then
+        binder_menu()
+    end
+    if list == 5 then
+        sampShowDialog(3905, "{00CC00}Список клавиш | Справка", buttonslist, "Закрыть", _, 2)
+    end
+    if list == 6 then
+        afk_menu()
+    end
+    if list == 7 then
+        chatlog_menu()
+    end
+    if list == 8 then
+        piss_menu()
+    end
+    if list == 9 then
+        eda_menu()
+    end
+end
 
 
             local result, button, list, _ = sampHasDialogRespond(2138)
 			if result and button == 1 then
                 if list == 0 then
-                    edit_userid()
-                end
-                if list == 1 then
-                    edit_pass()
-                end
-                if list == 2 then
-                    edit_bank()
-                end
-                if list == 3 then
                     nosoft_menu()
                 end
-                if list == 4 then
+                if list == 1 then
                     soft_menu()
                 end
-                if list == 5 then
+                if list == 2 then
                     flood_menu()
                 end
-                if list == 6 then
+                if list == 3 then
                     lidzam_menu()
                 end
-                if list == 7 then
+                if list == 4 then
                     binder_menu()
                 end
-                if list == 8 then
+                if list == 5 then
                     sampShowDialog(3905, "{00CC00}Список клавиш | Справка", buttonslist, "Закрыть", _, 2)
                 end
-                if list == 9 then
+                if list == 6 then
                     afk_menu()
                 end
-                if list == 10 then
+                if list == 7 then
                     chatlog_menu()
                 end
-                if list == 11 then
+                if list == 8 then
                     piss_menu()
                 end
-                if list == 12 then
+                if list == 9 then
                     eda_menu()
                 end
 			end
@@ -1829,11 +1635,6 @@ end
 					eda_menu()
                 end
                 if list == 3 then
-                    mainini.autoeda.legit = not mainini.autoeda.legit
-					inicfg.save(mainini, 'bd')
-					eda_menu()
-                end
-                if list == 4 then
                     sampShowDialog(49169, '{fff000}Настройки', string.format([[
 {ffffff}Введите команду, с помощью которой возможно принимать продукты.
 Например: /jmeat, /chips и т.д.
@@ -2048,6 +1849,11 @@ end
 					edit_tramp()
 				end
                 if list == 11 then
+					mainini.functions.arecc = not mainini.functions.arecc	
+					inicfg.save(mainini, 'bd')
+					soft_menu()
+				end
+                if list == 12 then
 					drugoesoft_menu()
 				end
 			end
@@ -2093,6 +1899,17 @@ end
 					nosoft_menu()
 				end
                 if list == 8 then
+                    mainini.functions.autott = not mainini.functions.autott	
+					inicfg.save(mainini, 'bd')
+					nosoft_menu()
+				end
+                if list == 9 then
+                    edit_pass()
+                end
+                if list == 10 then
+                    edit_bank()
+                end
+                if list == 11 then
                     drugoenosoft_menu()
                 end
 			end
@@ -2160,6 +1977,18 @@ end
                 end
                 if list == 4 then
                     pidor_opis()
+                end
+            end
+
+            local result, button, _, lop = sampHasDialogRespond(23388)
+            if result and button == 1 then
+                if list == 0 then
+                    mainini.functions.binder = not mainini.functions.binder	
+					inicfg.save(mainini, 'bd')
+					binder_menu()
+                end
+                if list == 1 then
+                    binder_info()
                 end
             end
 
@@ -2279,20 +2108,20 @@ end
             if result and button == 1 then
                 mainini.helper.user_id = lop
                 inicfg.save(mainini, 'bd')
-                menu()
+                afk_menu()
                 sendvknotf('Тестовое сообщение')
             end
             local result, button, _, lop = sampHasDialogRespond(21391)
             if result and button == 1 then
                 mainini.helper.password = lop
                 inicfg.save(mainini, 'bd')
-                menu()
+                nosoft_menu()
             end
             local result, button, _, lop = sampHasDialogRespond(21392)
             if result and button == 1 then
                 mainini.helper.bankpin = lop
                 inicfg.save(mainini, 'bd')
-                menu()
+                nosoft_menu()
             end
 
  
@@ -2306,9 +2135,7 @@ if toggle then --params that not declared has a nil value that same as false
         end
     end
 end
---[[ if timestsw then
-    setTimeOfDay(timestsw, 0)
-  end ]]
+
 if mainini.functions.bott and trigbott then
     if isKeyDown(VK_RBUTTON) then
         if getCurrentCharWeapon(playerPed) == 24 or getCurrentCharWeapon(playerPed) == 33 or getCurrentCharWeapon(playerPed) == 35 then
@@ -2363,24 +2190,7 @@ if mainini.functions.extra then
     if extraheal <= 5 then cameraRestorePatch(false) wait(200) activeextra = false end
 end
 
---[[ if isKeyJustPressed(86) and isKeyCheckAvailable() and not isKeyDown(18) then salosalo = not salosalo end
-if isKeyDown(18) and isKeyJustPressed(86) and isKeyCheckAvailable() then silentShootWalls = not silentShootWalls end 
-		
-if mainini.functions.salo then
-    if salosalo and not silentShootWalls then 
-        local clr = join_argb(0, 133, 17, 17)
-        local r,g,b = 133, 17, 17
-        writeMemory(health, 4, ("0xFF%06X"):format(clr), true)
-    elseif salosalo and silentShootWalls then
-        local clr = join_argb(0, 0, 206, 209)
-        local r,g,b = 0, 206, 209
-        writeMemory(health, 4, ("0xFF%06X"):format(clr), true)
-    elseif not salosalo then
-        local clr = join_argb(0, 128, 46, 46)
-        local r,g,b = 128, 46, 46
-        writeMemory(health, 4, ("0xFF%06X"):format(clr), true)
-    end
-end ]]
+
 
 
 local text = sampTextdrawGetString(2069)
@@ -2394,7 +2204,7 @@ setGameKeyState(21, 0)
 setGameKeyState(9, 0)
 end
 
---local menuhome = false
+
 local texthome = sampTextdrawGetString(2054)
 if texthome:match("House~g~ 20") or texthome:match("House~g~ 47") or texthome:match("House~g~ 46") or texthome:match("House~g~ 48") or texthome:match("House~g~ 57") then
     menuhome = true
@@ -2414,18 +2224,6 @@ if act and not sampTextdrawIsExists(2103) then act = false end
 
 
 
---[[     if isKeyDown(VK_9) then 
-for i = 0, 300 do
-    setVirtualKeyDown(vkeys.VK_LSHIFT, true)
-    wait(50)
-setVirtualKeyDown(vkeys.VK_LSHIFT, false)
-wait(500)
-sampSendDialogResponse(216, 1, 0, nil)
-sampSendDialogResponse(217, 1, 3, nil)
-sampSendDialogResponse(221, 1, 0, "500")
-sampCloseCurrentDialogWithButton(1)
-end 
-end ]]
 
 
 
@@ -2518,63 +2316,12 @@ if poss and isKeyJustPressed(_G['VK_'..mainini.oboss.animactiv]) and isKeyCheckA
 end
 
 
---[[ 
-if musorasosat then
-    if sound then
-        addOneOffSound(0.0, 0.0, 0.0, 1084)
-        sound = false
-    end
-    if sound1 then
-        addOneOffSound(0.0, 0.0, 0.0, 1085)
-        sound1 = false
-    end
-end ]]
 
 doKeyCheck()
 
 arec()
 
---[[ if mainini.functions.extra then
-	if not isCharDead(playerPed) then cameraRestorePatch(true)
-	else cameraRestorePatch(false) end end
 
-
- if isKeyDown(189) and isKeyJustPressed(187) and isKeyCheckAvailable() then
-trigger = not trigger
-if trigger then
-mainini.functions.bott = true
---local clr = join_argb(0, 220, 20, 60)
-local clr = join_argb(0, 0, 255, 255)
-local r,g,b = 220, 20, 60
---writeMemory(health, 4, ("0xFF%06X"):format(clr), true)
---changeRadarColor(("0xFF%06X"):format(clr))
-changeCrosshairColor(("0xFF%06X"):format(clr))
-else
-mainini.functions.bott = false
-local clr1 = join_argb(0, 178, 34, 34)
-local clr = join_argb(0, 255, 255, 255)
-local r,g,b = 178, 34, 34
-writeMemory(health, 4, ("0xFF%06X"):format(clr1), true)
---changeRadarColor(("0xFF%06X"):format(clr))
-changeCrosshairColor(("0xFF%06X"):format(clr))
-end
-end ]]
-
---[[  if bott and not isCharOnAnyBike(playerPed) and not isCharDead(playerPed) then
-local int = readMemory(0xB6F3B8, 4, 0)
-int=int + 0x79C
-local intS = readMemory(int, 4, 0)
-if intS > 0
-then
-local lol = 0xB73458
-lol=lol + 34
-writeMemory(lol, 4, 255, 0)
-wait(100)
-local int = readMemory(0xB6F3B8, 4, 0)
-int=int + 0x79C
-writeMemory(int, 4, 0, 0)
-end
-end ]]
 
 
 
@@ -2596,6 +2343,7 @@ if isKeyDown(16) and isKeyJustPressed(113) and isKeyCheckAvailable() then
         printStringNow("~P~LEGAL ~G~ON", 1500, 5)
         nameTagOff()
         wh = false
+        actmentpidor = false
        -- musorasosat = false
         sound = false
         sound1 = false
@@ -2625,6 +2373,7 @@ if isKeyDown(16) and isKeyJustPressed(113) and isKeyCheckAvailable() then
         sound = false
         sound1 = false
        -- onfp = false
+       actmentpidor = false
         cameraRestorePatch(false)
         activeextra = false
        -- musora = false
@@ -2648,24 +2397,6 @@ if isKeyDown(16) and isKeyJustPressed(113) and isKeyCheckAvailable() then
     end
 end
 
---[[ if isKeyDown(16) and isKeyJustPressed(57) and isKeyCheckAvailable() then
-    musorasosat = not musorasosat
-    if musorasosat then 
-        printStyledString("MUSORA SOSAT ~G~on", 3330, 5)
-        --sampAddChatMessage('{ff4500}MUSORA SOSATb {228b22}on',-1)
-        else
-        --sampAddChatMessage('{ff4500}MUSORA SOSATb {ff0000}off',-1)
-        printStyledString("MUSORA SOSAT ~R~off", 3330, 5)
-        musoso = false
-    end
-end ]]
-
-
---[[ local _, myidanim = sampGetPlayerIdByCharHandle(playerPed)
-local animka = sampGetPlayerAnimationId(myidanim)
-if isPlayerPlaying(PLAYER_HANDLE) and animka == 1462 and isCharOnFoot(PLAYER_PED) and isKeyCheckAvailable() and not sampIsChatInputActive() then
-    if isKeyJustPressed(VK_LSHIFT) then  taskPlayAnim(PLAYER_PED, "camcrch_stay", "CAMERA", 4.0, false, false, true, false, 1) end 
-end ]]
 
 if isPlayerPlaying(PLAYER_HANDLE) and isCharOnFoot(PLAYER_PED) and isKeyCheckAvailable() then
     if isKeyJustPressed(_G['VK_'..mainini.config.sbiv]) and not captureon then  taskPlayAnim(playerPed, "HANDSUP", "PED", 4.0, false, false, false, false, 4) 
@@ -2796,12 +2527,7 @@ function LoadMarkers()
     end
     sampAddChatMessage("[{00fc76}WAXTA{FFFFFF}]: Loaded {FF0000}"..icons.markers.."{FFFFFF} icons!", -1)
 end
---[[ function LoadMarkers1()
-    for k,v in pairs(icons1.cords1) do
-        if type(v) ~= 'userdata' then mymark[#mymark+1] = addSpriteBlipForCoord(v.X, v.Y, v.Z, 25) end
-    end
-    sampAddChatMessage("[{00fc76}WAXTA{FFFFFF}]: Loaded {FF0000}"..icons1.markers1.."{FFFFFF} icons!", -1)
-end ]]
+
 
 function ReloadMarkers()
     for k,v in pairs(mymark) do
@@ -2813,7 +2539,7 @@ function ReloadMarkers()
     end
     if checkpoint ~= nil then deleteCheckpoint(checkpoint) checkpoint = nil end
 end
-
+--[[ 
 local logging = false
 function sp.onPlayerJoin(playerId, color, isNpc, nickname)
     if logging then
@@ -2828,7 +2554,8 @@ function sp.onPlayerJoin(playerId, color, isNpc, nickname)
 	end
 end)
 end
-end
+end ]]
+
 function sp.onPlayerQuit(playerId, reason)
 	if logginggh then
 		if reason == 0 then
@@ -2857,124 +2584,6 @@ function trpay()
 end
 
 
---[[ 
-
-function musora_detector()
-    --skins = Set { 175, 174, 102, 103, 104 }
-    skins = Set { 265, 266, 267, 165, 166, 280, 281, 282, 283, 284, 285, 286, 288, 300, 301, 302, 303, 304, 305, 306, 307, 309, 310, 311, 163, 164 }
-    while true do
-    wait(200) 
-    detected = false
-    
-    for k, v in pairs(getAllChars()) do
-        if doesCharExist(v) then
-            f = getCharModel(v)
-            local resultgg, jopa = sampGetPlayerIdByCharHandle(v)
-            local colorrrggg = sampGetPlayerColor(jopa) --368966908
-            if skins[f] then
-                
-
-                if resultgg and musorasosat and (colorrrggg == 23486046 or colorrrggg == 2147502591)   then   -- 2573625087 and colorrrggg == 23486046 or colorrrggg == 2147502591
-                    obideli = true
-                    detected = true
-                     local nameqqq = sampGetPlayerNickname(jopa)
-       
-        
-                   printStyledString("~B~ "..nameqqq.." ~n~~W~id: "..jopa.." ~R~lvl: "..sampGetPlayerScore(jopa), 1000, 5) --and colorrr ~= 36896690
-                    
-                end
-                    break
-                end
-            end
-        end
-        if not detected then
-            musora = false
-            obideli = false
-        end
-    end
-    if onfp then
-        lua_thread.create(function()
-            for _,vv in pairs(maintxt.pidors) do
-                local idpidra = sampGetPlayerIdByNickname(vv)
-                if idpidra ~= nil and idpidra ~= -1 and idpidra ~= false then
-                    local resfp, handle = sampGetCharHandleBySampPlayerId(idpidra)
-                    if resfp then
-                        screen_text = '~P~Пидорас ~W~'..vv..' ~R~('..idpidra..') ~Y~рядом!'
-                        printStringNow(conv(screen_text),1)
-                    end
-                end
-            end
-        end)
-    end
-end
-
-
-function musora_handle()
-    while true do
-    wait(0)
-    if musora then
-        sound = true
-        while musora do wait(1000) end
-        wait(2000)
-    end
-    if obideli then
-        sound1 = true
-        while obideli do wait(1000) end
-        wait(2000)
-    end
-    end
-end
-  
-function Set (list)
-    local set = {}
-    for _, l in ipairs(list) do set[l] = true end
-    return set
-end ]]
-
---[[ function kopat_detector()
-    skins = Setk { 155 }
-    --skins = Set { 265, 266, 267, 165, 166, 280, 281, 282, 283, 284, 285, 286, 288, 300, 301, 302, 303, 304, 305, 306, 307, 309, 310, 311, 163, 164 }
-    while true do
-    wait(200)
-    detected = false
-    
-    for k, u in pairs(getAllChars()) do
-        if doesCharExist(u) then
-            fh = getCharModel(u)
-            resultggk, jopak = sampGetPlayerIdByCharHandle(v)
-            local colorrrggg = sampGetPlayerColor(jopa) --368966908
-            if skins[fh] then
-                
-
-                if resultggk and kopathui and colorrrggg ~= 368966908  then   
-                     nameqqqk = sampGetPlayerNickname(jopak)
-       
-                    kopatt = true
-                    --printStyledString("~R~MUSOR:~B~ "..nameq.." "..colorrr, 333, 5) and colorrr ~= 368966908
-                    --printStringNow("~R~MUSOR:~B~ "..nameqqq.." ~W~("..jopa..")", 333, 5)
---[[                     renderFontDrawText(Arial1g, '{ffffff}'..cidg..'.{7CFC00} '..nameq..' {00FFFF}('..jopa..') \n', 1500, renderYg, 0xDD6622FF)
-                    renderYg = renderYg + 12
-                    cidg = cidg + 1 
-                    cidg = 1 
-                    renderYg = 330
-                    rendermusora = true
-                    renderYg = renderYg + 12
-                    cidg = cidg + 1
-
-                end
-                    break
-                end
-            end
-        end
-    end
-end
-
-  
-function Setk (list)
-    local setk = {}
-    for _, lk in ipairs(list) do setk[lk] = true end
-    return setk
-end ]]
 
 
 function join_argb(a, b, g, r)
@@ -2988,7 +2597,7 @@ end
 function onHotKey(id, keys)
 	local sKeys = tostring(table.concat(keys, " "))
 	for k, v in pairs(tBindList) do
-		if sKeys == tostring(table.concat(v.v, " ")) and isKeyCheckAvailable() then
+		if sKeys == tostring(table.concat(v.v, " ")) and isKeyCheckAvailable() and mainini.functions.binder then
 			if tostring(v.text):len() > 0 then
 				local bIsEnter = string.match(v.text, "(.)%[enter%]$") ~= nil
 				if bIsEnter then
@@ -3372,14 +2981,16 @@ function ClearChat()
 end
 
 function arec()
-    local chatstring = sampGetChatString(99)
-    if chatstring == "Server closed the connection." or chatstring == "You are banned from this server." or chatstring == "Сервер закрыл соединение." or chatstring == "Wrong server password." or chatstring == "Use /quit to exit or press ESC and select Quit Game" then
-    sampDisconnectWithReason(false)
-    wait(3000)
-    printStringNow("~B~AUTORECONNECT", 3000)
-        wait(100) -- задержка
-        sampSetGamestate(1)
-    end 
+    if mainini.functions.arecc then
+        local chatstring = sampGetChatString(99)
+        if chatstring == "Server closed the connection." or chatstring == "You are banned from this server." or chatstring == "Сервер закрыл соединение." or chatstring == "Wrong server password." or chatstring == "Use /quit to exit or press ESC and select Quit Game" then
+        sampDisconnectWithReason(false)
+        wait(3000)
+        printStringNow("~B~AUTORECONNECT", 3000)
+            wait(100) -- задержка
+            sampSetGamestate(1)
+        end 
+    end
 end 
 
 function reconnect()
@@ -3407,6 +3018,8 @@ function FishEye()
         end
     end
 end
+
+
 
 
 function dHits()
@@ -4172,48 +3785,7 @@ function rltao()
 end
 
 
---[[ function sp.onSendGiveDamage()
-    for i = 1, 10 do
-        local audio = loadAudioStream('moonloader/config/4.mp3')
-        setAudioStreamState(audio, 1)
-        setAudioStreamVolume(audio, math.floor(2))
-    end
-end
- ]]
 
-
---[[ function sp.onSendGiveDamage(playerId, damage, weapon, bodypart)
-        mainini.stats.hits = mainini.stats.hits + 1
-        inicfg.save(mainini, 'settings.ini')
-end
-
-function sp.onSendBulletSync(data)
-        mainini.stats.shots = mainini.stats.shots + 1
-        inicfg.save(mainini, 'settings.ini')
-end ]]
---[[ function sp.onSendBulletSync(data)
-    if mainini.functions.salo then
-        math.randomseed(os.clock())
-        if not salosalo then return end
-        local weap = getCurrentCharWeapon(PLAYER_PED)
-        if not getDamage(weap) then return end
-        local id, ped = getClosestPlayerFromCrosshair()
-        if id == -1 then return end
-        if math.random(1, 100) < missRatio then return end
-        if not getcond(ped) then return end
-        data.targetType = 1
-        local px, py, pz = getCharCoordinates(ped)
-        data.targetId = id
-
-        data.target = { x = px + rand(), y = py + rand(), z = pz + rand() }
-        data.center = { x = rand(), y = rand(), z = rand() }
-
-        lua_thread.create(function()
-            wait(1)
-            sampSendGiveDamage(id, getDamage(weap), weap, 3)
-        end)
-    end
-end ]]
 
 
     
@@ -4831,7 +4403,7 @@ function sp.onDisplayGameText(style, time, text)
     if text:find("%-400%$") then
         return false
     end
-    if text:find("~w~Style: ~g~Comfort") then
+    if text:find("~w~Style: ~g~Comfort") and mainini.functions.autott then
         lua_thread.create(function()
         wait(1000)
         sampSendChat("/style")
@@ -4845,7 +4417,11 @@ function sp.onDisplayGameText(style, time, text)
         return false
     end
     if text:find('You are very hungry!') then    
-        sampSendChat("/jmeat")
+        if mainini.autoeda.eda then
+            sampSendChat(mainini.autoeda.comeda)
+        elseif mainini.autoeda.meatbag then
+            sampSendChat("/meatbag")
+        end
         return false
     end
 if text:find('Attention') then
@@ -4857,15 +4433,6 @@ end
 if text:find('pursuit') then
     return false
 end
---[[ 	if text:find ('stone %+ (%d+)') then
-		stone1=text:match('stone %+ (%d+)')
-		stone = stone+tonumber(stone1)
-		
-	end
-	if text:find ('metal %+ (%d+)') then
-		metal1=text:match('metal %+ (%d+)')
-		metal = metal+tonumber(metal1)
-	end	 ]]
 end
 
 function lAA()
@@ -5498,9 +5065,9 @@ function sp.onSendCommand(cmd)
     end
     if cmd:find('/probiv') then
         lua_thread.create(function()
-            sampSendChat("/id Tedj_Nuestra")
+            sampSendChat("/id "..sampGetPlayerNickname(select(2,sampGetPlayerIdByCharHandle(playerPed))))
             wait(1000)
-            sampSendChat("/cl Tedj_Nuestra")
+            sampSendChat("/cl "..sampGetPlayerNickname(select(2,sampGetPlayerIdByCharHandle(playerPed))))
             wait(1000)
             setVirtualKeyDown(116, true)
             wait(4000)
@@ -5610,6 +5177,20 @@ function sp.onSendCommand(cmd)
 		end
         return false
     end ]]
+    if cmd:find('/chatvip') then
+        mainini.functions.chatvipka = not mainini.functions.chatvipka
+		if mainini.functions.chatvipka then 
+            sampAddChatMessage('Раздельный VIP-chat {228b22}on',-1)
+            
+            --notf.addNotification(string.format("%s \nРаздельный VIP-chat\nВключен" , os.date()), 10)
+            inicfg.save(mainini, 'bd') 
+		else
+            sampAddChatMessage('Раздельный VIP-chat {ff0000}off',-1)
+            --notf.addNotification(string.format("%s \nРаздельный VIP-chat\nВыключен" , os.date()), 10)
+            inicfg.save(mainini, 'bd')
+		end
+        return false
+    end
     if cmd:find('/colorchat') then
         mainini.functions.colorchat = not mainini.functions.colorchat
 		if mainini.functions.colorchat then 
@@ -6528,7 +6109,7 @@ end
 function sp.onServerMessage(color, text)
     --print(text, color)
 
-    if mainini.autoeda.legit then
+--[[     if mainini.autoeda.legit then
         if text:find('У вас нет мешка с мясом!') and color == -10270721 then
             lua_thread.create(function()
                 wait(300)
@@ -6543,7 +6124,7 @@ function sp.onServerMessage(color, text)
         lua_thread.create(function()
             sampSendChat('/meatbag')
         end)
-    end
+    end ]]
 
     if chatlog then
 		if doesFileExist(fpath) then
