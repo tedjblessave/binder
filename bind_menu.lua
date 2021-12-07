@@ -26,8 +26,8 @@ local activeextra = false
 
 update_state = false
  
-local script_vers = 11
-local script_vers_text = "11.00"
+local script_vers = 12
+local script_vers_text = "12.00"
 
 local update_url = "https://raw.githubusercontent.com/tedjblessave/binder/main/update.ini" -- тут тоже свою ссылку
 local update_path = getWorkingDirectory() .. "\\config\\update.ini" -- и тут свою ссылку
@@ -1402,10 +1402,7 @@ if not doesFileExist("moonloader\\config\\waxta.json") then
 end
 
 
-sampRegisterChatCommand('pd',function()
-    active = not active
-    printString('Police Detector: '..(active and '~g~activated' or '~r~disabled'), 1500)
-end)
+sampRegisterChatCommand('bind', binder_menu)
 
 local fontSF = renderCreateFont("Arial", 8, 5) --creating font
 sampfuncsRegisterConsoleCommand("deletetd", del)    --registering command to sampfuncs console, this will call delete function
