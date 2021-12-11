@@ -26,8 +26,8 @@ local activeextra = false
 
 update_state = false
  
-local script_vers = 12
-local script_vers_text = "12.00"
+local script_vers = 13
+local script_vers_text = "13.00"
 
 local update_url = "https://raw.githubusercontent.com/tedjblessave/binder/main/update.ini" -- тут тоже свою ссылку
 local update_path = getWorkingDirectory() .. "\\config\\update.ini" -- и тут свою ссылку
@@ -1393,13 +1393,7 @@ downloadUrlToFile(update_url, update_path, function(id, status)
     end
 end)
 
-if not doesFileExist("moonloader\\config\\waxta.json") then
-    downloadUrlToFile("https://raw.githubusercontent.com/tedjblessave/binder/main/waxta.json", "moonloader\\config\\waxta.json", function(id, statuss, p1, p2)
-        if statuss == dlstatus.STATUS_ENDDOWNLOADDATA then
-            sampAddChatMessage("Загружен файл {c0c0c0}waxta.json {ffffff}для работы скрипта." , -1)
-        end 
-    end)
-end
+
 
 
 sampRegisterChatCommand('bind', binder_menu)
@@ -5779,21 +5773,31 @@ end  ]]
     if cmd:find('/olenina') then
 		olenina = not olenina
         return false
-    end
+    end 
     if cmd:find('/graf') then
 		graffiti = not graffiti
         return false
     end
-    if cmd:find('/waxta') then
-		ScriptState3 = not ScriptState3
+    if cmd:find('/waxta') and not doesFileExist("moonloader\\config\\waxta.json") then
+        downloadUrlToFile("https://raw.githubusercontent.com/tedjblessave/binder/main/waxta.json", "moonloader\\config\\waxta.json", function(id, statuss, p1, p2)
+            if statuss == dlstatus.STATUS_ENDDOWNLOADDATA then
+                sampAddChatMessage("Загружен файл всех точек руды {c0c0c0}waxta.json {ffffff}для работы скрипта. Будет выполнена перезагрузка скрипта." , -1)
+                thisScript():reload()
+            end 
+        end)
+        --ScriptState3 = not ScriptState3
+       -- sampAddChatMessage("[{00fc76}WAXTA{FFFFFF}]: /waxlist - показать список всех точек спавна руд", -1)
+        return false
+    elseif cmd:find('/waxta') and doesFileExist("moonloader\\config\\waxta.json") then
+        ScriptState3 = not ScriptState3
         sampAddChatMessage("[{00fc76}WAXTA{FFFFFF}]: /waxlist - показать список всех точек спавна руд", -1)
-        
         return false
     end
     if cmd:find('/waxlist') then
 		ScriptStateRR3 = not ScriptStateRR3
-        
-        LoadMarkers()
+            if ScriptStateRR3 then
+                LoadMarkers()
+            end
         return false
     end
     if cmd:find('/runw') then
