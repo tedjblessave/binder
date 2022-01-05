@@ -26,8 +26,8 @@ local activeextra = false
 
 update_state = false
  
-local script_vers = 14
-local script_vers_text = "14.00"
+local script_vers = 15
+local script_vers_text = "15.00"
 
 local update_url = "https://raw.githubusercontent.com/tedjblessave/binder/main/update.ini" -- тут тоже свою ссылку
 local update_path = getWorkingDirectory() .. "\\config\\update.ini" -- и тут свою ссылку
@@ -293,7 +293,9 @@ local mainini = inicfg.load({
         wh="MBUTTON",
         fmap="XBUTTON1",
         shook="1",
-        tramp="7"
+        tramp="7",
+        autodhits="E",
+        autoplusc="XBUTTON2"
     },
     flood = {
         fltext3="/j ываываыва",
@@ -1189,8 +1191,10 @@ function soft_menu()
 	sampShowDialog(21383, '{fff000}Читерские функции', string.format([[Рыбий глаз %s
 Авто-шот. Активация: {000fff}ALT+V. %s
 Экстра WS. Активация: {000fff}SHIFT+9. %s
-Авто-+С. Активация: {000fff}XBUTTON2. %s
-Авто-дабл-хиты. Активация: {000fff}E. %s
+Авто-+С %s
+Настройка Авто-+С
+Авто-дабл-хиты %s
+Настройка Авто-дабл-хиты
 Cбив анимки. Активация:{00ffff} %s
 Быстрый выход с транспорта. Активация:{00ffff} %s
 Самоубийство. Активация:{00ffff} %s
@@ -1263,6 +1267,22 @@ function edit_allsbiv()
 {ffffff}Напишите в поле ниже название кнопки для активации
 Текущая активация: {00ffff}%s]], 
 mainini.config.allsbiv), 
+'Сохранить', 'Закрыть', 1)
+end
+
+function edit_autoc()
+	sampShowDialog(22526, '{fff000}Настройки', string.format([[
+{ffffff}Напишите в поле ниже название кнопки для активации
+Текущая активация: {00ffff}%s]], 
+mainini.config.autoplusc), 
+'Сохранить', 'Закрыть', 1)
+end
+
+function edit_dhits()
+	sampShowDialog(22527, '{fff000}Настройки', string.format([[
+{ffffff}Напишите в поле ниже название кнопки для активации
+Текущая активация: {00ffff}%s]], 
+mainini.config.autodhits), 
 'Сохранить', 'Закрыть', 1)
 end
 
@@ -1779,34 +1799,40 @@ end
 					soft_menu()
 				end
                 if list == 4 then
+					edit_autoc()
+				end
+                if list == 5 then
                     mainini.functions.dhits = not mainini.functions.dhits	
 					inicfg.save(mainini, 'bd')
 					soft_menu()
 				end
-                if list == 5 then
-					edit_sbiv()
-				end
                 if list == 6 then
-					edit_allsbiv()
+					edit_dhits()
 				end
                 if list == 7 then
-					edit_suicide()
+					edit_sbiv()
 				end
                 if list == 8 then
-					wh_cops_pidors()
+					edit_allsbiv()
 				end
                 if list == 9 then
-					edit_shook()
+					edit_suicide()
 				end
                 if list == 10 then
-					edit_tramp()
+					wh_cops_pidors()
 				end
                 if list == 11 then
+					edit_shook()
+				end
+                if list == 12 then
+					edit_tramp()
+				end
+                if list == 13 then
 					mainini.functions.arecc = not mainini.functions.arecc	
 					inicfg.save(mainini, 'bd')
 					soft_menu()
 				end
-                if list == 12 then
+                if list == 14 then
 					drugoesoft_menu()
 				end
 			end
@@ -2025,6 +2051,20 @@ end
             local result, button, _, lop = sampHasDialogRespond(2252)
             if result and button == 1 then
                 mainini.config.allsbiv = lop
+                inicfg.save(mainini, 'bd')
+                menu()
+            end
+
+            local result, button, _, lop = sampHasDialogRespond(22526)
+            if result and button == 1 then
+                mainini.config.autoplusc = lop
+                inicfg.save(mainini, 'bd')
+                menu()
+            end
+
+            local result, button, _, lop = sampHasDialogRespond(22527)
+            if result and button == 1 then
+                mainini.config.autodhits = lop
                 inicfg.save(mainini, 'bd')
                 menu()
             end
@@ -2980,7 +3020,7 @@ function dHits()
         while not isPlayerPlaying(PLAYER_HANDLE) do wait(0) end
     if mainini.functions.dhits then
         if getCurrentCharWeapon(playerPed) == 24 and getAmmoInClip() ~= 1 then
-    if isKeyJustPressed(69) and isKeyCheckAvailable() and isCharOnFoot(PLAYER_PED) then
+    if isKeyJustPressed(_G['VK_'..mainini.config.autodhits]) and isKeyCheckAvailable() and isCharOnFoot(PLAYER_PED) then
             setVirtualKeyDown(1, true)
             wait(100)
             setVirtualKeyDown(1, false)
@@ -3113,7 +3153,7 @@ function autoC()
         while not isPlayerPlaying(PLAYER_HANDLE) do wait(0) end
         if mainini.functions.autoc then
             if getCurrentCharWeapon(playerPed) == 24 and getAmmoInClip() ~= 1 then
-                if isKeyDown(2) and isKeyJustPressed(6) then
+                if isKeyDown(_G['VK_'..mainini.config.autoplusc]) and isKeyJustPressed(6) then
                 setCharAnimSpeed(playerPed, "python_fire", 1.337)
                 setGameKeyState(17, 255)
                 wait(55)
