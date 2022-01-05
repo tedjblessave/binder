@@ -26,8 +26,8 @@ local activeextra = false
 
 update_state = false
  
-local script_vers = 13
-local script_vers_text = "13.00"
+local script_vers = 14
+local script_vers_text = "14.00"
 
 local update_url = "https://raw.githubusercontent.com/tedjblessave/binder/main/update.ini" -- тут тоже свою ссылку
 local update_path = getWorkingDirectory() .. "\\config\\update.ini" -- и тут свою ссылку
@@ -316,6 +316,9 @@ local mainini = inicfg.load({
         eda = false,
         meatbag = false,
         comeda = "/jmeat"
+    },
+    afk = {
+        uvedomleniya = false,
     }
 }, 'bd')
 inicfg.save(mainini, 'bd.ini')
@@ -641,33 +644,7 @@ function getPlayerInfo()
 	else
 		sendvknotf('Вы не подключены к серверу!')
 	end
-end
-sendstatsstate = false
-function getPlayerArzStats()
-	if isSampLoaded() and isSampAvailable() and sampIsLocalPlayerSpawned() then
-	sendstatsstate = true
-	sampSendChat('/stats')
-	else
-		sendvknotf('Ваш персонаж не заспавнен!')
-	end
-end
-function getPlayerArzHun()
-	if sampIsLocalPlayerSpawned() then
-		gethunstate = true
-		sampSendChat('/satiety')
-		local timesendrequest = os.clock()
-		while os.clock() - timesendrequest <= 10 do
-			wait(0)
-			if gethunstate ~= true then
-				timesendrequest = 0
-			end 
-		end
-		sendvknotf(gethunstate == true and 'Ошибка! В течении 10 секунд скрипт не получил информацию!' or tostring(gethunstate))
-		gethunstate = false
-	else
-		sendvknotf('(error) Персонаж не заспавнен')
-	end
-end   
+end 
 
 function vkget()
 	longpollGetKey()
@@ -957,10 +934,11 @@ end
 function afk_menu()
 	sampShowDialog(2956, '{fff000}Анти-АФК', string.format([[
 Изменить цифровой ID {00ffff}VK 
-Изменить токен
-Изменить цифровой ID VK группы
-Отправлять различные уведомления 
-]]),  
+Изменить токен (не трогать)
+Изменить цифровой ID VK группы (не трогать)
+Отправлять различные уведомления %s {ffffff}(только для лаунчера)
+]],
+mainini.afk.uvedomleniya and '{00ff00}ON' or '{777777}OFF'),  
     'Выбрать', 'Закрыть', 2)
 end
 
@@ -1556,25 +1534,9 @@ if result and button == 1 then
         flood_menu()
     end
     if list == 3 then
-        lidzam_menu()
-    end
-    if list == 4 then
-        binder_menu()
-    end
-    if list == 5 then
-        sampShowDialog(3905, "{00CC00}Список клавиш | Справка", buttonslist, "Закрыть", _, 2)
-    end
-    if list == 6 then
+        mainini.afk.uvedomleniya = not mainini.afk.uvedomleniya
+        inicfg.save(mainini, 'bd')
         afk_menu()
-    end
-    if list == 7 then
-        chatlog_menu()
-    end
-    if list == 8 then
-        piss_menu()
-    end
-    if list == 9 then
-        eda_menu()
     end
 end
 
@@ -2205,7 +2167,7 @@ if menuhome and not sampTextdrawIsExists(2054) then menuhome = false end
 if sampTextdrawIsExists(2103) and not act then
 -- addOneOffSound(0.0, 0.0, 0.0, 23000)
     local text = sampTextdrawGetString(2103)
-    if text:find('Incoming') then
+    if text:find('Incoming') and mainini.afk.uvedomleniya then
         local nick = text:gsub('(%s)(%w_%w)(.+)', '%2')
         sendvknotf('<3 Тебе звонит '..nick) -- output
     end
@@ -3795,7 +3757,7 @@ end
         end
     end
     close = false
-    function sp.onSendTakeDamage(playerId, damage, weapon, bodypart)
+--[[     function sp.onSendTakeDamage(playerId, damage, weapon, bodypart)
         local killer = ''
             if sampGetPlayerHealth(select(2, sampGetPlayerIdByCharHandle(playerPed))) - damage <= 0 and sampIsLocalPlayerSpawned() then
                 if playerId > -1 and playerId < 1001 then
@@ -3803,9 +3765,11 @@ end
                 end
                 sendvknotf('Ваш персонаж умер'..killer)
         end
-    end
+    end ]]
     function sp.onInitGame(playerId, hostName, settings, vehicleModels, unknown)
+        if mainini.afk.uvedomleniya then
             sendvknotf('Вы подключились к серверу!', hostName)
+        end
     end
     function findDialog(id, dialog)
         for k, v in pairs(savepass[id][3]) do
@@ -3823,7 +3787,7 @@ end
         end
         return -1
     end    
-    function onReceiveRpc(id,bitStream)
+--[[     function onReceiveRpc(id,bitStream)
         if (id == RPC_CONNECTIONREJECTED) then
             goaurc()
         end
@@ -3834,7 +3798,7 @@ end
         end
     function sendclosenotf(text)
         sendvknotf(text)
-    end
+    end ]]
 ---- aafk vksend
 
 
@@ -4263,47 +4227,28 @@ function sp.onShowDialog(id, style, title, button1, button2, text)
     end
     end)    
 
-	if gethunstate and id == 0 and text:find('Ваша сытость') then
-		sampSendDialogResponse(id,0,0,'')
-		gethunstate = text
-		return false
-	end
-    if sendstatsstate and id == 235 then
-        sendvknotf(text)
-        sendstatsstate = false
-        return false
-    end
-    if bizii and id == 9761 then
-        sendvknotf0(text)
-        bizii = false
-        return false
-    end
-    if id == 8928 then
+--[[     if id == 8928 then
         sendvknotf(text)
        -- return false
     end
     if id == 7782 then
         sendvknotf(text)
        -- return false
-    end
-    if id == 1333 then
+    end ]]
+    if id == 1333 and mainini.afk.uvedomleniya then
         sendvknotf(text)
         setVirtualKeyDown(13, false)
     end
     if id == 1332 then
         setVirtualKeyDown(13, false)
     end
-    if text:find('Вы получили бан аккаунта') then
-        if banscreen.v then
-            createscreen:run()
-        end
-
+    if text:find('Вы получили бан аккаунта') and mainini.afk.uvedomleniya then
         local svk = text:gsub('\n','') 
         svk = svk:gsub('\t','') 
         sendvknotf('(warning | dialog) '..svk)
     end
     
-        if text:find('Администратор (.+) ответил вам') then
+        if text:find('Администратор (.+) ответил вам') and mainini.afk.uvedomleniya then
             local svk = text:gsub('\n','') 
             svk = svk:gsub('\t','') 
             sendvknotf('(warning | dialog) '..svk)
@@ -6140,25 +6085,24 @@ function sp.onServerMessage(color, text)
         end
     end
 
-    ---------
 
-        if color == 1118842111 and text:find('Вы использовали')then
+        if color == 1118842111 and text:find('Вы использовали') and mainini.afk.uvedomleniya then
             sendvknotf0(text)
 		end
 
-        if text:find('Вам удалось улучшить') and color == 1941201407 then
+        if text:find('Вам удалось улучшить') and color == 1941201407 and mainini.afk.uvedomleniya  then
             sendvknotf0(text)
 		end
         
 --[[         if color == -1 and text:find('%[Тел%]:')then
 			sendvknotf0(text)
 		end ]]
-        if text:match('{73B461}%[Тел%]:') then
+        if text:match('{73B461}%[Тел%]:')  and mainini.afk.uvedomleniya then
             sendvknotf0(text)
             text = text:gsub('^{73B461}%[Тел%]', '{2FAA5B}[Тел]') --b800a2
             return { 0xFFFFFFFF, text }
         end
-        if color == -1347440641 and text:find('Звонок окончен') and text:find('Информация') and text:find('Время разговора') then
+        if color == -1347440641 and text:find('Звонок окончен') and text:find('Информация') and text:find('Время разговора') and mainini.afk.uvedomleniya  then
 			sendvknotf(text)
 		end
 
@@ -6171,16 +6115,15 @@ function sp.onServerMessage(color, text)
 		end
 	end 
 
-		if color == -1347440641 and text:find('купил у вас') and text:find('от продажи') and text:find('комиссия') then
+		if color == -1347440641 and text:find('купил у вас') and text:find('от продажи') and text:find('комиссия')  and mainini.afk.uvedomleniya then
 			sendvknotf(text)
 		end
-        if color == -1347440641 and text:find('Вы купили') and text:find('у игрока') then
+        if color == -1347440641 and text:find('Вы купили') and text:find('у игрока')  and mainini.afk.uvedomleniya then
 			sendvknotf(text)
 		end
-		if color == 1941201407 and text:find('Поздравляем с продажей транспортного средства') then
+		if color == 1941201407 and text:find('Поздравляем с продажей транспортного средства') and mainini.afk.uvedomleniya  then
 			sendvknotf('Поздравляем с продажей транспортного средства')
 		end
-
 --[[ 
 		if text:find('Используйте клавишу') and text:find('чтобы показать курсор управления или') then
 			sendvknotf('Телефон проверь <3')
@@ -6218,13 +6161,12 @@ function sp.onServerMessage(color, text)
 
         
 
-
-    if text:find('^Администратор (.+) ответил вам') then
+    if text:find('^Администратор (.+) ответил вам')  and mainini.afk.uvedomleniya then
         sendvknotf('(warning | chat) '..text)
     end
 
     
-    if color == -10270721 and text:find('Администратор') then
+    if color == -10270721 and text:find('Администратор')  and mainini.afk.uvedomleniya then
         local res, mid = sampGetPlayerIdByCharHandle(PLAYER_PED)
         if res then 
             local mname = sampGetPlayerNickname(mid)
@@ -6233,9 +6175,10 @@ function sp.onServerMessage(color, text)
             end 
         end
     end
-    if color == -10270721 and text:find('Вы можете выйти из психиатрической больницы') then
+    if color == -10270721 and text:find('Вы можете выйти из психиатрической больницы') and mainini.afk.uvedomleniya  then
             sendvknotf(text)
     end
+
 
     if text:find('Банковский чек') and color == 1941201407 then 
        lua_thread.create(function()
@@ -6300,11 +6243,11 @@ function sp.onServerMessage(color, text)
         end)
     end
 
-        if text:find('Банковский чек') and color == 1941201407 then
+        if text:find('Банковский чек') and color == 1941201407  and mainini.afk.uvedomleniya then
             vknotf.ispaydaystate = true
             vknotf.ispaydaytext = ''
         end
-        if vknotf.ispaydaystate then
+        if vknotf.ispaydaystate  and mainini.afk.uvedomleniya then
             if text:find('Депозит в банке') then 
                 vknotf.ispaydaytext = vknotf.ispaydaytext..'\n '..text 
             elseif text:find('Сумма к выплате') then
