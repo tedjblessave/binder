@@ -26,8 +26,8 @@ local activeextra = false
 
 update_state = false
  
-local script_vers = 15
-local script_vers_text = "15.00"
+local script_vers = 16
+local script_vers_text = "16.00"
 
 local update_url = "https://raw.githubusercontent.com/tedjblessave/binder/main/update.ini" -- тут тоже свою ссылку
 local update_path = getWorkingDirectory() .. "\\config\\update.ini" -- и тут свою ссылку
