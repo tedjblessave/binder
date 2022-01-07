@@ -737,10 +737,10 @@ local checked_test = false
 local checked_test2 = false
 local checked_test3 = false
 local checked_test4 = false
-local zadervka = 1
-local zadervka1 = 1
-local zadervka2 = 1
-local zadervka3 = 1 
+local zadervka = 5
+local zadervka1 = 5
+local zadervka2 = 5
+local zadervka3 = 5 
 
 local Counter = 0
 
@@ -1434,7 +1434,7 @@ proops = lua_thread.create(proops)
 
 
 rltao = lua_thread.create(rltao)
-ifixx = lua_thread.create(ifixx)
+--ifixx = lua_thread.create(ifixx)
 
 camhack = lua_thread.create(camhack)
 
@@ -3153,7 +3153,7 @@ function autoC()
         while not isPlayerPlaying(PLAYER_HANDLE) do wait(0) end
         if mainini.functions.autoc then
             if getCurrentCharWeapon(playerPed) == 24 and getAmmoInClip() ~= 1 then
-                if isKeyDown(_G['VK_'..mainini.config.autoplusc]) and isKeyJustPressed(6) then
+                if isKeyDown(2) and isKeyJustPressed(_G['VK_'..mainini.config.autoplusc]) then
                 setCharAnimSpeed(playerPed, "python_fire", 1.337)
                 setGameKeyState(17, 255)
                 wait(55)
@@ -3731,24 +3731,30 @@ function sp.onPlayerChatBubble(id, col, dist, dur, msg)
 		return {id, col, 1488, dur, msg}
 	end
 end
-function ifixx()
-    while true do wait(501*1140)
+--[[ function ifixx()
+    while true do wait(400*1000)
         if activrsdf then
             lua_thread.create(function() wait(0)
                 fix = true
                 sampSendChat("/donate")
                 wait(3000)
                 fix = false
+               -- sampAddChatMessage("inv fix", -1)
+                sendvknotf0("inv fix")
             end)
         end
     end
-end
+end ]]
 function rltao()
 	while true do wait(0)
         while not isPlayerPlaying(PLAYER_HANDLE) do wait(0) end
         if checked_test then
             sampSendClickTextdraw(65535)
             wait(355)
+            fix = true
+            sampSendChat("/donate")
+            wait(3000)
+            fix = false
             active = true
             sampSendChat("/invent")
             wait(zadervka*60000)
@@ -3756,6 +3762,10 @@ function rltao()
           if checked_test2 then
             sampSendClickTextdraw(65535)
             wait(355)
+            fix = true
+            sampSendChat("/donate")
+            wait(3000)
+            fix = false
             active1 = true
             sampSendChat("/invent")
             wait(zadervka1*60000)
@@ -3763,6 +3773,10 @@ function rltao()
           if checked_test3 then
             sampSendClickTextdraw(65535)
             wait(355)
+            fix = true
+            sampSendChat("/donate")
+            wait(3000)
+            fix = false
             active2 = true
             sampSendChat("/invent")
             wait(zadervka2*60000)
@@ -3770,6 +3784,10 @@ function rltao()
           if checked_test4 then
             sampSendClickTextdraw(65535)
             wait(355)
+            fix = true
+            sampSendChat("/donate")
+            wait(3000)
+            fix = false
             active3 = true
             sampSendChat("/invent")
             wait(zadervka3*60000)
@@ -4176,6 +4194,7 @@ function sp.onShowDialog(id, style, title, button1, button2, text)
         
     --notf.addNotification(string.format("%s \ninventory fixed!" , os.date()), 10)
 		return false
+        --fix = false
 	end
     if id == 2 then
         if mainini.helper.password ~= "хуйпизда" then
@@ -4916,7 +4935,7 @@ function sp.onSendCommand(cmd)
             checked_test2 = true
             checked_test3 = true
             checked_test4 = true
-            activrsdf = true
+            --activrsdf = true
             else
             sendvknotf0("Прокрутка рулеток и фикс инв выкл")
             sampAddChatMessage("{ffffff}Прокрутка рулеток и фикс инв {ff0000}выкл",-1)
@@ -4925,7 +4944,7 @@ function sp.onSendCommand(cmd)
             checked_test2 = false
             checked_test3 = false
             checked_test4 = false
-            activrsdf = false
+            --activrsdf = false
         end
         return false
     end
