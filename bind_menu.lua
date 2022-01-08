@@ -14,7 +14,7 @@ local wm = require 'lib.windows.message'
 local rkeys = require 'rkeys'
 encoding.default = 'CP1251'
 u8 = encoding.UTF8
-local poss = false
+local poss = false 
 
 local captureon = false
 
@@ -22,12 +22,12 @@ local fixbike = false
 
 local fontvip = renderCreateFont("Arial", 10, 9)
 
-local activeextra = false
+local activeextra = false 
 
-update_state = false
+update_state = false 
  
-local script_vers = 16
-local script_vers_text = "16.00"
+local script_vers = 17
+local script_vers_text = "17.00"
 
 local update_url = "https://raw.githubusercontent.com/tedjblessave/binder/main/update.ini" -- тут тоже свою ссылку
 local update_path = getWorkingDirectory() .. "\\config\\update.ini" -- и тут свою ссылку
@@ -278,7 +278,8 @@ local mainini = inicfg.load({
         activepidor=true,
         binder = false,
         autott = false,
-        arecc = false
+        arecc = false,
+        famkv = false
     },
     lidzam = { 
         devyatka = false,
@@ -1174,7 +1175,8 @@ function nosoft_menu()
 Авто-ТвинТурбо %s
 Изменить пароль для авто-логина
 Изменить пин-код для банка
-{DAA520}Остальной функционал]], 
+{DAA520}Остальной функционал
+Уведомлять семью каждый пейдей об оплате фам.квартиры %s]], 
 	mainini.functions.hphud and '{00ff00}ON' or '{777777}OFF', 
 	mainini.functions.dotmoney and '{00ff00}ON' or '{777777}OFF',
     mainini.functions.fastmap and '{00ff00}ON' or '{777777}OFF',
@@ -1183,7 +1185,8 @@ function nosoft_menu()
     mainini.functions.chatvipka and '{00ff00}ON' or '{777777}OFF',
     mainini.functions.offfrachat and '{777777}OFF' or '{00ff00}ON',
     mainini.functions.offrabchat and '{777777}OFF' or '{00ff00}ON',
-    mainini.functions.autott and '{00ff00}ON' or '{777777}OFF'),
+    mainini.functions.autott and '{00ff00}ON' or '{777777}OFF',
+    mainini.functions.famkv and '{00ff00}ON' or '{777777}OFF'),
     'Выбрать', 'Закрыть', 2)
 end
 
@@ -1891,6 +1894,11 @@ end
                 if list == 11 then
                     drugoenosoft_menu()
                 end
+                if list == 12 then
+                    mainini.functions.famkv = not mainini.functions.famkv	
+					inicfg.save(mainini, 'bd')
+					nosoft_menu()
+				end
 			end
 
             
@@ -4196,6 +4204,11 @@ function sp.onShowDialog(id, style, title, button1, button2, text)
 		return false
         --fix = false
 	end
+    if text:find("Вы были кикнуты за подозрение") and mainini.afk.uvedomleniya then
+        sendvknotf(text)
+	--return false
+        --fix = false
+	end
     if id == 2 then
         if mainini.helper.password ~= "хуйпизда" then
             sampSendDialogResponse(id, 1, _, mainini.helper.password)
@@ -4286,14 +4299,14 @@ function sp.onShowDialog(id, style, title, button1, button2, text)
     end
     end)    
 
---[[     if id == 8928 then
+      if id == 8928 and mainini.afk.uvedomleniya then
         sendvknotf(text)
        -- return false
     end
-    if id == 7782 then
+    if id == 7782 and mainini.afk.uvedomleniya then
         sendvknotf(text)
        -- return false
-    end ]]
+    end
     if id == 1333 and mainini.afk.uvedomleniya then
         sendvknotf(text)
         setVirtualKeyDown(13, false)
@@ -6112,7 +6125,11 @@ function conv(text)
 end
 
 function sp.onServerMessage(color, text)
-    --print(text, color)
+    print(text, color)
+
+    if text:find('Член семьи') and text:find('в счёт оплату') and color == -1178486529 and mainini.afk.uvedomleniya then
+        sendvknotf0(text..' <3')
+    end
 
 --[[     if mainini.autoeda.legit then
         if text:find('У вас нет мешка с мясом!') and color == -10270721 then
@@ -6239,9 +6256,12 @@ function sp.onServerMessage(color, text)
     end
 
 
-    if text:find('Банковский чек') and color == 1941201407 then 
+    if text:find('Банковский чек')  and color == 1941201407 then 
        lua_thread.create(function()
         wait(10*1000)
+        if mainini.functions.famkv then
+        sampSendChat('/fam [notf.] Мужики и девахи, оплачивайте налоги за фам.квартиру! (/fammenu - семейная квартира)')
+        end
         sampAddChatMessage('{ffffff}Не забывай оплачивать налоги за {ff4500}дома, бизнесы, фам.кв{ffffff}!', -1)      
         wait(600*1000)
         sampAddChatMessage('{ffffff}Не забывай оплачивать налоги за {ff4500}дома, бизнесы, фам.кв{ffffff}!', -1)    
