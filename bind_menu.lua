@@ -1405,7 +1405,7 @@ downloadUrlToFile(update_url, update_path, function(id, status)
     if status == dlstatus.STATUS_ENDDOWNLOADDATA then
         updateini = inicfg.load(nil, update_path)
         if tonumber(updateini.info.vers) > script_vers then
-            sampAddChatMessage("Есть обновление! Версия за " .. updateini.info.vers_text.. " число. {c0c0c0}Обновить: {ff4500}/ub", -1)
+            sampAddChatMessage("Есть обновление! Версия за {FA8072}" .. updateini.info.vers_text.. " {ffffff}число. {c0c0c0}Обновить: {ff4500}/ub", -1)
             update_state = true
         end
         --os.remove(update_path)
