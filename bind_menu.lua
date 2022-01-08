@@ -6125,7 +6125,7 @@ function conv(text)
 end
 
 function sp.onServerMessage(color, text)
-    print(text, color)
+   -- print(text, color)
 
     if text:find('„лен семьи') and text:find('в счЄт оплату') and color == -1178486529 and mainini.afk.uvedomleniya then
         sendvknotf0(text..' <3')
