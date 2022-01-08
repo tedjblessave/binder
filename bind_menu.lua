@@ -6530,7 +6530,7 @@ function sp.onServerMessage(color, text)
                     end
                 end
 
-                if text:find('Администратор') then
+                if text:find('Администратор') or text:find('Куратор') then
                     if color == -10270721 then -- действия FF6347FF
                         return { 0xb22222ff, text }
                     elseif color == -2686721 then -- /ao FFD700FF
