@@ -6186,7 +6186,7 @@ function sp.onServerMessage(color, text)
 		sendvknotf0(text)
 	end 
     if not vknotf.chatf then 
-        if text:find('%[Семья') or text:find('%[Альянс ') then
+        if text:find('%[Семья') or text:find('%[Альянс ') or text:find('%[Новости Семьи%]') then
 			sendvknotf0(text)
 		end
 	end 
