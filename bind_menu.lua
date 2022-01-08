@@ -26,8 +26,8 @@ local activeextra = false
 
 update_state = false 
  
-local script_vers = 17
-local script_vers_text = "17.00"
+local script_vers = 20
+local script_vers_text = "08.01.2022"
 
 local update_url = "https://raw.githubusercontent.com/tedjblessave/binder/main/update.ini" -- тут тоже свою ссылку
 local update_path = getWorkingDirectory() .. "\\config\\update.ini" -- и тут свою ссылку
@@ -303,8 +303,12 @@ local mainini = inicfg.load({
         flwait2="180",
         flwait1="180",
         flwait3="15",
+        flwait4="180",
+        flwait5="10",
         fltext1="/vr Набор активных гетто-игроков в закрытую full семью nuestra. 18+, 60+fps fullHD. vk: @blessave",
-        fltext2="/vr выывава"
+        fltext2="/vr выывава",
+        fltext4="/vr выывава",
+        fltext5="/vr выывава"
     },
     oboss = {
         piss1 = false,
@@ -354,6 +358,8 @@ local locked = false
 floodon1 = false
 floodon2 = false
 floodon3 = false
+floodon4 = false
+floodon5 = false
 
 naboron = false
 
@@ -1050,6 +1056,12 @@ Flood 2 %s
 {7FFFD4}%s
 Flood 3 %s
 {C71585}%s сек.
+{7FFFD4}%s
+Flood 4 %s
+{C71585}%s сек.
+{7FFFD4}%s
+Flood 5 %s
+{C71585}%s сек.
 {7FFFD4}%s]], 
     floodon1 and '{00ff00}ON' or '{777777}OFF', 
     mainini.flood.flwait1,
@@ -1059,7 +1071,13 @@ Flood 3 %s
     mainini.flood.fltext2, 
     floodon3 and '{00ff00}ON' or '{777777}OFF', 
     mainini.flood.flwait3,
-    mainini.flood.fltext3),
+    mainini.flood.fltext3, 
+    floodon4 and '{00ff00}ON' or '{777777}OFF', 
+    mainini.flood.flwait4,
+    mainini.flood.fltext4, 
+    floodon5 and '{00ff00}ON' or '{777777}OFF', 
+    mainini.flood.flwait5,
+    mainini.flood.fltext5),
         'Выбрать', 'Закрыть', 2)
 end
 
@@ -1387,7 +1405,7 @@ downloadUrlToFile(update_url, update_path, function(id, status)
     if status == dlstatus.STATUS_ENDDOWNLOADDATA then
         updateini = inicfg.load(nil, update_path)
         if tonumber(updateini.info.vers) > script_vers then
-            sampAddChatMessage("Есть обновление! Версия: " .. updateini.info.vers_text.. ". {c0c0c0}Обновить: {ff4500}/ub", -1)
+            sampAddChatMessage("Есть обновление! Версия за " .. updateini.info.vers_text.. " число. {c0c0c0}Обновить: {ff4500}/ub", -1)
             update_state = true
         end
         --os.remove(update_path)
@@ -1777,6 +1795,54 @@ end
                         mainini.flood.fltext3), 
                         'Сохранить', 'Закрыть', 1)
                 end
+                if list == 9 then
+                    floodon4 = not floodon4
+                    if floodon4 then 
+                        floodka4 = lua_thread.create(flood4) 
+                    else
+                        lua_thread.terminate(floodka4) 
+                    end
+                    flood_menu()
+                end
+                if list == 10 then
+                    sampShowDialog(27885, '{fff000}Настройки', string.format([[
+{ffffff}Напишите количество секунд для задержки
+Текущая задержка: {F08080}%s сек.]], 
+                        mainini.flood.flwait4), 
+                        'Сохранить', 'Закрыть', 1)
+                end
+                if list == 11 then
+                    sampShowDialog(27886, '{fff000}Настройки', string.format([[
+{ffffff}Введите текст для флуда
+Текущий текст:
+{20B2AA}%s]], 
+                        mainini.flood.fltext4), 
+                        'Сохранить', 'Закрыть', 1)
+                end
+                if list == 12 then
+                    floodon5 = not floodon5
+                    if floodon5 then 
+                        floodka5 = lua_thread.create(flood5) 
+                    else
+                        lua_thread.terminate(floodka5) 
+                    end
+                    flood_menu()
+                end
+                if list == 13 then
+                    sampShowDialog(27895, '{fff000}Настройки', string.format([[
+{ffffff}Напишите количество секунд для задержки
+Текущая задержка: {F08080}%s сек.]], 
+                        mainini.flood.flwait5), 
+                        'Сохранить', 'Закрыть', 1)
+                end
+                if list == 14 then
+                    sampShowDialog(27896, '{fff000}Настройки', string.format([[
+{ffffff}Введите текст для флуда
+Текущий текст:
+{20B2AA}%s]], 
+                        mainini.flood.fltext5), 
+                        'Сохранить', 'Закрыть', 1)
+                end
 			end
 
             local result, button, list, _ = sampHasDialogRespond(21383)
@@ -2038,6 +2104,34 @@ end
             local result, button, _, lop = sampHasDialogRespond(27876)
             if result and button == 1 then
                 mainini.flood.fltext3 = lop
+                inicfg.save(mainini, 'bd')
+                flood_menu()
+            end
+
+            local result, button, _, lop = sampHasDialogRespond(27885)
+            if result and button == 1 then
+                mainini.flood.flwait4 = lop
+                inicfg.save(mainini, 'bd')
+                flood_menu()
+            end
+
+            local result, button, _, lop = sampHasDialogRespond(27886)
+            if result and button == 1 then
+                mainini.flood.fltext4 = lop
+                inicfg.save(mainini, 'bd')
+                flood_menu()
+            end
+
+            local result, button, _, lop = sampHasDialogRespond(27895)
+            if result and button == 1 then
+                mainini.flood.flwait5 = lop
+                inicfg.save(mainini, 'bd')
+                flood_menu()
+            end
+
+            local result, button, _, lop = sampHasDialogRespond(27896)
+            if result and button == 1 then
+                mainini.flood.fltext5 = lop
                 inicfg.save(mainini, 'bd')
                 flood_menu()
             end
@@ -3296,6 +3390,22 @@ function flood3(arg)
 		if floodon3 then
 			sampSendChat(mainini.flood.fltext3)
 			wait(mainini.flood.flwait3 * 1000)
+		end
+	end
+end
+function flood4(arg)
+	while true do wait(0)
+		if floodon4 then
+			sampSendChat(mainini.flood.fltext4)
+			wait(mainini.flood.flwait4 * 1000)
+		end
+	end
+end
+function flood5(arg)
+	while true do wait(0)
+		if floodon5 then
+			sampSendChat(mainini.flood.fltext5)
+			wait(mainini.flood.flwait5 * 1000)
 		end
 	end
 end
@@ -5444,7 +5554,7 @@ function sp.onSendCommand(cmd)
         end
         return false
     end
-    if cmd:find('/flood') and not (cmd:find('/flood1') or cmd:find('/flood2') or cmd:find('/flood3')) then
+    if cmd:find('/flood') and not (cmd:find('/flood1') or cmd:find('/flood2') or cmd:find('/flood3') or cmd:find('/flood4') or cmd:find('/flood5')) then
         flood_menu()
         return false
     end
@@ -5479,6 +5589,28 @@ function sp.onSendCommand(cmd)
 		else
             sampAddChatMessage('{ff4500}flood3 {ff0000}off',-1)
 			lua_thread.terminate(floodka3) 
+		end
+        return false
+    end
+    if cmd:find('/flood4') then
+        floodon4 = not floodon4
+		if floodon4 then 
+            sampAddChatMessage('{ff4500}flood4 {228b22}on',-1)
+			floodka4 = lua_thread.create(flood4) 
+		else
+            sampAddChatMessage('{ff4500}flood4 {ff0000}off',-1)
+			lua_thread.terminate(floodka4) 
+		end
+        return false
+    end
+    if cmd:find('/flood5') then
+        floodon5 = not floodon5
+		if floodon5 then 
+            sampAddChatMessage('{ff4500}flood5 {228b22}on',-1)
+			floodka5 = lua_thread.create(flood5) 
+		else
+            sampAddChatMessage('{ff4500}flood5 {ff0000}off',-1)
+			lua_thread.terminate(floodka5) 
 		end
         return false
     end
