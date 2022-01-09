@@ -26,8 +26,8 @@ local activeextra = false
 
 update_state = false 
  
-local script_vers = 20
-local script_vers_text = "08.01.2022"
+local script_vers = 21
+local script_vers_text = "09.01.2022"
 
 local update_url = "https://raw.githubusercontent.com/tedjblessave/binder/main/update.ini" -- тут тоже свою ссылку
 local update_path = getWorkingDirectory() .. "\\config\\update.ini" -- и тут свою ссылку
@@ -279,7 +279,10 @@ local mainini = inicfg.load({
         binder = false,
         autott = false,
         arecc = false,
-        famkv = false
+        famkv = false,
+        uvedomusora = false,
+        zajimrpm = false,
+        listpidor = false
     },
     lidzam = { 
         devyatka = false,
@@ -296,7 +299,8 @@ local mainini = inicfg.load({
         shook="1",
         tramp="7",
         autodhits="E",
-        autoplusc="XBUTTON2"
+        autoplusc="XBUTTON2",
+        zajimrpm ="XBUTTON1"
     },
     flood = {
         fltext3="/j ываываыва",
@@ -1241,13 +1245,29 @@ end
 function wh_cops_pidors()
 	sampShowDialog(2859, '{fff000}{c0c0c0}WallHack. {0000ff}Cops. {da70d6}Pidors.', string.format([[Инструкция {ff0000}[ВАЖНО]
 WallHack. Активация:{00ffff} %s
-Детектор мусоров %s
-Детектор пидорасов %s
+Детектор мусоров %s {ffffff}(хавает FPS)
+Детектор пидорасов %s {ffffff}(хавает FPS)
+Прогрузка списка пидорасов при включении WH %s {ffffff}(нужно для функции выше)
+Уведомление на экране о том, что в зоне стрима есть Мусора %s
+Зажимной рендер списков пидорасов и мусоров %s {ffffff}(под вопросом)
+Кнопка для активации зажимного рендера {ffff00}%s {ffffff}(под вопросом)
 {DAA520}Пидорасы]], 
     mainini.config.wh,
 	mainini.functions.activement and '{00ff00}ON' or '{777777}OFF', 
-	mainini.functions.activepidor and '{00ff00}ON' or '{777777}OFF'),
+	mainini.functions.activepidor and '{00ff00}ON' or '{777777}OFF', 
+	mainini.functions.listpidor and '{00ff00}ON' or '{777777}OFF', 
+	mainini.functions.uvedomusora and '{00ff00}ON' or '{777777}OFF', 
+	mainini.functions.zajimrpm and '{00ff00}ON' or '{777777}OFF', 
+	mainini.config.zajimrpm),
     'Выбрать', 'Закрыть', 2)
+end
+
+function zajim_pidomusor()
+	sampShowDialog(2931, '{fff000}Настройки', string.format([[
+{ffffff}Напишите в поле ниже название кнопки для активации
+Текущая активация: {00ffff}%s]], 
+mainini.config.zajimrpm), 
+'Сохранить', 'Закрыть', 1)
 end
 
 function edit_wh()
@@ -1497,7 +1517,12 @@ end
 
 wait(0)
 
-
+if wasKeyPressed(_G['VK_'..mainini.config.zajimrpm]) then
+    if mainini.functions.zajimrpm then
+        mainini.functions.activement = not mainini.functions.activement
+        mainini.functions.activepidor = not mainini.functions.activepidor
+    end
+end
 
 if actmentpidor then
     if mainini.functions.activement then
@@ -1530,6 +1555,37 @@ if actmentpidor then
         end
         if not isPauseMenuActive() and policeCounter == 0 then
             renderFontDrawText(fontment1, 'Возле вас нет мусоров.', w/6, h/3.350, 0xFFFFFFFF)
+        end
+    end
+
+    if mainini.functions.uvedomusora then
+        policeCounter = 0
+        --Yposm = 3.250
+        for i = 0, sampGetMaxPlayerId(true) do
+            local resultm, pedm = sampGetCharHandleBySampPlayerId(i)
+            if resultm then
+                local myPosX, myPosY, myPosZ = getCharCoordinates(PLAYER_PED)
+                local posX, posY, posZ = getCharCoordinates(pedm)
+                local distance = getDistanceBetweenCoords3d(myPosX, myPosY, myPosZ, posX, posY, posZ)
+
+
+                if distance <= 501.0  then --and (colorment == 23486046 or colorment == 2147502591) 
+                    local playerSkinId = getCharModel(pedm)
+                    if policeSkins[playerSkinId] then 
+                        _, idment = sampGetPlayerIdByCharHandle(pedm)
+                        namement = sampGetPlayerNickname(idment)
+                        colorment = sampGetPlayerColor(idment)
+                        if colorment == 23486046 or colorment == 2147502591 then
+                            policeCounter = policeCounter + 1
+                           -- isVisible(myPosX, myPosY, myPosZ, posX, posY, posZ)
+                           -- Yposm = Yposm - 0.140
+                           -- renderFontDrawText(fontment, '{0000ff}Мусорa: {FFFFFF}'..policeCounter, w/6, h/3.350, 0xFFFFFFFF)
+                            --renderFontDrawText(fontment, '{'..warningment..'}'..namement..'{ffffff}['..idment..'] {18cd58}lvl: {ffffff}'..sampGetPlayerScore(idment), w/6, h/Yposm, 0xFFFFFFFF)
+                            printStyledString("~R~MUSORA:~B~ "..policeCounter, 3330, 5)
+                        end
+                    end    
+                end
+            end
         end
     end
 
@@ -2029,6 +2085,24 @@ end
 					wh_cops_pidors()
                 end
                 if list == 4 then
+                    mainini.functions.listpidor = not mainini.functions.listpidor	
+					inicfg.save(mainini, 'bd')
+					wh_cops_pidors()
+                end
+                if list == 5 then
+                    mainini.functions.uvedomusora = not mainini.functions.uvedomusora	
+					inicfg.save(mainini, 'bd')
+					wh_cops_pidors()
+                end
+                if list == 6 then
+                    mainini.functions.zajimrpm = not mainini.functions.zajimrpm	
+					inicfg.save(mainini, 'bd')
+					wh_cops_pidors()
+                end
+                if list == 7 then
+                    zajim_pidomusor()
+                end
+                if list == 8 then
                     pidor_opis()
                 end
             end
@@ -2183,6 +2257,13 @@ end
                 mainini.config.tramp = lop
                 inicfg.save(mainini, 'bd')
                 menu()
+            end
+
+            local result, button, _, lop = sampHasDialogRespond(2931)
+            if result and button == 1 then
+                mainini.config.zajimrpm = lop
+                inicfg.save(mainini, 'bd')
+                wh_cops_pidors()
             end
 
             local result, button, _, lop = sampHasDialogRespond(2253)
@@ -2515,7 +2596,7 @@ if  isKeyJustPressed(_G['VK_'..mainini.config.wh]) and isKeyCheckAvailable() and
         nameTagOff()
         addOneOffSound(0.0, 0.0, 0.0, 1138)
     end
-    if pidorsshow then
+    if pidorsshow and mainini.functions.listpidor then
         sampProcessChatInput("/pidors")
         pidorsshow = false
     end
@@ -2738,6 +2819,7 @@ function onScriptTerminate(scr, quitgame)
     if scr == thisScript() then
         os.remove(getWorkingDirectory()..'\\config\\pidorasi.ini')
         cameraRestorePatch(false)
+        nameTagOff()
     end
 end
 
