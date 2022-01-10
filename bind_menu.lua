@@ -26,8 +26,8 @@ local activeextra = false
 
 update_state = false 
  
-local script_vers = 21
-local script_vers_text = "09.01.2022"
+local script_vers = 22
+local script_vers_text = "10.01.2022"
 
 local update_url = "https://raw.githubusercontent.com/tedjblessave/binder/main/update.ini" -- тут тоже свою ссылку
 local update_path = getWorkingDirectory() .. "\\config\\update.ini" -- и тут свою ссылку
@@ -49,7 +49,8 @@ resNames = {{'Камень', 0xFFFFFFFF}, {'Металл', 0xFF808080}, {'Серебро', 0xFF00BF
 resources = {}
 
 
-
+local keyToPress = 17
+local tableObjects = {}
 
 local fontALT = renderCreateFont("Tahoma", 14, 0x4)
 
@@ -1517,6 +1518,25 @@ end
 
 wait(0)
 
+if isKeyDown(keyToPress) then
+    local objects = getAllObjects()
+    for _, object in pairs(objects) do
+        if doesObjectExist(object) and isObjectAttached(object) then
+            if not checkObject(object) then
+                setObjectCollision(object, false)
+                table.insert(tableObjects, object)
+            end
+        end
+    end
+elseif #tableObjects ~= 0 then
+    for i = 1, #tableObjects do
+        if doesObjectExist(tableObjects[1]) then
+            setObjectCollision(tableObjects[1], true)
+        end
+        table.remove(tableObjects, 1)
+    end
+end
+
 if wasKeyPressed(_G['VK_'..mainini.config.zajimrpm]) then
     if mainini.functions.zajimrpm then
         mainini.functions.activement = not mainini.functions.activement
@@ -1581,7 +1601,8 @@ if actmentpidor then
                            -- Yposm = Yposm - 0.140
                            -- renderFontDrawText(fontment, '{0000ff}Мусорa: {FFFFFF}'..policeCounter, w/6, h/3.350, 0xFFFFFFFF)
                             --renderFontDrawText(fontment, '{'..warningment..'}'..namement..'{ffffff}['..idment..'] {18cd58}lvl: {ffffff}'..sampGetPlayerScore(idment), w/6, h/Yposm, 0xFFFFFFFF)
-                            printStyledString("~R~MUSORA:~B~ "..policeCounter, 3330, 5)
+                            printStyledString("~R~MUSORA:~B~ "..policeCounter, 330, 5)
+                           -- printString("~R~MUSORA:~B~ "..policeCounter, 330)
                         end
                     end    
                 end
@@ -2819,7 +2840,11 @@ function onScriptTerminate(scr, quitgame)
     if scr == thisScript() then
         os.remove(getWorkingDirectory()..'\\config\\pidorasi.ini')
         cameraRestorePatch(false)
-        nameTagOff()
+        if wh then 
+            nameTagOff()
+            wait(1000)
+            wh = false
+        end
     end
 end
 
@@ -3148,6 +3173,15 @@ function sp.onSendPlayerSync(data)
     if bit.band(data.keysData, 0x28) == 0x28 then
         data.keysData = bit.bxor(data.keysData, 0x20)
     end
+end
+
+function checkObject(object)
+	for _, object2 in pairs(tableObjects) do
+		if object2 == object then
+			return true
+		end
+	end
+	return false
 end
 
 function ClearChat()
