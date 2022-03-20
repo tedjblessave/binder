@@ -29,8 +29,8 @@ local activeextra = false
 
 update_state = false 
  
-local script_vers = 22
-local script_vers_text = "10.01.2022"
+local script_vers = 29
+local script_vers_text = "20.03.2022"
 
 local update_url = "https://raw.githubusercontent.com/tedjblessave/binder/main/update.ini" -- тут тоже свою ссылку
 local update_path = getWorkingDirectory() .. "\\config\\update.ini" -- и тут свою ссылку
