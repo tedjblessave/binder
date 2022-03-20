@@ -7,21 +7,24 @@ local mem = require "memory"
 local memory = require 'memory'
 local as_action = require('moonloader').audiostream_state
 local inicfg = require 'inicfg'
+local ffi = require "ffi"
+local getBonePosition = ffi.cast("int (__thiscall*)(void*, float*, int, bool)", 0x5E4280)
 local effil = require("effil")
 local vkeys = require 'vkeys'
 local dlstatus = require('moonloader').download_status
 local wm = require 'lib.windows.message'
 local rkeys = require 'rkeys'
+
 encoding.default = 'CP1251'
 u8 = encoding.UTF8
 local poss = false 
 
+
 local captureon = false
 
 local fixbike = false
-
-local fontvip = renderCreateFont("Arial", 10, 9)
-
+local dotmoney = true
+local Arial = renderCreateFont("Tahoma", 17, 0x4)
 local activeextra = false 
 
 update_state = false 
@@ -49,13 +52,23 @@ resNames = {{'Камень', 0xFFFFFFFF}, {'Металл', 0xFF808080}, {'Серебро', 0xFF00BF
 resources = {}
 
 
-local keyToPress = 17
-local tableObjects = {}
-
 local fontALT = renderCreateFont("Tahoma", 14, 0x4)
 
 local fontVR = renderCreateFont("Arial", 10, 9)
 
+local statesl = false
+local debugMode = false
+
+local health = 0xBAB22C
+
+local settings = {
+	max_distance = 65,
+	field_of_search = 1, 
+	show_circle = false,
+	key_activation = 57,
+	miss_ratio = 15,
+    through_walls = false
+}
 
 
 
@@ -263,45 +276,58 @@ local mainini = inicfg.load({
         bankpin="123456"
     },
     functions = {
-        dotmoney=true,
         dhits=false,
-        fish=false,
         extra=false,
         bott=false,
+        sl=false,
         autoc=false,
-        hphud=true,
-        fastmap=false,
-        chatvipka=false,
         colorchat=false,
         offrabchat=false,
         offfrachat=false,
         activement=true,
-        activepidor=true,
         binder = false,
-        autott = false,
         arecc = false,
         famkv = false,
-        uvedomusora = false,
-        zajimrpm = false,
-        listpidor = false
+        uvedomusora = false
     },
-    lidzam = { 
+    lidzamband = { 
         devyatka = false,
-        nabortext="/vr Набор в ФК 'The Rifa'. /smug /port | Желающих ждём на площадке.",
-        naborwait="180",
-        band="The Rifa"
+        naborgtext="/vr Набор в ФК 'The Rifa'. /smug /port | Желающих ждём на площадке.",
+        naborgwait="180",
+        band="The Rifa",
+        minlvl=2,
+        minrank=5,
+        fltext1="/f 123",
+        flwait1="10",
+        fltext2="/f 123",
+        flwait2="10",
+        fltext3="/f 123",
+        flwait3="10",
+        fltext4="/f 123",
+        flwait4="10",
+        fltext5="/f 123",
+        flwait5="10",
+        fltext6="/f 123",
+        flwait6="10",
+        fltext7="/f 123",
+        flwait7="10",
+        fltext8="/f 123",
+        flwait8="10",
+        fltext9="/f 123",
+        flwait9="10",
+    },
+    lidzammafia = {
+        devyatka = false,
     },
     config = {
         allsbiv="V",
         sbiv="Z",
         suicide="F10",
         wh="MBUTTON",
-        fmap="XBUTTON1",
         shook="1",
         tramp="7",
         autodhits="E",
-        autoplusc="XBUTTON2",
-        zajimrpm ="XBUTTON1"
+        autoplusc="XBUTTON2"
     },
     flood = {
         fltext3="/j ываываыва",
@@ -329,29 +355,125 @@ local mainini = inicfg.load({
         meatbag = false,
         comeda = "/jmeat"
     },
+    stsw = {
+        Weather = 3,
+        Time = 19,
+        Static = false
+    },
     afk = {
         uvedomleniya = false,
     }
 }, 'bd')
-inicfg.save(mainini, 'bd.ini')
+inicfg.save(mainini, 'bd')
+
+--------------------------
+
+function convertSettingsToString(settings_table)
+	local output = ''
+	for k, v in pairs(settings_table) do
+		output = output .. k .. '=' .. tostring(v) .. ','
+	end
+	return output:sub(0, -2)
+end
+
+function convertStringToSettings(str)
+	local output = {}
+	for par in str:gmatch('[^,]+') do
+		local field, value = par:match('(.+)=(.+)')
+		if value == 'true' then value = true
+		elseif value == 'false' then value = false
+		else value = tonumber(value) end
+		output[field] = value
+	end
+	return output
+end
 
 
---local mainini = inicfg.load(nil, "settings")
---local maintxt = inicfg.load(nil, "pidorasi.txt")
-   -- inicfg.save(mainini, 'moonloader\\config.ini') 
-----------------------------------------------------------------------------------------------------------------------------------------------------------
+function debugSay(msg)
+	if debugMode then sampAddChatMessage('[SHOT] ' .. msg, -1) end
+end
 
-local maintxt = inicfg.load({
-    pidors = {    },
-}, 'pidorasi')
---if not doesFileExist('moonloader/config/pidorasi.ini') then inicfg.save(maintxt, 'pidorasi.ini') end
+
+
+local cx = representIntAsFloat(readMemory(0xB6EC10, 4, false))
+local cy = representIntAsFloat(readMemory(0xB6EC14, 4, false))
+local w, h = getScreenResolution()
+local xc, yc = w * cy, h * cx
+
+function getpx()
+	return ((w / 2) / getCameraFov()) * settings.field_of_search
+end
+
+function canPedBeShot(ped)
+	local ax, ay, az = convertScreenCoordsToWorld3D(xc, yc, 0) -- getCharCoordinates(1)
+	local bx, by, bz = getCharCoordinates(ped)
+	return not select(1, processLineOfSight(ax, ay, az, bx, by, bz + 0.7, true, true, false, true, false, true, false, false))
+end
+
+function getcond(ped)
+	if settings.through_walls then return true --   or isKeyDown(keys.VK_E)
+	else return canPedBeShot(ped) end
+end
+
+function getDistanceFromPed(ped)
+	local ax, ay, az = getCharCoordinates(1)
+	local bx, by, bz = getCharCoordinates(ped)
+	return math.sqrt( (ax - bx) ^ 2 + (ay - by) ^ 2 + (az - bz) ^ 2 )
+end
+
+function getClosestPlayerFromCrosshair()
+	local R1, target = getCharPlayerIsTargeting(0)
+	local R2, player = sampGetPlayerIdByCharHandle(target)
+	if R2 then return player, target end
+	local minDist = getpx()
+	local closestId, closestPed = -1, -1
+	for i = 0, 999 do
+		local res, ped = sampGetCharHandleBySampPlayerId(i)
+		if res then
+			if getDistanceFromPed(ped) < settings.max_distance then
+			local xi, yi = convert3DCoordsToScreen(getCharCoordinates(ped))
+			local dist = math.sqrt( (xi - xc) ^ 2 + (yi - yc) ^ 2 )
+			if dist < minDist then
+				minDist = dist
+				closestId, closestPed = i, ped
+			end
+			end
+		end
+	end
+	return closestId, closestPed
+end
+
+function rand() return math.random(-50, 50) / 100 end
+
+function getDamage(weap)
+	local damage = {
+		[22] = 8.25,
+		[23] = 13.2,
+		[24] = 46.200000762939,
+		[28] = 6.6,
+        [25] = 30,
+        [26] = 30,
+        [27] = 30,
+        [28] = 6.6,
+        [29] = 8.25,	
+        [30] = 9.9,
+        [31] = 9.9000005722046,
+        [32] = 6.6,
+        [34] = 30,
+        [33] = 25,
+        [38] = 46.2
+	}
+	return (damage[weap] or 0) + math.random(1e9)/1e15
+end
+
+
 ------------------------------------------------------------------------------------------------------------------------------------------------------------
 local fontt = renderCreateFont('Arial', 10, 9)
 local fo0nt = renderCreateFont('Tahoma', 9, 5)
 
 local sukazaebalmutit = 0
 
-bike = {[481] = true, [509] = true, [510] = true}
+bike = {[481] = true, [509] = true, [510] = true, [14914] = true, [14916] = true}
 moto = {[448] = true, [461] = true, [462] = true, [463] = true, [468] = true, [471] = true, [521] = true, [522] = true, [523] = true, [581] = true, [586] = true, [3196] = true, [3194] = true}
 
 local fam = {'Family', 'Empire', 'Squad', 'Dynasty', 'Corporation', 'Crew', 'Brotherhood'}
@@ -366,9 +488,17 @@ floodon3 = false
 floodon4 = false
 floodon5 = false
 
-naboron = false
+naborgon = false
 
-
+floodong1 = false
+floodong2 = false
+floodong3 = false
+floodong4 = false
+floodong5 = false
+floodong6 = false
+floodong7 = false
+floodong8 = false
+floodong9 = false
 ---------------
 ----------
 
@@ -380,6 +510,8 @@ local vknotf = {
 	ispaydaytext = '',
     chatc = false,
     chatf = false,
+    chatgo = false,
+    chatadv = false,
     dialogs = false,
 }
 
@@ -471,7 +603,11 @@ function longpollResolve(result)
                             elseif pl.button == 'chatchat' then
 								chatchatVK()
                             elseif pl.button == 'famchat' then
-								famchatVK()
+								famchatVK()    
+                            elseif pl.button == 'chatgovor' then
+								govorchatVK()                            
+                            elseif pl.button == 'advchat' then
+                                    advchatVK()
                             elseif pl.button == 'razgovor' then
 								razgovorVK()
                             elseif pl.button == 'alldialogs' then
@@ -604,9 +740,11 @@ function vkKeyboard()
 	keyboard.buttons[1] = {}
     keyboard.buttons[2] = {}
 	keyboard.buttons[3] = {}
+	keyboard.buttons[4] = {}
 	local row = keyboard.buttons[1]
     local row2 = keyboard.buttons[2]
 	local row3 = keyboard.buttons[3]
+	local row4 = keyboard.buttons[4]
     row[1] = {}
 	row[1].action = {}
 	row[1].color = 'positive'
@@ -637,6 +775,18 @@ function vkKeyboard()
 	row3[3].action.type = 'text'
 	row3[3].action.payload = '{"button": "alldialogs"}'
 	row3[3].action.label = vklchatdialog and 'Выкл. диалоги' or 'Вкл. диалоги'
+    row4[1] = {}
+	row4[1].action = {}
+	row4[1].color = vklchatgovor and 'secondary' or 'primary'
+	row4[1].action.type = 'text'
+	row4[1].action.payload = '{"button": "chatgovor"}'
+	row4[1].action.label = vklchatgovor and 'Выкл. чат рядом' or 'Вкл. чат рядом'
+    row4[2] = {}
+	row4[2].action = {}
+	row4[2].color = vklchatadv and 'secondary' or 'primary'
+	row4[2].action.type = 'text'
+	row4[2].action.payload = '{"button": "advchat"}'
+	row4[2].action.label = vklchatadv and 'Выкл. adv чат' or 'Вкл. adv чат'
 	return encodeJson(keyboard)
 end
 function char_to_hex(str)
@@ -761,28 +911,6 @@ local automeatbag = false
 local fix = false
 local activrsdf = false
 
-local miningtool = true
-local automining_status = false
-local automining_getbtc = 0
-local automining_startall = 0
-local automining_fillall = 0
-
-local oxladtime = 224 -- Часы, на сколько хватит охлада
-
-local INFO = { 
-    0.029999,
-    0.059999,
-    0.09,
-    0.11999,
-    0.15,
-    0.18,
-	0.209999,
-	0.239999,
-	0.27,
-	0.3
-} -- Прибыль в час по лвл
-
-local dtextm = {} 
 
 
 function sp.onSetPlayerDrunk(drunkLevel)
@@ -799,6 +927,15 @@ if not doesFileExist(fpath) then
 	if fw then fw:write():close() end
 end
 
+local baza = true
+--local defString = ""
+local bazafpath = getWorkingDirectory()..'\\config\\baza.txt'
+local bazafpapka = getGameDirectory().."/moonloader/config"
+createDirectory(bazafpapka)
+if not doesFileExist(bazafpath) then 
+	local bazafw = io.open(bazafpath, 'w+')
+	if bazafw then bazafw:write():close() end
+end
 
 local icons = {
     markers = 0,
@@ -862,95 +999,36 @@ end
 local Arial1g = renderCreateFont("Tahoma", 14, 0x4)
 
 
-local trigbott = true
-
-function sequent_async_http_request(method, url, args, resolve, reject)
-    if not _G['lanes.async_http'] then
-        local linda = lanes.linda()
-        local lane_gen = lanes.gen('*', {package = {path = package.path, cpath = package.cpath}}, function()
-            local requests = require 'requests'
-            while true do
-                local key, val = linda:receive(50 / 1000, 'request')
-                if key == 'request' then
-                    local ok, result = pcall(requests.request, val.method, val.url, val.args)
-                    if ok then
-                        result.json, result.xml = nil, nil
-                        linda:send('response', result)
-                    else
-                        linda:send('error', result)
-                    end
-                end
-            end
-        end)
-        _G['lanes.async_http'] = {lane = lane_gen(), linda = linda}
-    end
-    local lanes_http = _G['lanes.async_http']
-    lanes_http.linda:send('request', {method = method, url = url, args = args})
-    lua_thread.create(function(linda)
-        while true do
-            local key, val = linda:receive(0, 'response', 'error')
-            if key == 'response' then
-                return resolve(val)
-            elseif key == 'error' then
-                return reject(val)
-            end
-            wait(0)
-        end
-    end, lanes_http.linda)
-end
-
-function iin(list, what_find, mode) -- vk.com/fottes
-    if what_find and type(what_find) ~= 'table' then
-        local set = {}
-        for _, l in ipairs(list) do set[l] = true end
-        return set[what_find] and true or false
-    elseif type(what_find) == 'table' then
-        if not mode or mode == false then
-            local set = {}
-            for _, l in ipairs(list) do set[l] = true end
-            for _, l in ipairs(what_find) do if set[l] then return true end end
-        elseif mode == true then
-            local set = {}
-            local res = nil
-            for _, l in ipairs(list) do set[l] = true end
-            for k,v in pairs(what_find) do if set[v] then res = true else res = false end end
-            return res
-        end
-    end
-end
-
-
-local dialogTabArr = {}
-local dialogTabStr = ""
-local keyl = 'AAF0rwwhGQ1-qPZL1sCP7s6rqCL7uuajy54' -- 
+local trigbott = false
 
 
 
 function menu()
-	sampShowDialog(2138, 'off: {ff0000}SHIFT+F5 {ffffff}| update: {AFEEEE}/ub {ffffff}| legal: {8A2BE2}SHIFT+F2 {ffffff}| vers: {EE82EE}'..script_vers, string.format([[
-{7CFC00}Нейтральные функции
-{DC143C}Читерские функции
+	sampShowDialog(2138, 'off: {ff0000}SHIFT+F5 {ffffff}| update: {C71585}/ub {ffffff}| legal: {8A2BE2}SHIFT+F2 {ffffff}| vers: {EE82EE}'..script_vers, string.format([[
+{00FA9A}Изменить пароль для {ff0000}авто-логина
+{AFEEEE}Изменить {ff0000}пин-код {AFEEEE}для банка
 {DA70D6}Флудерка
 {1E90FF}Режим лидера/заместителя
 {9ACD32}Биндер binds.bind
-{BC8F8F}Кнопки для активации. Название (id)
 {C0C0C0}Анти-АФК
 {DEB887}Чат-лог
 {ff4500}Обоссывалка
-{E9967A}Авто-еда]]),  
+{E9967A}Авто-еда
+Уведомлять семью каждый пейдей об оплате фам.квартиры %s
+{ffffff}Рекконект: {ff4500}/hrec {ffffff}| Авто-рекконект %s
+{BC8F8F}Кнопки для активации. Название (id)
+{FFE4E1}Остальной функционал
+]], 
+    mainini.functions.famkv and '{00ff00}ON' or '{777777}OFF',
+    mainini.functions.arecc and '{00ff00}ON' or '{777777}OFF'), 
     'Выбрать', 'Закрыть', 2)
 end
---[[ {ffffff}1. Приходят различные уведомления (пейдей, наказания от админов, звонок по телефону и т.д.)
-{ffffff}2. Возможно включить все диалоги и управлять ими через VK. !d (text) !d (строка в диалоге)
-{ffffff}3. Включить весь чат
-{ffffff}4. Включить семейный чат, альянса
-5. Можно разговаривать по телефону (пока работает только на самсунгах) ]]
+
 function afk_menu()
 	sampShowDialog(2956, '{fff000}Анти-АФК', string.format([[
 Изменить цифровой ID {00ffff}VK 
-Изменить токен (не трогать)
-Изменить цифровой ID VK группы (не трогать)
 Отправлять различные уведомления %s {ffffff}(только для лаунчера)
+{c0c0c0}p.s. для работы анти-афк на лаунчере нужен спец.обход - {808000}#AntiAFK_1.3_byAIR.asi
 ]],
 mainini.afk.uvedomleniya and '{00ff00}ON' or '{777777}OFF'),  
     'Выбрать', 'Закрыть', 2)
@@ -964,75 +1042,90 @@ function chatlog_menu()
 ]]), "Выйти", _, 0)
 end
 
-function pidor_opis()
-    sampShowDialog(28591, '{fff000}Пидорасы', string.format([[
-{ffffff}Показать весь список пидорасов - {DDA0DD}/pidors
-{ffffff}Показать список пидорасов {2CFF00}онлайн {ffffff}- {DDA0DD}/onpidors
-{ffffff}Показать список пидорасов {ff0000}оффлайн {ffffff}- {DDA0DD}/offpidors
-
-{ffffff}Добавить пидораса в список - {DDA0DD}/addpidor (id) или (Nick_Name)
-{ffffff}Удалить из списка - {DDA0DD}/delpidor (Nick_Name)
-]]),  
-    'Закрыть', _, 0)
-end
 
 function drugoenosoft_menu()
 	sampShowDialog(2938, '{fff000}Функционал', string.format([[
-{ffffff}1. Доставание оружия командами - {DDA0DD}/de /m4 /rf /sg /mp5 /pst /ak
-{ffffff}2. Удобное пользование майнинг фермой
-{ffffff}3. Сокращенные команды: {DDA0DD}/members - /mb, /findihouse - /fh, /findibiz - /fbiz, /fam - /k
-{ffffff}4. Очистка памяти зоны стрима - /cln
-{ffffff}5. Удобное открытие меню дома /home - ALT в доме (для домов 20, 46, 47, 48, 57)
+{ffffff}1. Доставание оружия командами - {DDA0DD}/de /ma /rf /sg /mp5 /pst /ak
+{ffffff}3. Сокращенные команды: {DDA0DD}/members -> /mb, /findihouse -> /fh, /findibiz -> /fbiz, /fam -> /k
+{ffffff}4. Очистка памяти зоны стрима - {DDA0DD}/cln
+{ffffff}5. Удобное открытие меню дома /home - ALT в доме (для домов 20, 46, 47, 48, 57, 61)
 {ffffff}6. Удаление всякого ебаного мусора из чата
 {ffffff}7. Цветной текст в чате, кто говорит, чат альянса
-{ffffff}8. Авто-/key
-{ffffff}9. Авто-ТвинТурбо
-{ffffff}10. Калькулятор - {DDA0DD}/calc
-{ffffff}11. Авто-оплата налогов семейной квартиры - {DDA0DD}/fpay
-{ffffff}12. Авто-оплата налогов на трейлер - {DDA0DD}/trpay
-{ffffff}13. Анти-задержка при отправке сообщений в /vr
-{ffffff}14. Авто-прокрутка сундуков с рулетками - {DDA0DD}/rlt + {ffffff}фикс инвентаря в случае бага
-{ffffff}15. Поесть в доме с холодильника - {DDA0DD}/eathome
-{ffffff}16. Перевод секунды в минуты при /jail
-{ffffff}17. Перевод секунды в минуты при /mute
-{ffffff}18. Цвета авто всех банд - /gcolors
-{ffffff}19. Узнать цвет авто по иду из /dl - /getcolor
-{ffffff}20. Очистка чата - /cchat
-{ffffff}21. Авто-закуп патрон у Гурамма - {DDA0DD}/ptguram
-{ffffff}22. Умные и красивые /sms
-{ffffff}23. Уведомления об оплате налогов, чтоб не забыть
-{ffffff}24. Авто-сборка шара, велика, дельтаплана
-25. Для адвокатов: ПКМ + CapsLock по зеку, чтобы предложить услуги адвоката
+{ffffff}8. Авто-{DDA0DD}/key
+{ffffff}9. Калькулятор - {DDA0DD}/calc
+{ffffff}10. Авто-оплата налогов семейной квартиры - {DDA0DD}/fpay
+{ffffff}11. Анти-задержка при отправке сообщений в {DDA0DD}/vr
+{ffffff}12. Авто-прокрутка сундуков с рулетками - {DDA0DD}/rlt + {ffffff}фикс инвентаря в случае бага
+{ffffff}13. Поесть в доме с холодильника - {DDA0DD}/eathome
+{ffffff}14. Перевод секунды в минуты при {DDA0DD}/jail
+{ffffff}15. Перевод секунды в минуты при {DDA0DD}/mute
+{ffffff}16. Узнать цвет авто по иду из /dl - /getcolor
+{ffffff}17. Очистка чата - {DDA0DD}/cchat
+{ffffff}18. Умные и красивые {DDA0DD}/sms
+{ffffff}19. Уведомления об оплате налогов, чтоб не забыть
+{ffffff}20. Авто-сборка шара, велика, дельтаплана
+{ffffff}21. Отключение чата адвокатов - {DDA0DD}/rabchat
+{ffffff}22. Отключение чата банды - {DDA0DD}/frachat
+{ffffff}23. Раскраска чата по мнению автора - {DDA0DD}/colorchat
+{ffffff}24. Пробив всего себя для фрапса (кроме консоли) - {FF7F50}/probiv
+{ffffff}25. {ff0000}CamHack {ffffff}- включить: {DDA0DD}C+1{ffffff}, выключить: {DDA0DD}С+2{ffffff}, ускорить: {DDA0DD}+{ffffff}, замедлить: {DDA0DD}-{ffffff}, показать худ: {DDA0DD}F12
+
 ]]),  
     'Закрыть', _, 0)
 end
 
 function drugoesoft_menu()
 	sampShowDialog(2939, '{fff000}Функционал', string.format([[
-{ffffff}1. Легальный мод. Отключить все читерские функции, которые можно спалить на фрапсе. По типу зажимной гм, сх, нитро, вх и т.д. - {FF7F50}SHIFT+F2
-{ffffff}2. Рендер многого чего c авто-альтом - {FF7F50}/rend
-{ffffff}3. Пробив всего себя для фрапса - {FF7F50}/probiv
-{ffffff}4. Лучший WallHack с рендером мусоров и пидорасов
-{ffffff}5. Серверный список пидорасов {FF7F50}/pidors /addpidor /delpidor
-{ffffff}6. Анти-столбы при врезании в трапспорте - зажать {ff0000}SHIFT
-{ffffff}7. Зажимной GM-car - зажать {ff0000}левый SHIFT
-{ffffff}8. Авто-баги игры: быстро бегать/плавать - зажать {ff0000}1{ffffff}, ездить на велике/мото - зажать {ff0000}SHIFT{ffffff}, высокий прыжок на велике - {ff0000}C
-{ffffff}9. Анти-ломка
-{ffffff}10. Реконнект - {FF7F50}/hrec. {ffffff}Авто-рекконект
-{ffffff}11. Авто-нитро - {ff0000}ЛКМ в машине
-{ffffff}12. Спидхак маленький - {ff0000}ПКМ в машине
-{ffffff}13. Трамплин - {FF7F50}7 в машине
-{ffffff}14. Бесконечный бег
-{ffffff}15. Зажимное анти-падение с велосипеда/мото - зажать {ff0000}SHIFT. {ffffff}Исключение: в воде всегда не работает
-{ffffff}16. Кам-хак - C+1, C+2
-{ffffff}17. Авто-еда мясо оленя
-18.Зажимнай анти-коллизия объектов на машинах (Анти-ковш) - зажать {ff0000}левый CTRL
+{ffffff}1. Рендер многого чего c авто-альтом - {FF7F50}/rend
+{ffffff}2. Анти-столбы при врезании в трапспорте - зажать {ff0000}SHIFT
+{ffffff}3. Зажимной GM-car - зажать {ff0000}левый SHIFT
+{ffffff}4. Авто-баги игры: быстро бегать/плавать - зажать {ff0000}1{ffffff}, ездить на велике/мото - зажать {ff0000}SHIFT{ffffff}, высокий прыжок на велике - {ff0000}C
+{ffffff}5. Анти-ломка
+{ffffff}6. Авто-нитро - {ff0000}ЛКМ в машине
+{ffffff}7. Спидхак маленький - {ff0000}ПКМ в машине
+{ffffff}8. Бесконечный бег
+{ffffff}9. Зажимное анти-падение с велосипеда/мото - зажать {ff0000}SHIFT. {ffffff}Исключение: в воде всегда не работает
+{ffffff}10.Зажимнай анти-коллизия объектов на машинах (Анти-ковш) - зажать {ff0000}левый CTRL
 ]]),  
     'Закрыть', _, 0)
 end
 
 function lidzam_menu()
     sampShowDialog(2741, '{fff000}Режим лидера/зама', string.format([[
+Режим лидера/зама для банды %s
+Настройки
+Режим лидера/зама для мафии %s
+Настройки (В разработке)]], 
+    mainini.lidzamband.devyatka and '{00ff00}ON' or '{777777}OFF',
+    mainini.lidzammafia.devyatka and '{00ff00}ON' or '{777777}OFF'),
+        'Выбрать', 'Закрыть', 2)
+end
+
+function lidzamband_menu()
+    sampShowDialog(2790, '{fff000}Режим лидера/зама банды', string.format([[
+Банда: {B0C4DE}%s
+{ffffff}С какого лвл принимать: {00ffff}%s
+{ffffff}На какой ранг принимать новичков: {00ff00}%s
+{ff0000}Флудилка
+Пиар набора %s
+{C71585}%s сек.
+{7FFFD4}%s
+{ffffff}Принять в банду на 5 ранг - {ADFF2F}ПКМ+[
+{ffffff}Принять в банду на 8 ранг - {ADFF2F}ПКМ+]
+{ffffff}Сменить скин - {ADFF2F}ПКМ+= {ffffff}или {90EE90}/gs id skinid
+{ffffff}Изменить ранг - {ADFF2F}ПКМ+- {ffffff}или {90EE90}/gr id rank
+{ffffff}Уволить из банды с причиной "Выселен" - {CD5C5C}/fu id]],
+    mainini.lidzamband.band,
+    mainini.lidzamband.minlvl,
+    mainini.lidzamband.minrank,
+    naborgon and '{00ff00}ON' or '{777777}OFF', 
+    mainini.lidzamband.naborgwait,
+    mainini.lidzamband.naborgtext),
+        'Выбрать', 'Закрыть', 2)
+end
+
+function lidzammafia_menu()
+    sampShowDialog(2791, '{fff000}Режим лидера/зама мафии', string.format([[
 Режим лидера/зама %s
 Банда: %s
 |
@@ -1046,9 +1139,9 @@ function lidzam_menu()
 Изменить ранг - ПКМ+- или /gr id rank]], 
     mainini.lidzam.devyatka and '{00ff00}ON' or '{777777}OFF', 
     mainini.lidzam.band,
-    naboron and '{00ff00}ON' or '{777777}OFF', 
-    mainini.lidzam.naborwait,
-    mainini.lidzam.nabortext),
+    nabormon and '{00ff00}ON' or '{777777}OFF', 
+    mainini.lidzamband.nabormwait,
+    mainini.lidzamband.nabormtext),
         'Выбрать', 'Закрыть', 2)
 end
 
@@ -1084,6 +1177,65 @@ Flood 5 %s
     floodon5 and '{00ff00}ON' or '{777777}OFF', 
     mainini.flood.flwait5,
     mainini.flood.fltext5),
+        'Выбрать', 'Закрыть', 2)
+end
+
+function ghetto_lidzam_flood()
+    sampShowDialog(22487, '{fff000}Ghetto Флудерка', string.format([[
+Flood 1 %s
+Flood 2 %s
+Flood 3 %s
+Flood 4 %s
+Flood 5 %s
+Flood 6 %s
+Flood 7 %s
+Flood 8 %s
+Flood 9 %s
+{ffffff}FL1: {C71585}%s сек.
+{ffffff}FL1: {7FFFD4}%s
+{ffffff}FL2: {C71585}%s сек.
+{ffffff}FL2: {7FFFD4}%s
+{ffffff}FL3: {C71585}%s сек.
+{ffffff}FL3: {7FFFD4}%s
+{ffffff}FL4: {C71585}%s сек.
+{ffffff}FL4: {7FFFD4}%s
+{ffffff}FL5: {C71585}%s сек.
+{ffffff}FL5: {7FFFD4}%s
+{ffffff}FL6: {C71585}%s сек.
+{ffffff}FL6: {7FFFD4}%s
+{ffffff}FL7: {C71585}%s сек.
+{ffffff}FL7: {7FFFD4}%s
+{ffffff}FL8: {C71585}%s сек.
+{ffffff}FL8: {7FFFD4}%s
+{ffffff}FL9: {C71585}%s сек.
+{ffffff}FL9: {7FFFD4}%s]], 
+    floodong1 and '{00ff00}ON' or '{777777}OFF',
+    floodong2 and '{00ff00}ON' or '{777777}OFF',
+    floodong3 and '{00ff00}ON' or '{777777}OFF',
+    floodong4 and '{00ff00}ON' or '{777777}OFF',
+    floodong5 and '{00ff00}ON' or '{777777}OFF',
+    floodong6 and '{00ff00}ON' or '{777777}OFF',
+    floodong7 and '{00ff00}ON' or '{777777}OFF',
+    floodong8 and '{00ff00}ON' or '{777777}OFF',
+    floodong9 and '{00ff00}ON' or '{777777}OFF',
+    mainini.lidzamband.flwait1,
+    mainini.lidzamband.fltext1, 
+    mainini.lidzamband.flwait2,
+    mainini.lidzamband.fltext2, 
+    mainini.lidzamband.flwait3,
+    mainini.lidzamband.fltext3, 
+    mainini.lidzamband.flwait4,
+    mainini.lidzamband.fltext4, 
+    mainini.lidzamband.flwait5,
+    mainini.lidzamband.fltext5, 
+    mainini.lidzamband.flwait6,
+    mainini.lidzamband.fltext6, 
+    mainini.lidzamband.flwait7,
+    mainini.lidzamband.fltext7, 
+    mainini.lidzamband.flwait8,
+    mainini.lidzamband.fltext8, 
+    mainini.lidzamband.flwait9,
+    mainini.lidzamband.fltext9),
         'Выбрать', 'Закрыть', 2)
 end
 
@@ -1130,8 +1282,8 @@ function binder_info()
 	sampShowDialog(2338, '{Fff000}Биндер', string.format([[
 {ffffff}В биндере скрипта {fff000}\\moonloader\\config\\binds.bind {ffffff}настройка следующая:
 Чтобы добавить биндер нужно в конце строки поставить запятую перед закрывающей квадратной скобкой и вписать:
-{FFA07A}{"text":"МАТЬ ЕБАЛ[enter]","v":[82]}
-{ffffff}Здесь: текст бинда это МАТЬ ЕБАЛ ([enter] - нажмимает интер, если не писать то биндер просто введется в чате), 82 - это ID клавиши. В данном случае клавиша R.
+{FFA07A}{"text":"раз два три - на лоб трампам ссы[enter]","v":[82]}
+{ffffff}Здесь: текст бинда это "раз два три - на лоб трампам ссы" ([enter] - нажмимает интер, если не писать то биндер просто введется в чате), 82 - это ID клавиши. В данном случае клавиша R.
 
 Чтобы добавить биндер на команду нужно ввести обратный слэш "\" перед самой командой:
 {FFA07A}{"text":"\/mask[enter]","v":[82]}
@@ -1154,84 +1306,32 @@ function binder_info()
 
 ]]),  
     'Закрыть', _, 0)
-end
-
-function whcoppidr_instr()
-	sampShowDialog(2958, '{Fff000}Инструкция', string.format([[
-{ffffff}В биндере скрипта {fff000}\\moonloader\\config\\binds.bind {ffffff}настройка следующая:
-Чтобы добавить биндер нужно в конце строки поставить запятую перед закрывающей квадратной скобкой и вписать:
-{FFA07A}{"text":"МАТЬ ЕБАЛ[enter]","v":[82]}
-{ffffff}Здесь: текст бинда это МАТЬ ЕБАЛ ([enter] - нажмимает интер, если не писать то биндер просто введется в чате), 82 - это ID клавиши. В данном случае клавиша R.
-
-Чтобы добавить биндер на команду нужно ввести обратный слэш "\" перед самой командой:
-{FFA07A}{"text":"\/mask[enter]","v":[82]}
-
-        {9ACD32}Биндеры по умолчанию:
-            {ffffff}/lock - {9370DB}L
-            {ffffff}/armour - {9370DB}4
-            {ffffff}/time - {9370DB}B
-            {ffffff}/mask - {9370DB}5
-            {ffffff}/usedrugs 3 - {9370DB}X
-            {ffffff}/anim 3 - {9370DB}ALT+C
-            {ffffff}/anim 9 - {9370DB}3
-            {ffffff}/style - {9370DB}J
-            {ffffff}/key - {9370DB}K
-            {ffffff}/fillcar - {9370DB}CTRL+2
-            {ffffff}/repcar - {9370DB}CTRL+1
-            {ffffff}/usemed - {9370DB}6
-            {ffffff}/cars - {9370DB}O
-            {ffffff}Распальцовка (q) - {9370DB}R
-
-]]),  
-    'Закрыть', _, 0)
-end
-
-function nosoft_menu()
-	sampShowDialog(21381, '{fff000}Нейтральные функции', string.format([[
-Хп-худ %s
-Разделение точками денег %s
-Быстрое открывание карты %s
-Быстрое открывание карты. Активация: {00ffff}%s
-Цветной чат %s
-Разделенный VIP-chat %s
-Фракционный чат %s
-Рабочий чат %s
-Авто-ТвинТурбо %s
-Изменить пароль для авто-логина
-Изменить пин-код для банка
-{DAA520}Остальной функционал
-Уведомлять семью каждый пейдей об оплате фам.квартиры %s]], 
-	mainini.functions.hphud and '{00ff00}ON' or '{777777}OFF', 
-	mainini.functions.dotmoney and '{00ff00}ON' or '{777777}OFF',
-    mainini.functions.fastmap and '{00ff00}ON' or '{777777}OFF',
-    mainini.config.fmap,
-    mainini.functions.colorchat and '{00ff00}ON' or '{777777}OFF',
-    mainini.functions.chatvipka and '{00ff00}ON' or '{777777}OFF',
-    mainini.functions.offfrachat and '{777777}OFF' or '{00ff00}ON',
-    mainini.functions.offrabchat and '{777777}OFF' or '{00ff00}ON',
-    mainini.functions.autott and '{00ff00}ON' or '{777777}OFF',
-    mainini.functions.famkv and '{00ff00}ON' or '{777777}OFF'),
-    'Выбрать', 'Закрыть', 2)
 end
 
 function soft_menu()
-	sampShowDialog(21383, '{fff000}Читерские функции', string.format([[Рыбий глаз %s
-Авто-шот. Активация: {000fff}ALT+V. %s
-Экстра WS. Активация: {000fff}SHIFT+9. %s
+	sampShowDialog(21383, '{fff000}Читерские функции', string.format([[Авто-шот. Активация: {000fff}ALT+9. %s
+[%s{ffffff}] Сало на дигл и узи. Активация: {000fff}9. %s
+[salo] miss: %sper. dist: %s. wshot: %s. fov: %s. debugmenu: %s
+{ffffff}Экстра WS. Активация: {000fff}SHIFT+9. %s
 Авто-+С %s
-Настройка Авто-+С
+{ff0000}Настройка Авто-+С
 Авто-дабл-хиты %s
-Настройка Авто-дабл-хиты
+{ff0000}Настройка Авто-дабл-хиты
 Cбив анимки. Активация:{00ffff} %s
 Быстрый выход с транспорта. Активация:{00ffff} %s
 Самоубийство. Активация:{00ffff} %s
-{c0c0c0}WallHack. {0000ff}Cops. {da70d6}Pidors.
+{c0c0c0}WallHack. {0000ff}Cops.
 SprintHook. Активация:{00ffff} %s
 Трамплин. Активация:{00ffff} %s
-{ffffff}Рекконект: {ff4500}/hrec {ffffff}| Авто-рекконект %s
 {DAA520}Остальной функционал]], 
-	mainini.functions.fish and '{00ff00}ON' or '{777777}OFF', 
 	mainini.functions.bott and '{00ff00}ON' or '{777777}OFF',
+    mainini.functions.sl and '{ff0000}ВЫКЛЮЧИ ДОЛБАЕБ' or '{00ffff}НЕ РАБОТАЕТ',
+	mainini.functions.sl and '{00ff00}ON' or '{777777}OFF',
+    settings.miss_ratio,
+    settings.max_distance,
+    settings.through_walls,
+    settings.field_of_search,
+    debugMode and '{00ff00}ON' or '{777777}OFF',
     mainini.functions.extra and '{00ff00}ON' or '{777777}OFF',
     mainini.functions.autoc and '{00ff00}ON' or '{777777}OFF',
     mainini.functions.dhits and '{00ff00}ON' or '{777777}OFF',
@@ -1239,37 +1339,18 @@ SprintHook. Активация:{00ffff} %s
     mainini.config.allsbiv,
     mainini.config.suicide,
     mainini.config.shook,
-    mainini.config.tramp,
-    mainini.functions.arecc and '{00ff00}ON' or '{777777}OFF'),
+    mainini.config.tramp),
     'Выбрать', 'Закрыть', 2)
 end
 
 function wh_cops_pidors()
-	sampShowDialog(2859, '{fff000}{c0c0c0}WallHack. {0000ff}Cops. {da70d6}Pidors.', string.format([[Инструкция {ff0000}[ВАЖНО]
-WallHack. Активация:{00ffff} %s
+	sampShowDialog(2859, '{fff000}{c0c0c0}WallHack. {0000ff}Cops.', string.format([[WallHack. Активация:{00ffff} %s
 Детектор мусоров %s {ffffff}(хавает FPS)
-Детектор пидорасов %s {ffffff}(хавает FPS)
-Прогрузка списка пидорасов при включении WH %s {ffffff}(нужно для функции выше)
-Уведомление на экране о том, что в зоне стрима есть Мусора %s
-Зажимной рендер списков пидорасов и мусоров %s {ffffff}(под вопросом)
-Кнопка для активации зажимного рендера {ffff00}%s {ffffff}(под вопросом)
-{DAA520}Пидорасы]], 
+Уведомление на экране о том, что в зоне стрима есть Мусора %s]], 
     mainini.config.wh,
 	mainini.functions.activement and '{00ff00}ON' or '{777777}OFF', 
-	mainini.functions.activepidor and '{00ff00}ON' or '{777777}OFF', 
-	mainini.functions.listpidor and '{00ff00}ON' or '{777777}OFF', 
-	mainini.functions.uvedomusora and '{00ff00}ON' or '{777777}OFF', 
-	mainini.functions.zajimrpm and '{00ff00}ON' or '{777777}OFF', 
-	mainini.config.zajimrpm),
+	mainini.functions.uvedomusora and '{00ff00}ON' or '{777777}OFF'),
     'Выбрать', 'Закрыть', 2)
-end
-
-function zajim_pidomusor()
-	sampShowDialog(2931, '{fff000}Настройки', string.format([[
-{ffffff}Напишите в поле ниже название кнопки для активации
-Текущая активация: {00ffff}%s]], 
-mainini.config.zajimrpm), 
-'Сохранить', 'Закрыть', 1)
 end
 
 function edit_wh()
@@ -1337,18 +1418,12 @@ mainini.config.sbiv),
 'Сохранить', 'Закрыть', 1)
 end
 
-function edit_fastmap()
-	sampShowDialog(2141, '{fff000}Настройки', string.format([[
-{ffffff}Напишите в поле ниже название кнопки для активации
-Текущая активация: {00ffff}%s]], 
-mainini.config.fmap), 
-'Сохранить', 'Закрыть', 1)
-end
+
 
 function edit_userid()
 	sampShowDialog(2139, '{fff000}Настройки', string.format([[
 {ffffff}Для начала работы скрипта {ff4500}ble$$ave {ffffff}необходимо:
-{ffffff}Перейти в группу {00FF00}https://vk.com/blessave1. {ffffff}Вступить и написать в личные сообщения группе.
+{ffffff}Перейти в группу {00FF00}https://vk.com/blessavesoft. {ffffff}Вступить и написать в личные сообщения группе.
 {ffffff}Вставить в {FF1493}этом {ffffff}диалоговом окне скопированный цифровой ID вашего VK.
 {ffffff}Если вы всё сделали правильно то вам придет сообщение с тектом {F5DEB3}тестовое сообщение{ffffff}.
 Текущий ID: {00ffff}%s]], 
@@ -1404,6 +1479,7 @@ end
 function main()
 if not isSampfuncsLoaded() or not isSampLoaded() then return end
 while not isSampAvailable() do wait(100) end 
+local PI = 3.14159
 if not doesFileExist("moonloader\\config\\udpate.ini") then
     downloadUrlToFile("https://raw.githubusercontent.com/tedjblessave/binder/main/udpate.ini", "moonloader\\config\\udpate.ini", function(id, statuss, p1, p2)
         if statuss == dlstatus.STATUS_ENDDOWNLOADDATA then
@@ -1414,8 +1490,7 @@ end
 local _, ider = sampGetPlayerIdByCharHandle(PLAYER_PED)
 local nicker = sampGetPlayerNickname(ider)
 local nickker = string.match(nicker, '(.*)_')
-printStringNow("~B~Script ~Y~/blessave ~G~ON ~P~for "..nickker, 1500, 5)
-pidorsshow = true
+--printStringNow("~B~Script ~Y~/blessave ~G~ON ~P~for "..nickker, 1500, 5)
 
 workpaus(true)
 lAA = lua_thread.create(lAA)
@@ -1435,9 +1510,11 @@ downloadUrlToFile(update_url, update_path, function(id, status)
 end)
 
 
+sampRegisterChatCommand("/sm", setStatic)
+sampRegisterChatCommand("/t", setTime)
+sampRegisterChatCommand("/w", setWeather)
 
-
-sampRegisterChatCommand('bind', binder_menu)
+sampRegisterChatCommand('bind', menu)
 
 local fontSF = renderCreateFont("Arial", 8, 5) --creating font
 sampfuncsRegisterConsoleCommand("deletetd", del)    --registering command to sampfuncs console, this will call delete function
@@ -1467,7 +1544,11 @@ tormoz = lua_thread.create(tormoz)
 dHits = lua_thread.create(dHits)
 autoC = lua_thread.create(autoC)
 
-FishEye = lua_thread.create(FishEye)
+
+timeweat = lua_thread.create(timeweat)
+
+autoshar = lua_thread.create(autoshar)
+targetfunc = lua_thread.create(targetfunc)
 
 
 fastrun = lua_thread.create(fastrun)
@@ -1477,7 +1558,6 @@ proops = lua_thread.create(proops)
 
 
 rltao = lua_thread.create(rltao)
---ifixx = lua_thread.create(ifixx)
 
 camhack = lua_thread.create(camhack)
 
@@ -1494,6 +1574,7 @@ keyPressed = 0
 
 
 
+
 while true do
 
 
@@ -1501,49 +1582,7 @@ if autoaltrend then
     renderFontDrawText(fontALT, "{ffffff}Auto{ff0000}ALT", 1400, 600, 0xDD6622FF)
 end
 
-
-
-
-
-if mainini.functions.chatvipka and not sampIsDialogActive() then
-    rposX, rposY = 650, 800
-                         
-        for i = 15 - 1, 0, -1 do
-            if chat[#chat - i] ~= nil then
-                renderFontDrawText(fontvip, chat[#chat - i], rposX, rposY, 0xFFFFFFFF, 0x90000000)
-                rposY = rposY + 18
-            end
-        end
-    
-end
-
 wait(0)
-
-if isKeyDown(keyToPress) then
-    local objects = getAllObjects()
-    for _, object in pairs(objects) do
-        if doesObjectExist(object) and isObjectAttached(object) then
-            if not checkObject(object) then
-                setObjectCollision(object, false)
-                table.insert(tableObjects, object)
-            end
-        end
-    end
-elseif #tableObjects ~= 0 then
-    for i = 1, #tableObjects do
-        if doesObjectExist(tableObjects[1]) then
-            setObjectCollision(tableObjects[1], true)
-        end
-        table.remove(tableObjects, 1)
-    end
-end
-
-if wasKeyPressed(_G['VK_'..mainini.config.zajimrpm]) then
-    if mainini.functions.zajimrpm then
-        mainini.functions.activement = not mainini.functions.activement
-        mainini.functions.activepidor = not mainini.functions.activepidor
-    end
-end
 
 if actmentpidor then
     if mainini.functions.activement then
@@ -1567,15 +1606,15 @@ if actmentpidor then
                             policeCounter = policeCounter + 1
                             isVisible(myPosX, myPosY, myPosZ, posX, posY, posZ)
                             Yposm = Yposm - 0.140
-                            renderFontDrawText(fontment, '{0000ff}Мусорa: {FFFFFF}'..policeCounter, w/6, h/3.350, 0xFFFFFFFF)
-                            renderFontDrawText(fontment, '{'..warningment..'}'..namement..'{ffffff}['..idment..'] {18cd58}lvl: {ffffff}'..sampGetPlayerScore(idment), w/6, h/Yposm, 0xFFFFFFFF)
+                            renderFontDrawText(fontment, '{0000ff}Мусорa: {FFFFFF}'..policeCounter, w/50, h/3.350, 0xFFFFFFFF)
+                            renderFontDrawText(fontment, '{'..warningment..'}'..namement..'{ffffff}['..idment..'] {18cd58}lvl: {ffffff}'..sampGetPlayerScore(idment), w/50, h/Yposm, 0xFFFFFFFF)
                         end
                     end    
                 end
             end
         end
         if not isPauseMenuActive() and policeCounter == 0 then
-            renderFontDrawText(fontment1, 'Возле вас нет мусоров.', w/6, h/3.350, 0xFFFFFFFF)
+            renderFontDrawText(fontment1, 'Возле вас нет мусоров.', w/50, h/3.350, 0xFFFFFFFF)
         end
     end
 
@@ -1610,718 +1649,11 @@ if actmentpidor then
             end
         end
     end
-
-    if mainini.functions.activepidor then
-        pidorCounter = 0
-        Yposp = 3.250
-        for _,vv in pairs(maintxt.pidors) do
-            idpidor = sampGetPlayerIdByNickname(vv)
-            if idpidor ~= nil and idpidor ~= -1 and idpidor ~= false then
-                resultp, handlep = sampGetCharHandleBySampPlayerId(idpidor)
-                if resultp then
-                    local myPosX, myPosY, myPosZ = getCharCoordinates(PLAYER_PED)
-                    local posX, posY, posZ = getCharCoordinates(handlep)
-                    local distance = getDistanceBetweenCoords3d(myPosX, myPosY, myPosZ, posX, posY, posZ)
-                    _, idpidra = sampGetPlayerIdByCharHandle(handlep)
-                    namepidra = sampGetPlayerNickname(idpidra)
-                    if distance <= 501.0 then
-                        pidorCounter = pidorCounter + 1
-                        isVisiblep(myPosX, myPosY, myPosZ, posX, posY, posZ)  
-                        Yposp = Yposp - 0.140
-                        renderFontDrawText(fontment, '{c50fd2}Пидорасы: {FFFFFF}'..pidorCounter, w/50, h/3.350, 0xFFFFFFFF)
-                        renderFontDrawText(fontment, '{'..warningpidor..'}'..namepidra..'{ffffff}['..idpidra..']', w/50, h/Yposp, 0xFFFFFFFF)
-                    end
-                end
-            end
-        end
-        if not isPauseMenuActive() and pidorCounter == 0 then
-            renderFontDrawText(fontment1, 'Возле вас нет пидорасов.', w/50, h/3.350, 0xFFFFFFFF)
-        end
-    end
 end
 
 
-local result, button, list, _ = sampHasDialogRespond(2956)
-if result and button == 1 then
-    if list == 0 then
-        edit_userid()
-    end
-    if list == 1 then
-        soft_menu()
-    end
-    if list == 2 then
-        flood_menu()
-    end
-    if list == 3 then
-        mainini.afk.uvedomleniya = not mainini.afk.uvedomleniya
-        inicfg.save(mainini, 'bd')
-        afk_menu()
-    end
-end
-
-
-            local result, button, list, _ = sampHasDialogRespond(2138)
-			if result and button == 1 then
-                if list == 0 then
-                    nosoft_menu()
-                end
-                if list == 1 then
-                    soft_menu()
-                end
-                if list == 2 then
-                    flood_menu()
-                end
-                if list == 3 then
-                    lidzam_menu()
-                end
-                if list == 4 then
-                    binder_menu()
-                end
-                if list == 5 then
-                    sampShowDialog(3905, "{00CC00}Список клавиш | Справка", buttonslist, "Закрыть", _, 2)
-                end
-                if list == 6 then
-                    afk_menu()
-                end
-                if list == 7 then
-                    chatlog_menu()
-                end
-                if list == 8 then
-                    piss_menu()
-                end
-                if list == 9 then
-                    eda_menu()
-                end
-			end
-
-            local result, button, list, lop = sampHasDialogRespond(4969)
-			if result and button == 1 then
-                if list == 1 then
-                    mainini.autoeda.eda = not mainini.autoeda.eda
-					inicfg.save(mainini, 'bd')
-					eda_menu()
-                end
-                if list == 2 then
-                    mainini.autoeda.meatbag = not mainini.autoeda.meatbag
-					inicfg.save(mainini, 'bd')
-					eda_menu()
-                end
-                if list == 3 then
-                    sampShowDialog(49169, '{fff000}Настройки', string.format([[
-{ffffff}Введите команду, с помощью которой возможно принимать продукты.
-Например: /jmeat, /chips и т.д.
-Текущая команда: {20B2AA}%s]], 
-                        mainini.autoeda.comeda), 
-                        'Сохранить', 'Закрыть', 1)
-                end
-			end
-
-            local result, button, list, lop = sampHasDialogRespond(4169)
-			if result and button == 1 then
-                if list == 1 then
-                    mainini.oboss.piss1 = not mainini.oboss.piss1
-					inicfg.save(mainini, 'bd')
-					piss_menu()
-                end
-                if list == 2 then
-                    mainini.oboss.piss2 = not mainini.oboss.piss2
-					inicfg.save(mainini, 'bd')
-					piss_menu()
-                end
-                if list == 3 then
-                    mainini.oboss.piss3 = not mainini.oboss.piss3
-					inicfg.save(mainini, 'bd')
-					piss_menu()
-                end
-                if list == 4 then
-                    sampShowDialog(41691, '{fff000}Настройки', string.format([[
-{ffffff}Для отображения ника игрока нужно ввести знак процента и букву s
-Текущий текст обоссывалки:
-{20B2AA}%s]], 
-                        mainini.oboss.pisstext), 
-                        'Сохранить', 'Закрыть', 1)
-                end
-                if list == 5 then
-                    sampShowDialog(44169, '{fff000}Настройки', string.format([[
-{ffffff}Напишите в поле ниже название кнопки для активации
-Текущая активация: {00ffff}%s]], 
-                        mainini.oboss.obossactiv), 
-                        'Сохранить', 'Закрыть', 1)
-                end
-                if list == 6 then
-                    sampShowDialog(43169, '{fff000}Настройки', string.format([[
-{ffffff}Напишите в поле ниже название кнопки для активации
-Текущая активация: {00ffff}%s]], 
-                        mainini.oboss.animactiv), 
-                        'Сохранить', 'Закрыть', 1)
-                end
-                if list == 7 then
-                    sampShowDialog(42169, '{fff000}Настройки', string.format([[
-{ffffff}Напишите в поле ниже название кнопки для активации
-Текущая активация: {00ffff}%s]], 
-                        mainini.oboss.pissactiv), 
-                        'Сохранить', 'Закрыть', 1)
-                end
-			end
-
-            local result, button, _, lop = sampHasDialogRespond(44169)
-            if result and button == 1 then
-                mainini.oboss.obossactiv = lop
-                inicfg.save(mainini, 'bd')
-                piss_menu()
-            end
-
-            local result, button, _, lop = sampHasDialogRespond(49169)
-            if result and button == 1 then
-                mainini.autoeda.comeda = lop
-                inicfg.save(mainini, 'bd')
-                eda_menu()
-            end
-
-            local result, button, _, lop = sampHasDialogRespond(43169)
-            if result and button == 1 then
-                mainini.oboss.animactiv = lop
-                inicfg.save(mainini, 'bd')
-                piss_menu()
-            end
-
-            local result, button, _, lop = sampHasDialogRespond(41691)
-            if result and button == 1 then
-                mainini.oboss.pisstext = lop
-                inicfg.save(mainini, 'bd')
-                piss_menu()
-            end
-
-            local result, button, _, lop = sampHasDialogRespond(42169)
-            if result and button == 1 then
-                mainini.oboss.pissactiv = lop
-                inicfg.save(mainini, 'bd')
-                piss_menu()
-            end
-
-            local result, button, list, lop = sampHasDialogRespond(2787)
-			if result and button == 1 then
-                if list == 0 then
-                    floodon1 = not floodon1
-                    if floodon1 then 
-                        floodka1 = lua_thread.create(flood1) 
-                    else
-                        lua_thread.terminate(floodka1) 
-                    end
-                    flood_menu()
-                end
-                if list == 1 then
-                    sampShowDialog(27871, '{fff000}Настройки', string.format([[
-{ffffff}Напишите количество секунд для задержки
-Текущая задержка: {F08080}%s сек.]], 
-                        mainini.flood.flwait1), 
-                        'Сохранить', 'Закрыть', 1)
-                end
-                if list == 2 then
-                    sampShowDialog(27872, '{fff000}Настройки', string.format([[
-{ffffff}Введите текст для флуда
-Текущий текст:
-{20B2AA}%s]], 
-                        mainini.flood.fltext1), 
-                        'Сохранить', 'Закрыть', 1)
-                end
-                if list == 3 then
-                    floodon2 = not floodon2
-                    if floodon2 then 
-                        floodka2 = lua_thread.create(flood2) 
-                    else
-                        lua_thread.terminate(floodka2) 
-                    end
-                    flood_menu()
-                end
-                if list == 4 then
-                    sampShowDialog(27873, '{fff000}Настройки', string.format([[
-{ffffff}Напишите количество секунд для задержки
-Текущая задержка: {F08080}%s сек.]], 
-                        mainini.flood.flwait2), 
-                        'Сохранить', 'Закрыть', 1)
-                end
-                if list == 5 then
-                    sampShowDialog(27874, '{fff000}Настройки', string.format([[
-{ffffff}Введите текст для флуда
-Текущий текст:
-{20B2AA}%s]], 
-                        mainini.flood.fltext2), 
-                        'Сохранить', 'Закрыть', 1)
-                end
-                if list == 6 then
-                    floodon3 = not floodon3
-                    if floodon3 then 
-                        floodka3 = lua_thread.create(flood3) 
-                    else
-                        lua_thread.terminate(floodka3) 
-                    end
-                    flood_menu()
-                end
-                if list == 7 then
-                    sampShowDialog(27875, '{fff000}Настройки', string.format([[
-{ffffff}Напишите количество секунд для задержки
-Текущая задержка: {F08080}%s сек.]], 
-                        mainini.flood.flwait3), 
-                        'Сохранить', 'Закрыть', 1)
-                end
-                if list == 8 then
-                    sampShowDialog(27876, '{fff000}Настройки', string.format([[
-{ffffff}Введите текст для флуда
-Текущий текст:
-{20B2AA}%s]], 
-                        mainini.flood.fltext3), 
-                        'Сохранить', 'Закрыть', 1)
-                end
-                if list == 9 then
-                    floodon4 = not floodon4
-                    if floodon4 then 
-                        floodka4 = lua_thread.create(flood4) 
-                    else
-                        lua_thread.terminate(floodka4) 
-                    end
-                    flood_menu()
-                end
-                if list == 10 then
-                    sampShowDialog(27885, '{fff000}Настройки', string.format([[
-{ffffff}Напишите количество секунд для задержки
-Текущая задержка: {F08080}%s сек.]], 
-                        mainini.flood.flwait4), 
-                        'Сохранить', 'Закрыть', 1)
-                end
-                if list == 11 then
-                    sampShowDialog(27886, '{fff000}Настройки', string.format([[
-{ffffff}Введите текст для флуда
-Текущий текст:
-{20B2AA}%s]], 
-                        mainini.flood.fltext4), 
-                        'Сохранить', 'Закрыть', 1)
-                end
-                if list == 12 then
-                    floodon5 = not floodon5
-                    if floodon5 then 
-                        floodka5 = lua_thread.create(flood5) 
-                    else
-                        lua_thread.terminate(floodka5) 
-                    end
-                    flood_menu()
-                end
-                if list == 13 then
-                    sampShowDialog(27895, '{fff000}Настройки', string.format([[
-{ffffff}Напишите количество секунд для задержки
-Текущая задержка: {F08080}%s сек.]], 
-                        mainini.flood.flwait5), 
-                        'Сохранить', 'Закрыть', 1)
-                end
-                if list == 14 then
-                    sampShowDialog(27896, '{fff000}Настройки', string.format([[
-{ffffff}Введите текст для флуда
-Текущий текст:
-{20B2AA}%s]], 
-                        mainini.flood.fltext5), 
-                        'Сохранить', 'Закрыть', 1)
-                end
-			end
-
-            local result, button, list, _ = sampHasDialogRespond(21383)
-			if result and button == 1 then
-				if list == 0 then
-					mainini.functions.fish = not mainini.functions.fish	
-					inicfg.save(mainini, 'bd')
-					soft_menu()
-				end
-                if list == 1 then
-					mainini.functions.bott = not mainini.functions.bott	
-					inicfg.save(mainini, 'bd')
-					soft_menu()
-				end
-                if list == 2 then
-                    mainini.functions.extra = not mainini.functions.extra	
-					inicfg.save(mainini, 'bd')
-					soft_menu()
-				end
-                if list == 3 then
-                    mainini.functions.autoc = not mainini.functions.autoc	
-					inicfg.save(mainini, 'bd')
-					soft_menu()
-				end
-                if list == 4 then
-					edit_autoc()
-				end
-                if list == 5 then
-                    mainini.functions.dhits = not mainini.functions.dhits	
-					inicfg.save(mainini, 'bd')
-					soft_menu()
-				end
-                if list == 6 then
-					edit_dhits()
-				end
-                if list == 7 then
-					edit_sbiv()
-				end
-                if list == 8 then
-					edit_allsbiv()
-				end
-                if list == 9 then
-					edit_suicide()
-				end
-                if list == 10 then
-					wh_cops_pidors()
-				end
-                if list == 11 then
-					edit_shook()
-				end
-                if list == 12 then
-					edit_tramp()
-				end
-                if list == 13 then
-					mainini.functions.arecc = not mainini.functions.arecc	
-					inicfg.save(mainini, 'bd')
-					soft_menu()
-				end
-                if list == 14 then
-					drugoesoft_menu()
-				end
-			end
-
-            local result, button, list, _ = sampHasDialogRespond(21381)
-			if result and button == 1 then
-				if list == 0 then
-					mainini.functions.hphud = not mainini.functions.hphud	
-					inicfg.save(mainini, 'bd')
-					nosoft_menu()
-				end
-                if list == 1 then
-					mainini.functions.dotmoney = not mainini.functions.dotmoney	
-					inicfg.save(mainini, 'bd')
-					nosoft_menu()
-				end
-                if list == 2 then
-                    mainini.functions.fastmap = not mainini.functions.fastmap	
-					inicfg.save(mainini, 'bd')
-					nosoft_menu()
-				end
-                if list == 3 then
-					edit_fastmap()
-				end
-                if list == 4 then
-                    mainini.functions.colorchat = not mainini.functions.colorchat	
-					inicfg.save(mainini, 'bd')
-					nosoft_menu()
-				end
-                if list == 5 then
-                    mainini.functions.chatvipka = not mainini.functions.chatvipka	
-					inicfg.save(mainini, 'bd')
-					nosoft_menu()
-				end
-                if list == 6 then
-                    mainini.functions.offfrachat = not mainini.functions.offfrachat	
-					inicfg.save(mainini, 'bd')
-					nosoft_menu()
-				end
-                if list == 7 then
-                    mainini.functions.offrabchat = not mainini.functions.offrabchat	
-					inicfg.save(mainini, 'bd')
-					nosoft_menu()
-				end
-                if list == 8 then
-                    mainini.functions.autott = not mainini.functions.autott	
-					inicfg.save(mainini, 'bd')
-					nosoft_menu()
-				end
-                if list == 9 then
-                    edit_pass()
-                end
-                if list == 10 then
-                    edit_bank()
-                end
-                if list == 11 then
-                    drugoenosoft_menu()
-                end
-                if list == 12 then
-                    mainini.functions.famkv = not mainini.functions.famkv	
-					inicfg.save(mainini, 'bd')
-					nosoft_menu()
-				end
-			end
-
-            
-            local result, button, _, lop = sampHasDialogRespond(2741)
-            if result and button == 1 then
-                if list == 0 then
-                    mainini.lidzam.devyatka = not mainini.lidzam.devyatka 
-                    inicfg.save(mainini, 'bd')
-                    lidzam_menu()
-                end
-                if list == 1 then
-                    sampShowDialog(27411, '{fff000}Настройки', string.format([[
-{ffffff}Напишите название вашей банды
-Текущие название: {F08080}%s сек.]], 
-                        mainini.lidzam.band), 
-                        'Сохранить', 'Закрыть', 1)
-                end
-                if list == 3 then
-                    naboron = not naboron
-                    --inicfg.save(mainini, 'bd')
-                    if naboron then 
-                        naborka = lua_thread.create(nabor) 
-                    else
-                        lua_thread.terminate(naborka) 
-                    end
-                    lidzam_menu()
-                end
-                if list == 4 then
-                    sampShowDialog(27418, '{fff000}Настройки', string.format([[
-{ffffff}Напишите количество секунд для задержки
-Текущая задержка: {F08080}%s сек.]], 
-                        mainini.lidzam.naborwait), 
-                        'Сохранить', 'Закрыть', 1)
-                end
-                if list == 5 then
-                    sampShowDialog(27417, '{fff000}Настройки', string.format([[
-{ffffff}Введите текст для флуда о наборе
-Текущий текст:
-{20B2AA}%s]], 
-                        mainini.lidzam.nabortext), 
-                        'Сохранить', 'Закрыть', 1)
-                end
-
-            end
-
-            local result, button, _, lop = sampHasDialogRespond(2859)
-            if result and button == 1 then
-                if list == 0 then
-                    whcoppidr_instr()
-                end
-                if list == 1 then
-                    edit_wh()
-                end
-                if list == 2 then
-                    mainini.functions.activement = not mainini.functions.activement	
-					inicfg.save(mainini, 'bd')
-					wh_cops_pidors()
-                end
-                if list == 3 then
-                    mainini.functions.activepidor = not mainini.functions.activepidor	
-					inicfg.save(mainini, 'bd')
-					wh_cops_pidors()
-                end
-                if list == 4 then
-                    mainini.functions.listpidor = not mainini.functions.listpidor	
-					inicfg.save(mainini, 'bd')
-					wh_cops_pidors()
-                end
-                if list == 5 then
-                    mainini.functions.uvedomusora = not mainini.functions.uvedomusora	
-					inicfg.save(mainini, 'bd')
-					wh_cops_pidors()
-                end
-                if list == 6 then
-                    mainini.functions.zajimrpm = not mainini.functions.zajimrpm	
-					inicfg.save(mainini, 'bd')
-					wh_cops_pidors()
-                end
-                if list == 7 then
-                    zajim_pidomusor()
-                end
-                if list == 8 then
-                    pidor_opis()
-                end
-            end
-
-            local result, button, _, lop = sampHasDialogRespond(23388)
-            if result and button == 1 then
-                if list == 0 then
-                    mainini.functions.binder = not mainini.functions.binder	
-					inicfg.save(mainini, 'bd')
-					binder_menu()
-                end
-                if list == 1 then
-                    binder_info()
-                end
-            end
-
-            local result, button, _, lop = sampHasDialogRespond(27417)
-            if result and button == 1 then
-                mainini.lidzam.nabortext = lop
-                inicfg.save(mainini, 'bd')
-                lidzam_menu()
-            end
-
-            local result, button, _, lop = sampHasDialogRespond(27411)
-            if result and button == 1 then
-                mainini.lidzam.band = lop
-                inicfg.save(mainini, 'bd')
-                lidzam_menu()
-            end
-
-            local result, button, _, lop = sampHasDialogRespond(27418)
-            if result and button == 1 then
-                mainini.lidzam.naborwait = lop
-                inicfg.save(mainini, 'bd')
-                lidzam_menu()
-            end
-
-            local result, button, _, lop = sampHasDialogRespond(27871)
-            if result and button == 1 then
-                mainini.flood.flwait1 = lop
-                inicfg.save(mainini, 'bd')
-                flood_menu()
-            end
-
-            local result, button, _, lop = sampHasDialogRespond(27872)
-            if result and button == 1 then
-                mainini.flood.fltext1 = lop
-                inicfg.save(mainini, 'bd')
-                flood_menu()
-            end
-
-            local result, button, _, lop = sampHasDialogRespond(27873)
-            if result and button == 1 then
-                mainini.flood.flwait2 = lop
-                inicfg.save(mainini, 'bd')
-                flood_menu()
-            end
-
-            local result, button, _, lop = sampHasDialogRespond(27874)
-            if result and button == 1 then
-                mainini.flood.fltext2 = lop
-                inicfg.save(mainini, 'bd')
-                flood_menu()
-            end
-
-            local result, button, _, lop = sampHasDialogRespond(27875)
-            if result and button == 1 then
-                mainini.flood.flwait3 = lop
-                inicfg.save(mainini, 'bd')
-                flood_menu()
-            end
-
-            local result, button, _, lop = sampHasDialogRespond(27876)
-            if result and button == 1 then
-                mainini.flood.fltext3 = lop
-                inicfg.save(mainini, 'bd')
-                flood_menu()
-            end
-
-            local result, button, _, lop = sampHasDialogRespond(27885)
-            if result and button == 1 then
-                mainini.flood.flwait4 = lop
-                inicfg.save(mainini, 'bd')
-                flood_menu()
-            end
-
-            local result, button, _, lop = sampHasDialogRespond(27886)
-            if result and button == 1 then
-                mainini.flood.fltext4 = lop
-                inicfg.save(mainini, 'bd')
-                flood_menu()
-            end
-
-            local result, button, _, lop = sampHasDialogRespond(27895)
-            if result and button == 1 then
-                mainini.flood.flwait5 = lop
-                inicfg.save(mainini, 'bd')
-                flood_menu()
-            end
-
-            local result, button, _, lop = sampHasDialogRespond(27896)
-            if result and button == 1 then
-                mainini.flood.fltext5 = lop
-                inicfg.save(mainini, 'bd')
-                flood_menu()
-            end
-
-            local result, button, _, lop = sampHasDialogRespond(2141)
-            if result and button == 1 then
-                mainini.config.fmap = lop
-                inicfg.save(mainini, 'bd')
-                menu()
-            end
-            
-            local result, button, _, lop = sampHasDialogRespond(2250)
-            if result and button == 1 then
-                mainini.config.wh = lop
-                inicfg.save(mainini, 'bd')
-                menu()
-            end
-            
-            local result, button, _, lop = sampHasDialogRespond(2252)
-            if result and button == 1 then
-                mainini.config.allsbiv = lop
-                inicfg.save(mainini, 'bd')
-                menu()
-            end
-
-            local result, button, _, lop = sampHasDialogRespond(22526)
-            if result and button == 1 then
-                mainini.config.autoplusc = lop
-                inicfg.save(mainini, 'bd')
-                menu()
-            end
-
-            local result, button, _, lop = sampHasDialogRespond(22527)
-            if result and button == 1 then
-                mainini.config.autodhits = lop
-                inicfg.save(mainini, 'bd')
-                menu()
-            end
-
-            local result, button, _, lop = sampHasDialogRespond(2293)
-            if result and button == 1 then
-                mainini.config.shook = lop
-                inicfg.save(mainini, 'bd')
-                menu()
-            end
-
-            local result, button, _, lop = sampHasDialogRespond(2299)
-            if result and button == 1 then
-                mainini.config.tramp = lop
-                inicfg.save(mainini, 'bd')
-                menu()
-            end
-
-            local result, button, _, lop = sampHasDialogRespond(2931)
-            if result and button == 1 then
-                mainini.config.zajimrpm = lop
-                inicfg.save(mainini, 'bd')
-                wh_cops_pidors()
-            end
-
-            local result, button, _, lop = sampHasDialogRespond(2253)
-            if result and button == 1 then
-                mainini.config.sbiv = lop
-                inicfg.save(mainini, 'bd')
-                menu()
-            end
-            
-            local result, button, _, lop = sampHasDialogRespond(2251)
-            if result and button == 1 then
-                mainini.config.suicide = lop
-                inicfg.save(mainini, 'bd')
-                menu()
-            end
-
-            local result, button, _, lop = sampHasDialogRespond(2139)
-            if result and button == 1 then
-                mainini.helper.user_id = lop
-                inicfg.save(mainini, 'bd')
-                afk_menu()
-                sendvknotf('Тестовое сообщение')
-            end
-            local result, button, _, lop = sampHasDialogRespond(21391)
-            if result and button == 1 then
-                mainini.helper.password = lop
-                inicfg.save(mainini, 'bd')
-                nosoft_menu()
-            end
-            local result, button, _, lop = sampHasDialogRespond(21392)
-            if result and button == 1 then
-                mainini.helper.bankpin = lop
-                inicfg.save(mainini, 'bd')
-                nosoft_menu()
-            end
-
+dialogsMenu()
+dialogsFloodMenu()
  
 
 if toggle then --params that not declared has a nil value that same as false
@@ -2354,8 +1686,12 @@ if mainini.functions.bott and trigbott then
     end
 end
 
+if mainini.functions.sl and isKeyJustPressed(57) and isKeyCheckAvailable() and not isKeyDown(18) and not isKeyDown(16) and not isKeyDown(17) and not captureon then statesl = not statesl end
+
+
+
 if isKeyDown(18) and isKeyJustPressed(57) and isKeyCheckAvailable() then trigbott = not trigbott end
-if not trigbott then 
+if trigbott then 
     --local clr = join_argb(0, 220, 20, 60)
     local clr = join_argb(0, 178, 34, 34)
     local r,g,b = 178, 34, 34
@@ -2391,20 +1727,11 @@ end
 
 
 
-local text = sampTextdrawGetString(2069)
-if text:match("%[ ~p~%u+~w~ %]") then
-setGameKeyState(16, 255)
-setGameKeyState(21, 255)
-setGameKeyState(9, 255)
-wait(100)
-setGameKeyState(16, 0)
-setGameKeyState(21, 0)
-setGameKeyState(9, 0)
-end
+
 
 
 local texthome = sampTextdrawGetString(2054)
-if texthome:match("House~g~ 20") or texthome:match("House~g~ 47") or texthome:match("House~g~ 46") or texthome:match("House~g~ 48") or texthome:match("House~g~ 57") then
+if texthome:match("House~g~ 20") or texthome:match("House~g~ 61") or texthome:match("House~g~ 47") or texthome:match("House~g~ 46") or texthome:match("House~g~ 48") or texthome:match("House~g~ 57") then
     menuhome = true
 end
 if menuhome and not sampTextdrawIsExists(2054) then menuhome = false end
@@ -2419,11 +1746,6 @@ if sampTextdrawIsExists(2103) and not act then
     act = true
 end
 if act and not sampTextdrawIsExists(2103) then act = false end
-
-
-
-
-
 
 while isPauseMenuActive() do -- в меню паузы отключаем курсор, если он активен
     if cursorEnabled then
@@ -2442,76 +1764,6 @@ for i=0, 2048 do
     end
 end
 
-local valid, ped = getCharPlayerIsTargeting(PLAYER_HANDLE)
-if valid and doesCharExist(ped) then
-    local result, id = sampGetPlayerIdByCharHandle(ped)
-    if result then
-        local name = sampGetPlayerNickname(id)
-        local nickk = string.match(name, '(.*)_')
-        local nickkk = string.match(name, '_(.*)')
-        local namee = string.gsub(name, "_", " ");
-        local lvlped = sampGetPlayerScore(id)
-        if isKeyJustPressed(20) and isKeyCheckAvailable() then 
-            sampSendChat(string.format('/free %s', id))
-        end
-        if mainini.oboss.piss1 then
-            if isKeyJustPressed(_G['VK_'..mainini.oboss.obossactiv]) and isKeyCheckAvailable() then 
-                sampSendChat(string.format(mainini.oboss.pisstext, nickk))
-                poss = true
-            end
-        elseif mainini.oboss.piss2 then
-            if isKeyJustPressed(_G['VK_'..mainini.oboss.obossactiv]) and isKeyCheckAvailable() then 
-                sampSendChat(string.format(mainini.oboss.pisstext, namee))
-                poss = true
-            end
-        elseif mainini.oboss.piss3 then
-            if isKeyJustPressed(_G['VK_'..mainini.oboss.obossactiv]) and isKeyCheckAvailable() then 
-                sampSendChat(string.format(mainini.oboss.pisstext, name))
-                poss = true
-            end
-        end
-
-        if mainini.lidzam.devyatka and isKeyJustPressed(219) and isKeyCheckAvailable() then
-            if sampGetPlayerScore(id) >= 5 then
-                sampSendChat(string.format("/todo Надень вот это на себя*кинув в руки %s поношенную(5) бандану %s", namee, mainini.lidzam.band))
-                wait(500)
-                sampSendChat(string.format('/invite %s', name))
-                wait(3000)
-                sampSendChat(string.format('/giverank %s 5', name))
-            else
-                sampSendChat(string.format("/todo Надень вот это на себя*кинув в руки %s безымянную(1) бандану %s", namee, mainini.lidzam.band))
-                wait(500)
-                sampSendChat(string.format('/invite %s', name)) end
-        end
-        if mainini.lidzam.devyatka and isKeyJustPressed(221) and isKeyCheckAvailable() then
-            sampSendChat(string.format("/todo Надень вот это на себя*кинув в руки %s легендарную(8) бандану %s", namee, mainini.lidzam.band))
-            wait(500)
-            sampSendChat(string.format('/invite %s', name))
-            wait(3000)
-            sampSendChat(string.format('/giverank %s 8', name))
-            -- принял ваше предложение вступить к вам в организацию
-
-        end
-        if mainini.lidzam.devyatka and isKeyJustPressed(187) and isKeyCheckAvailable() then
-            sampSetChatInputText(string.format('/giveskin %s ', id))
-            sampSetChatInputEnabled(true)
-        end
-        if mainini.lidzam.devyatka and isKeyJustPressed(189) and isKeyCheckAvailable() then
-            sampSetChatInputText(string.format('/giverank %s ', id))
-            sampSetChatInputEnabled(true)
-        end
-    end
-end
-
-
-if poss and isKeyJustPressed(_G['VK_'..mainini.oboss.pissactiv]) and isKeyCheckAvailable() then 
-    sampSetSpecialAction(68)
-    poss = false
-end
-if poss and isKeyJustPressed(_G['VK_'..mainini.oboss.animactiv]) and isKeyCheckAvailable() then 
-    sampSendChat('/anim 85')
-    poss = false
-end
 
 
 
@@ -2524,15 +1776,13 @@ arec()
 
 
 
-
 if isKeyJustPressed(78) and isCharInAnyCar(PLAYER_PED) then
     notkey = true
 end
 
 
 if isKeyDown(16) and isKeyJustPressed(116) and isKeyCheckAvailable() then
-    --sampAddChatMessage("{ff4500}[ble$$ave] {4682B4}Скрипт {FF0000}ВЫКЛЮЧЕН. {ffffff}Автор: {800080}tedj",-1)
-    printStringNow("~B~Script ~Y~/blessave ~R~OFF ~P~for "..nickker, 1500, 5)
+    --printStringNow("~B~Script ~Y~/blessave ~R~OFF ~P~for "..nickker, 1500, 5)
     thisScript():unload() 
 end
 if isKeyDown(16) and isKeyJustPressed(113) and isKeyCheckAvailable() then
@@ -2542,14 +1792,11 @@ if isKeyDown(16) and isKeyJustPressed(113) and isKeyCheckAvailable() then
         nameTagOff()
         wh = false
         actmentpidor = false
-       -- musorasosat = false
         sound = false
         sound1 = false
-        --onfp = false
+        statesl = false
         cameraRestorePatch(false)
         activeextra = false
-        --musora = false
-        --obideli = false
         ScriptState = false
         ScriptState2 = false
         ScriptState3 = false
@@ -2565,17 +1812,13 @@ if isKeyDown(16) and isKeyJustPressed(113) and isKeyCheckAvailable() then
         inicfg.save(mainini, 'bd') 
     elseif captureon then
         printStringNow("~P~LEGAL ~G~ON", 1500, 5)
-        --nameTagOff()
         wh = false
-       -- musorasosat = false
         sound = false
         sound1 = false
-       -- onfp = false
+        statesl = false
        actmentpidor = false
         cameraRestorePatch(false)
         activeextra = false
-       -- musora = false
-        --obideli = false
         ScriptState = false
         ScriptState2 = false
         ScriptState3 = false
@@ -2618,10 +1861,6 @@ if  isKeyJustPressed(_G['VK_'..mainini.config.wh]) and isKeyCheckAvailable() and
         nameTagOff()
         addOneOffSound(0.0, 0.0, 0.0, 1138)
     end
-    if pidorsshow and mainini.functions.listpidor then
-        sampProcessChatInput("/pidors")
-        pidorsshow = false
-    end
 end
 if isKeyDown(119) then
     if wh then 
@@ -2631,112 +1870,92 @@ if isKeyDown(119) then
     end
 end
 
+if mainini.functions.sl and statesl then 
+    local clr = join_argb(0, 133, 17, 17)
+    local r,g,b = 133, 17, 17
+    writeMemory(health, 4, ("0xFF%06X"):format(clr), true)
+else
+    local clr = join_argb(0, 128, 46, 46)
+    local r,g,b = 128, 46, 46
+    writeMemory(health, 4, ("0xFF%06X"):format(clr), true)
+end
 
-local menuPtr = 0x00BA6748
-if isPlayerPlaying(playerHandle) then 
-        if isKeyCheckAvailable() and mainini.functions.fastmap and isKeyDown(_G['VK_'..mainini.config.fmap]) then
-            writeMemory(menuPtr + 0x33, 1, 1, false) -- activate menu  and isKeyDown(VK_Z)
-            -- wait for a next frame
-            wait(0)
-            writeMemory(menuPtr + 0x15C, 1, 1, false) -- textures loaded
-            writeMemory(menuPtr + 0x15D, 1, 5, false) -- current menu
-            if reduceZoom then
-                writeMemory(menuPtr + 0x64, 4, representFloatAsInt(300.0), false)
-                --wait(100)
-                setVirtualKeyDown(90, true)
-                wait(1500)
-                setVirtualKeyDown(90, false)
-            end
-            while mainini.functions.fastmap and isKeyDown(_G['VK_'..mainini.config.fmap]) do
-                wait(80)
-            end
-                writeMemory(menuPtr + 0x32, 1, 1, false) -- close menu
-            end
+if mainini.functions.sl and statesl and settings.show_circle and isKeyDown(2) and isCharOnFoot(1) and getDamage(getCurrentCharWeapon(1)) then
+    local px = getpx()
+    local step = px / 1e4
+    for i = 0, 6.28, step do
+        if
+            i > PI * 1.875 or i < PI * 0.125 or
+            i > PI * 0.875 and i < PI * 1.125 or
+            i > PI * 0.375 and i < PI * 0.625 or
+            i > PI * 1.375 and i < PI * 1.625
+        then
+            renderDrawBox(xc + math.cos(i) * px, yc + math.sin(i) * px, 3, 3, 0x55007FFF)
         end
     end
 end
 
 
-function runToPoint(tox, toy)
-    local x, y, z = getCharCoordinates(PLAYER_PED)
-    local angle = getHeadingFromVector2d(tox - x, toy - y)
-    local xAngle = math.random(-50, 50)/100
-    setCameraPositionUnfixed(xAngle, math.rad(angle - 90))
-    stopRun = false
-    while getDistanceBetweenCoords2d(x, y, tox, toy) > 0.8 do
-        setGameKeyState(1, -255)
-        --setGameKeyState(16, 1)
-        wait(1)
-        x, y, z = getCharCoordinates(PLAYER_PED)
-        angle = getHeadingFromVector2d(tox - x, toy - y)
-        setCameraPositionUnfixed(xAngle, math.rad(angle - 90))
-        if stopRun then
-           -- stopRun = false
-            break
+    end
+end
+
+function sp.onSendBulletSync(data)
+    if mainini.functions.sl then
+        if getCurrentCharWeapon(playerPed) == 24 then
+            math.randomseed(os.clock())
+            if not statesl then return end
+            local weap = getCurrentCharWeapon(1)
+            if not getDamage(weap) then return end
+            local id, ped = getClosestPlayerFromCrosshair()
+            if id == -1 then return debugSay('В зоне вокруг прицела не было найдено игроков') end
+            local vmes =	sampGetPlayerNickname(id) .. ' > ' .. math.floor(getDistanceFromPed(ped)) .. 'm > ' ..
+                    math.floor(getCharSpeed(1) * 3) .. ' vs ' .. math.floor(getCharSpeed(ped) * 3) .. ' > '
+            if data.targetType == 1 then return debugSay(vmes .. '{008000}Без помощи аима') end
+            if math.random(1, 100) < settings.miss_ratio and not isKeyDown(VK_Q) then return debugSay(vmes .. '{40E0D0}Имитация промахов') end
+            if not getcond(ped) then return debugSay(vmes .. '{FFA500}Игрок за текстурами') end
+            debugSay(vmes .. '{FF0000}Сработал аим')
+            data.targetType = 1
+            local px, py, pz = getCharCoordinates( ped )
+            data.targetId = id
+
+            data.target = { x = px + rand(), y = py + rand(), z = pz + rand() }
+            data.center = { x = rand(), y = rand(), z = rand() }
+
+            lua_thread.create(function ()
+                wait(1)
+                sampSendGiveDamage(id, getDamage(weap), weap, 3)
+                addBlood(px, py, pz, 0.0, 0.0, 0.0, 5, 1)
+            end)
+        end
+        if getCurrentCharWeapon(playerPed) == 23 or getCurrentCharWeapon(playerPed) == 22 or getCurrentCharWeapon(playerPed) == 28 then
+            math.randomseed(os.clock())
+            if not statesl then return end
+            local weap = getCurrentCharWeapon(1)
+            if not getDamage(weap) then return end
+            local id, ped = getClosestPlayerFromCrosshair()
+            if id == -1 then return debugSay('В зоне вокруг прицела не было найдено игроков') end
+            local vmes =	sampGetPlayerNickname(id) .. ' > ' .. math.floor(getDistanceFromPed(ped)) .. 'm > ' ..
+                    math.floor(getCharSpeed(1) * 3) .. ' vs ' .. math.floor(getCharSpeed(ped) * 3) .. ' > '
+            if data.targetType == 1 then return debugSay(vmes .. '{008000}Без помощи аима') end
+            if math.random(1, 100) < 0 and not isKeyDown(VK_Q) then return debugSay(vmes .. '{40E0D0}Имитация промахов') end
+            if not getcond(ped) then return debugSay(vmes .. '{FFA500}Игрок за текстурами') end
+            debugSay(vmes .. '{FF0000}Сработал аим')
+            data.targetType = 1
+            local px, py, pz = getCharCoordinates( ped )
+            data.targetId = id
+
+            data.target = { x = px + rand(), y = py + rand(), z = pz + rand() }
+            data.center = { x = rand(), y = rand(), z = rand() }
+
+            lua_thread.create(function ()
+                wait(1)
+                sampSendGiveDamage(id, getDamage(weap), weap, 3)
+                addBlood(px, py, pz, 0.0, 0.0, 0.0, 5, 1)
+            end)
         end
     end
 end
 
-function msave()
-	local mpX, mpY, mpZ = getCharCoordinates(PLAYER_PED)
-	sampAddChatMessage("[{00fc76}WAXTA{FFFFFF}]: Icon set!", -1)
-    icons.markers = icons.markers + 1
-    icons.cords[#icons.cords + 1] = { X = mpX, Y = mpY, Z = mpZ }
-    mymark[icons.markers] = addSpriteBlipForCoord(mpX, mpY, mpZ, 37)
-    jsoncfg.save(icons, configDir)
-	addOneOffSound(0, 0, 0, 1057)
-end
-function mdelete(arg)
-    if tonumber(arg) == nil then
-        icons.cords[#icons.cords] = nil
-        removeBlip(mymark[icons.markers])
-        icons.markers = icons.markers - 1
-        if icons.markers < 0 then icons.markers = 0 end
-        jsoncfg.save(icons, configDir)
-        sampAddChatMessage("[{00fc76}WAXTA{FFFFFF}]: Icon {FF0000}"..icons.markers+1 ..'{FFFFFF} deleted!', -1)
-    else
-        if icons.cords[tonumber(arg)] == nil then sampAddChatMessage('[{00fc76}WAXTA{FFFFFF}]: Icon {FF0000}'..tonumber(arg)..' {FFFFFF}not found!', -1) return end
-        table.remove(icons.cords, tonumber(arg))
-        removeBlip(mymark[tonumber(arg)])
-        icons.markers = icons.markers - 1
-        if icons.markers < 0 then icons.markers = 0 end
-        jsoncfg.save(icons, configDir)
-        ReloadMarkers()
-        sampAddChatMessage("[{00fc76}WAXTA{FFFFFF}]: Icon {FF0000}"..tonumber(arg)..'{FFFFFF} deleted!', -1)
-    end
-end
-function mlist()
-    local dtext = 'Distance\tCoords \n'
-    if checkpoint ~= nil then dtext = dtext..'\t \t{FF0000}Remove checkpoint' end
-    local x, y, z = getCharCoordinates(playerPed)
-    for k, v in pairs(icons.cords) do
-         f1 = ("%0.2f"):format(v.X)
-         f2 = ("%0.2f"):format(v.Y)
-        f3 = ("%0.2f"):format(v.Z)
-            dtext = dtext..'{FF0000}'..math.floor(getDistanceBetweenCoords3d(v.X, v.Y, v.Z, x, y, z))..'\t{FFFF00} '..tostring(f1)..', {ff00FF}'..tostring(f2)..', {fff000}'..tostring(f3)..'\n'
-    end
-    sampShowDialog(28246, "[{00fc76}WAXTA{FFFFFF}]: Icons list:", dtext, "Close", _, 0)
-    --lua_thread.create(dialog_mlist)
-end 
-
-function LoadMarkers() 
-    for k,v in pairs(icons.cords) do
-        if type(v) ~= 'userdata' then mymark[#mymark+1] = addSpriteBlipForCoord(v.X, v.Y, v.Z, 37) end
-    end
-    sampAddChatMessage("[{00fc76}WAXTA{FFFFFF}]: Loaded {FF0000}"..icons.markers.."{FFFFFF} icons!", -1)
-end
-
-
-function ReloadMarkers()
-    for k,v in pairs(mymark) do
-        removeBlip(mymark[k])
-    end
-    mymark = {}
-    for k,v in pairs(icons.cords) do
-        if type(v) ~= 'userdata' then mymark[#mymark+1] = addSpriteBlipForCoord(v.X, v.Y, v.Z, 37) end
-    end
-    if checkpoint ~= nil then deleteCheckpoint(checkpoint) checkpoint = nil end
-end
 --[[ 
 local logging = false
 function sp.onPlayerJoin(playerId, color, isNpc, nickname)
@@ -2752,7 +1971,13 @@ function sp.onPlayerJoin(playerId, color, isNpc, nickname)
 	end
 end)
 end
-end ]]
+end 
+
+function sp.onPlayerJoin(playerId, color, isNpc, nickname)
+    if nickname == "Chief_Cannon" then
+        sendvknotf0("чиф в ИГРЕ!")
+    end
+end
 
 function sp.onPlayerQuit(playerId, reason)
 	if logginggh then
@@ -2764,7 +1989,8 @@ function sp.onPlayerQuit(playerId, reason)
             sampAddChatMessage(sampGetPlayerNickname(playerId).."("..playerId..") вышел из игры.", -1)
 		end
 	end
-end
+end]]
+
 function gopay()
     lua_thread.create(function()
         sampSendChat('/fammenu')
@@ -2772,16 +1998,6 @@ function gopay()
         wait(10) sampSendDialogResponse(2763, 1, 9, -1)
     end)    
 end
-function trpay()
-    lua_thread.create(function()
-        sampSendChat('/trmenu')
-        wait(500)
-        sampSetCurrentDialogListItem(5)
-        sampCloseCurrentDialogWithButton(1)
-    end)    
-end
-
-
 
 
 function join_argb(a, b, g, r)
@@ -2824,12 +2040,6 @@ addEventHandler("onWindowMessage", function (msg, wparam, lparam)
 end)
 
 function onScriptTerminate(scr, quitgame)
-    if thisScript() == scr then
-        for k,v in pairs(mymark) do
-            removeBlip(mymark[k])
-        end
-        --print('{FFFFFF}[{00fc76}WAXTA{FFFFFF}]: {FF0000}All icons deleted!')
-    end
     if s == thisScript() then
         if marker or checkpoint or mark or dtext then
             removeUser3dMarker(mark)
@@ -2838,15 +2048,6 @@ function onScriptTerminate(scr, quitgame)
             sampDestroy3dText(dtext)
         end 
     end 
-    if scr == thisScript() then
-        os.remove(getWorkingDirectory()..'\\config\\pidorasi.ini')
-        cameraRestorePatch(false)
-        if wh then 
-            nameTagOff()
-            wait(1000)
-            wh = false
-        end
-    end
 end
 
 tblclosetest = {['50.83'] = 50.84, ['49.9'] = 50, ['49.05'] = 49.15, ['48.2'] = 48.4, ['47.4'] = 47.6, ['46.5'] = 46.7, ['45.81'] = '45.84',
@@ -2868,71 +2069,6 @@ end
 
 
 function sp.onShowTextDraw(id, data)
-
-    if math.floor(data.position.x) == 32 and math.floor(data.position.y) == 271  then bcal = id end--айфон х
-    if math.floor(data.position.x) == 32 and math.floor(data.position.y) == 261  then bcal = id end--гугл пиксель
-	if math.floor(data.position.x) == 31 and math.floor(data.position.y) == 268  then bcal = id end--самсунг
-    if math.floor(data.position.x) == 32 and math.floor(data.position.y) == 272  then bcal = id end--cяоми
-
---[[ 	if PhoneColor=='Xiaomi Mi 8' then
-		if math.floor(data.position.x) == 32 and math.floor(data.position.y) == 272  then bcal = id end
-		if math.floor(data.position.x) == 33 and math.floor(data.position.y) == 185  then num1 = id end
-		if math.floor(data.position.x) == 52 and math.floor(data.position.y) == 185  then num2 = id end
-		if math.floor(data.position.x) == 70 and math.floor(data.position.y) == 185  then num3 = id end
-		if math.floor(data.position.x) == 33 and math.floor(data.position.y) == 206  then num4 = id end
-		if math.floor(data.position.x) == 51 and math.floor(data.position.y) == 206  then num5 = id end
-		if math.floor(data.position.x) == 70 and math.floor(data.position.y) == 206  then num6 = id end
-		if math.floor(data.position.x) == 33 and math.floor(data.position.y) == 227  then num7 = id end
-		if math.floor(data.position.x) == 51 and math.floor(data.position.y) == 226  then num8 = id end
-		if math.floor(data.position.x) == 70 and math.floor(data.position.y) == 226  then num9 = id end
-		if math.floor(data.position.x) == 51 and math.floor(data.position.y) == 247  then num0 = id end
-		if math.floor(data.position.x) == 51 and math.floor(data.position.y) == 268  then bcal2 = id end
-	end
-
-
-	if PhoneColor=='IPhone X' then
-		if math.floor(data.position.x) == 33 and math.floor(data.position.y) == 185  then num1 = id end
-		if math.floor(data.position.x) == 52 and math.floor(data.position.y) == 185  then num2 = id end
-		if math.floor(data.position.x) == 70 and math.floor(data.position.y) == 185  then num3 = id end
-		if math.floor(data.position.x) == 33 and math.floor(data.position.y) == 206  then num4 = id end
-		if math.floor(data.position.x) == 51 and math.floor(data.position.y) == 206  then num5 = id end
-		if math.floor(data.position.x) == 70 and math.floor(data.position.y) == 206  then num6 = id end
-		if math.floor(data.position.x) == 33 and math.floor(data.position.y) == 227  then num7 = id end
-		if math.floor(data.position.x) == 51 and math.floor(data.position.y) == 226  then num8 = id end
-		if math.floor(data.position.x) == 70 and math.floor(data.position.y) == 226  then num9 = id end
-		if math.floor(data.position.x) == 51 and math.floor(data.position.y) == 247  then num0 = id end
-		if math.floor(data.position.x) == 51 and math.floor(data.position.y) == 268  then bcal2 = id end
-	end ]]
-
-
-	if PhoneColor=='Samsung Galaxy' then
-		if math.floor(data.position.x) == 34 and math.floor(data.position.y) == 188  then num1 = id end
-		if math.floor(data.position.x) == 53 and math.floor(data.position.y) == 188  then num2 = id end
-		if math.floor(data.position.x) == 71 and math.floor(data.position.y) == 188  then num3 = id end
-		if math.floor(data.position.x) == 34 and math.floor(data.position.y) == 209  then num4 = id end
-		if math.floor(data.position.x) == 53 and math.floor(data.position.y) == 209  then num5 = id end
-		if math.floor(data.position.x) == 71 and math.floor(data.position.y) == 209  then num6 = id end
-		if math.floor(data.position.x) == 34 and math.floor(data.position.y) == 230  then num7 = id end
-		if math.floor(data.position.x) == 53 and math.floor(data.position.y) == 230  then num8 = id end
-		if math.floor(data.position.x) == 71 and math.floor(data.position.y) == 230  then num9 = id end
-		if math.floor(data.position.x) == 53 and math.floor(data.position.y) == 251  then num0 = id end
-		if math.floor(data.position.x) == 53 and math.floor(data.position.y) == 271  then bcal2 = id end
-	end
-
-
---[[ 	if PhoneColor=='Google Pixel 3' then
-		if math.floor(data.position.x) == 32 and math.floor(data.position.y) == 191  then num1 = id end
-		if math.floor(data.position.x) == 51 and math.floor(data.position.y) == 191  then num2 = id end
-		if math.floor(data.position.x) == 70 and math.floor(data.position.y) == 191  then num3 = id end
-		if math.floor(data.position.x) == 32 and math.floor(data.position.y) == 213  then num4 = id end
-		if math.floor(data.position.x) == 51 and math.floor(data.position.y) == 213  then num5 = id end
-		if math.floor(data.position.x) == 70 and math.floor(data.position.y) == 213  then num6 = id end
-		if math.floor(data.position.x) == 32 and math.floor(data.position.y) == 233  then num7 = id end
-		if math.floor(data.position.x) == 51 and math.floor(data.position.y) == 233  then num8 = id end
-		if math.floor(data.position.x) == 70 and math.floor(data.position.y) == 233  then num9 = id end
-		if math.floor(data.position.x) == 51 and math.floor(data.position.y) == 254  then num0 = id end
-		if math.floor(data.position.x) == 32 and math.floor(data.position.y) == 254  then bcal2 = id end
-	end ]]
 
 	--sampAddChatMessage("ID: "..id.."\nData_modelId: "..data.modelId..'\nData_Pos_X: '..data.position.x..'\nData_Pos_Y: '..data.position.y, -1)
 	if data.modelId == mod and cmd == 1 then
@@ -2965,6 +2101,8 @@ if automeatbag then
             sampSendClickTextdraw(65535)
             close = false
             automeatbag = false
+            wait(500)
+            sampSendChat("/meatbag")
           end
     end)
 end 
@@ -3123,7 +2261,7 @@ function doKeyCheck()
     end
   end
 	function sp.onCreate3DText(id, color, position, distance, testLOS, attachedPlayerId, attachedVehicleId, text)
-        if mainini.functions.dotmoney then
+        if dotmoney then
 		    text = separator(text)
 		    return {id, color, position, distance, testLOS, attachedPlayerId, attachedVehicleId, text}
         end
@@ -3176,14 +2314,7 @@ function sp.onSendPlayerSync(data)
     end
 end
 
-function checkObject(object)
-	for _, object2 in pairs(tableObjects) do
-		if object2 == object then
-			return true
-		end
-	end
-	return false
-end
+
 
 function ClearChat()
     local memory = require "memory"
@@ -3205,6 +2336,16 @@ function arec()
     end
 end 
 
+function timeweat()
+    while true do wait(0)
+        while not isPlayerPlaying(PLAYER_HANDLE) do wait(0) end
+    if mainini.stsw.Static then
+        if mainini.stsw.Time ~= memory.read(0xB70153, 1, false) then memory.write(0xB70153, mainini.stsw.Time, 1, false) end
+        if mainini.stsw.Weather ~= memory.read(0xC81320, 2, false) then memory.write(0xC81320, mainini.stsw.Weather, 2, false) end
+    end
+end
+end
+
 function reconnect()
   lua_thread.create(function ()
   sampDisconnectWithReason(quit)
@@ -3214,23 +2355,99 @@ function reconnect()
   sampSetGamestate(1) end)
 end
 
-function FishEye()
-    while true do
-        wait(0)
-        if mainini.functions.fish then 
-            if isCurrentCharWeapon(PLAYER_PED, 34) and isKeyDown(2) then
-                if not locked then 
-                    cameraSetLerpFov(70.0, 70.0, 1000, 1)
-                    locked = true
-                end
-            else
-                cameraSetLerpFov(101.0, 101.0, 1000, 1)
-                locked = false
+
+function autoshar()
+    while true do wait(0)
+        while not isPlayerPlaying(PLAYER_HANDLE) do wait(0) end
+    local text = sampTextdrawGetString(2069)
+    if text:match("%[ ~p~%u+~w~ %]") then
+    setGameKeyState(16, 255)
+    setGameKeyState(21, 255)
+    setGameKeyState(9, 255)
+    wait(100)
+    setGameKeyState(16, 0)
+    setGameKeyState(21, 0)
+    setGameKeyState(9, 0)
+    end
+end
+end
+
+function targetfunc()
+    while true do wait(0)
+        while not isPlayerPlaying(PLAYER_HANDLE) do wait(0) end
+        
+local valid, ped = getCharPlayerIsTargeting(PLAYER_HANDLE)
+if valid and doesCharExist(ped) then
+    local result, id = sampGetPlayerIdByCharHandle(ped)
+    if result then
+        local name = sampGetPlayerNickname(id)
+        local nickk = string.match(name, '(.*)_')
+        local nickkk = string.match(name, '_(.*)')
+        local namee = string.gsub(name, "_", " ");
+        local lvlped = sampGetPlayerScore(id)
+        if isKeyJustPressed(20) and isKeyCheckAvailable() then 
+            sampSendChat(string.format('/free %s', id))
+        end
+        if mainini.oboss.piss1 then
+            if isKeyJustPressed(_G['VK_'..mainini.oboss.obossactiv]) and isKeyCheckAvailable() then 
+                sampSendChat(string.format(mainini.oboss.pisstext, nickk))
+                poss = true
             end
+        elseif mainini.oboss.piss2 then
+            if isKeyJustPressed(_G['VK_'..mainini.oboss.obossactiv]) and isKeyCheckAvailable() then 
+                sampSendChat(string.format(mainini.oboss.pisstext, namee))
+                poss = true
+            end
+        elseif mainini.oboss.piss3 then
+            if isKeyJustPressed(_G['VK_'..mainini.oboss.obossactiv]) and isKeyCheckAvailable() then 
+                sampSendChat(string.format(mainini.oboss.pisstext, name))
+                poss = true
+            end
+        end
+
+        if mainini.lidzamband.devyatka and isKeyJustPressed(219) and isKeyCheckAvailable() then
+            if sampGetPlayerScore(id) >= mainini.lidzamband.minlvl then
+                sampSendChat(string.format("/todo Надень вот это на себя*кинув в руки %s поношенную(5) бандану %s", namee, mainini.lidzamband.band))
+                wait(500)
+                sampSendChat(string.format('/invite %s', name))
+                wait(3000)
+                sampSendChat(string.format('/giverank %s %s', name, mainini.lidzamband.minrank))
+            else
+                sampSendChat(string.format("%s, в нашу банду %s проходит набор с %s лет проживания в штате", namee, mainini.lidzamband.band, mainini.lidzamband.minlvl))
+            end
+        end
+        if mainini.lidzamband.devyatka and isKeyJustPressed(221) and isKeyCheckAvailable() then
+            sampSendChat(string.format("/todo Надень вот это на себя*кинув в руки %s легендарную(8) бандану %s", namee, mainini.lidzamband.band))
+            wait(500)
+            sampSendChat(string.format('/invite %s', name))
+            wait(3000)
+            sampSendChat(string.format('/giverank %s 8', name))
+            -- принял ваше предложение вступить к вам в организацию
+
+        end
+        if mainini.lidzamband.devyatka and isKeyJustPressed(187) and isKeyCheckAvailable() then
+            sampSetChatInputText(string.format('/giveskin %s ', id))
+            sampSetChatInputEnabled(true)
+        end
+        if mainini.lidzamband.devyatka and isKeyJustPressed(189) and isKeyCheckAvailable() then
+            sampSetChatInputText(string.format('/giverank %s ', id))
+            sampSetChatInputEnabled(true)
         end
     end
 end
 
+
+if poss and isKeyJustPressed(_G['VK_'..mainini.oboss.pissactiv]) and isKeyCheckAvailable() then 
+    sampSetSpecialAction(68)
+    poss = false
+end
+if poss and isKeyJustPressed(_G['VK_'..mainini.oboss.animactiv]) and isKeyCheckAvailable() then 
+    sampSendChat('/anim 85')
+    poss = false
+end
+    end
+end
+        
 
 
 
@@ -3345,11 +2562,6 @@ function tormoz()
                 wait(3500)
                 deleteObject(object)
             end
-        --[[      if isKeyJustPressed(56) and isKeyCheckAvailable() and isCharInAnyCar(PLAYER_PED) and not sampIsChatInputActive() and not isSampfuncsConsoleActive() and not sampIsDialogActive() then
-                local cVecX, cVecY, cVecZ = getCarSpeedVector(storeCarCharIsInNoSave(PLAYER_PED))
-                if cVecZ < 7.0 then applyForceToCar(storeCarCharIsInNoSave(PLAYER_PED), 0.0, 0.0, 0.1, 0.0, 0.0, 0.0) 
-                end
-            end ]]
             if isCharInAnyCar(PLAYER_PED) and not sampIsChatInputActive() and not sampIsDialogActive() then
                 local veh = storeCarCharIsInNoSave(PLAYER_PED)
                 local speed = getCarSpeed(veh)
@@ -3358,11 +2570,6 @@ function tormoz()
                     wait(100)
                 end	  
             end
-    --[[             if isKeyDown(83) and isKeyCheckAvailable() and isCharInAnyCar(PLAYER_PED) and getCarSpeed(storeCarCharIsInNoSave(PLAYER_PED)) > 5 and not isCharOnAnyBike(PLAYER_PED) then
-                local data = samp_create_sync_data('vehicle')
-                data.keysData = data.keysData+160
-                data.send()
-            end ]]
         end
     end
 end
@@ -3445,7 +2652,7 @@ function fastrun()
 	 	end
 
         if isCharOnAnyBike(PLAYER_PED) and isKeyCheckAvailable() then
-			local bike = {[481] = true, [509] = true, [510] = true}
+			local bike = {[481] = true, [509] = true, [510] = true, [14914] = true, [14916] = true}
 			if bike[getCarModel(storeCarCharIsInNoSave(PLAYER_PED))] and isKeyJustPressed(67) and not isKeyDown(18) then
 				setVirtualKeyDown(0x11, true)
 				wait(300)
@@ -3478,11 +2685,83 @@ function fastrun()
     end
 end
 end
-function nabor(arg)
+function naborg(arg)
 	while true do wait(0)
-		if naboron then
-			sampSendChat(mainini.lidzam.nabortext)
-			wait(mainini.lidzam.naborwait * 1000)
+		if naborgon then
+			sampSendChat(mainini.lidzamband.naborgtext)
+			wait(mainini.lidzamband.naborgwait * 1000)
+		end
+	end
+end
+function floodg1(arg)
+	while true do wait(0)
+		if floodong1 then
+			sampSendChat(mainini.lidzamband.fltext1)
+			wait(mainini.lidzamband.flwait1 * 1000)
+		end
+	end
+end
+function floodg2(arg)
+	while true do wait(0)
+		if floodong2 then
+			sampSendChat(mainini.lidzamband.fltext2)
+			wait(mainini.lidzamband.flwait2 * 1000)
+		end
+	end
+end
+function floodg3(arg)
+	while true do wait(0)
+		if floodong3 then
+			sampSendChat(mainini.lidzamband.fltext3)
+			wait(mainini.lidzamband.flwait3 * 1000)
+		end
+	end
+end
+function floodg4(arg)
+	while true do wait(0)
+		if floodong4 then
+			sampSendChat(mainini.lidzamband.fltext4)
+			wait(mainini.lidzamband.flwait4 * 1000)
+		end
+	end
+end
+function floodg5(arg)
+	while true do wait(0)
+		if floodong5 then
+			sampSendChat(mainini.lidzamband.fltext5)
+			wait(mainini.lidzamband.flwait5 * 1000)
+		end
+	end
+end
+function floodg6(arg)
+	while true do wait(0)
+		if floodong6 then
+			sampSendChat(mainini.lidzamband.fltext6)
+			wait(mainini.lidzamband.flwait6 * 1000)
+		end
+	end
+end
+function floodg7(arg)
+	while true do wait(0)
+		if floodong7 then
+			sampSendChat(mainini.lidzamband.fltext7)
+			wait(mainini.lidzamband.flwait7 * 1000)
+		end
+	end
+end
+function floodg8(arg)
+	while true do wait(0)
+		if floodong8 then
+			sampSendChat(mainini.lidzamband.fltext8)
+			wait(mainini.lidzamband.flwait8 * 1000)
+		end
+	end
+end
+function floodg9(arg)
+	while true do wait(0)
+		if floodong9 then
+			sampSendChat(mainini.lidzamband.fltext9)
+			wait(mainini.lidzamband.flwait9 * 1000)
 		end
 	end
 end
@@ -3544,7 +2823,25 @@ function famchatVK()
     else
         vknotf.chatf = false
     end
-    sendvknotf('Fam чат '..(vklchat and 'включен!' or 'выключен!'))
+    sendvknotf('Fam чат '..(vklchatfam and 'включен!' or 'выключен!'))
+end
+function govorchatVK()
+    vklchatgovor = not vklchatgovor
+    if vklchatgovor then
+        vknotf.chatgo = true
+    else
+        vknotf.chatgo = false
+    end
+    sendvknotf('Чат рядом '..(vklchatgovor and 'включен!' or 'выключен!'))
+end
+function advchatVK()
+    vklchatadv = not vklchatadv
+    if vklchatadv then
+        vknotf.chatadv = true
+    else
+        vknotf.chatadv = false
+    end
+    sendvknotf('Адвокатский чат '..(vklchatadv and 'включен!' or 'выключен!'))
 end
 function alldialogsVK()
     vklchatdialog = not vklchatdialog
@@ -3598,21 +2895,18 @@ end
 function hphud()
 	while true do wait(0)
         while not isPlayerPlaying(PLAYER_HANDLE) do wait(0) end
-        if mainini.functions.hphud then
-            useRenderCommands(true)
+        useRenderCommands(true)
+        setTextCentre(true) -- set text centered
+        setTextScale(0.2, 0.7) -- x y size
+        setTextColour(255--[[r]], 255--[[g]], 255--[[b]], 255--[[a]])
+        setTextEdge(1--[[outline size]], 0--[[r]], 0--[[g]], 0--[[b]], 255--[[a]])
+        displayTextWithNumber(578.0, 67.9, 'NUMBER', getCharHealth(PLAYER_PED))
+        if getCharArmour(PLAYER_PED) > 0 then
             setTextCentre(true) -- set text centered
             setTextScale(0.2, 0.7) -- x y size
             setTextColour(255--[[r]], 255--[[g]], 255--[[b]], 255--[[a]])
             setTextEdge(1--[[outline size]], 0--[[r]], 0--[[g]], 0--[[b]], 255--[[a]])
-            displayTextWithNumber(578.0, 67.9, 'NUMBER', getCharHealth(PLAYER_PED))
-            if getCharArmour(PLAYER_PED) > 0 then
-                setTextCentre(true) -- set text centered
-                setTextScale(0.2, 0.7) -- x y size
-                setTextColour(255--[[r]], 255--[[g]], 255--[[b]], 255--[[a]])
-                setTextEdge(1--[[outline size]], 0--[[r]], 0--[[g]], 0--[[b]], 255--[[a]])
-                displayTextWithNumber(578.0, 46.0, 'NUMBER', getCharArmour(PLAYER_PED))
-            end
-    
+            displayTextWithNumber(578.0, 46.0, 'NUMBER', getCharArmour(PLAYER_PED))
         end
     end
 end
@@ -3966,20 +3260,6 @@ function sp.onPlayerChatBubble(id, col, dist, dur, msg)
 		return {id, col, 1488, dur, msg}
 	end
 end
---[[ function ifixx()
-    while true do wait(400*1000)
-        if activrsdf then
-            lua_thread.create(function() wait(0)
-                fix = true
-                sampSendChat("/donate")
-                wait(3000)
-                fix = false
-               -- sampAddChatMessage("inv fix", -1)
-                sendvknotf0("inv fix")
-            end)
-        end
-    end
-end ]]
 function rltao()
 	while true do wait(0)
         while not isPlayerPlaying(PLAYER_HANDLE) do wait(0) end
@@ -4030,11 +3310,6 @@ function rltao()
     end
 end
 
-
-
-
-
-    
     ---- aafk vksend
     function workpaus(bool)
         if bool then
@@ -4050,15 +3325,7 @@ end
         end
     end
     close = false
---[[     function sp.onSendTakeDamage(playerId, damage, weapon, bodypart)
-        local killer = ''
-            if sampGetPlayerHealth(select(2, sampGetPlayerIdByCharHandle(playerPed))) - damage <= 0 and sampIsLocalPlayerSpawned() then
-                if playerId > -1 and playerId < 1001 then
-                    killer = '\nУбийца: '..sampGetPlayerNickname(playerId)..'['..playerId..']'
-                end
-                sendvknotf('Ваш персонаж умер'..killer)
-        end
-    end ]]
+
     function sp.onInitGame(playerId, hostName, settings, vehicleModels, unknown)
         if mainini.afk.uvedomleniya then
             sendvknotf('Вы подключились к серверу!', hostName)
@@ -4080,21 +3347,6 @@ end
         end
         return -1
     end    
---[[     function onReceiveRpc(id,bitStream)
-        if (id == RPC_CONNECTIONREJECTED) then
-            goaurc()
-        end
-    end
-    function goaurc()
-        sendclosenotf('Потеряно соединение с сервером')
-        ip, port = sampGetCurrentServerAddress()
-        end
-    function sendclosenotf(text)
-        sendvknotf(text)
-    end ]]
----- aafk vksend
-
-
 
 function sampGetListboxItemByText(text, plain)
     --if not sampIsDialogActive() then return -1 end
@@ -4108,326 +3360,12 @@ function sampGetListboxItemByText(text, plain)
 end
 -----autopin
 function sp.onShowDialog(id, style, title, button1, button2, text)
-    if miningtool then
-	    if id == 15272 or id == 0 and title:find('Обзор всех видеокарт') or title:find('Выберите видеокарту') then
-			local automining_btcoverall = 0
-			local automining_btcoverallph = 0
-			local automining_btcamountoverall = 0
-			local automining_videocards = 0
-			local automining_videocardswork = 0
-			for line in text:gmatch("[^\n]+") do
-                dtextm[#dtextm+1] = line 
-            end
-			
-			if dtextm[1]:find('%(BTC%)') then
-			    dtextm[1] = dtextm[1]:gsub('%(BTC%)', '%1 | До 9 BTC')
-			end
-			
-			for d = 1, #dtextm do
-				if dtextm[d]:find('Полка%s+№%d+%s+|%s+%{BEF781%}%W+%s+%d+%p%d+%s+BTC%s+%d+%s+уровень%s+%d+%p%d+%%') then	-- Статус, работает или нет
-					automining_status = 1
-					automining_statustext = '{BEF781}'
-				else
-					automining_status = 0
-					automining_statustext = '{F78181}'
-				end
-				local automining_lvl = tonumber(dtextm[d]:match('Полка%s+№%d+%s+|%s+%{......%}%W+%s+%d+%p%d+%s+BTC%s+(%d+)%s+уровень%s+%d+%p%d+%%')) -- Уровень видюхи
-				local automining_fillstatus = tonumber(dtextm[d]:match('Полка%s+№%d+%s+|%s+%{......%}%W+%s+%d+%p%d+%s+BTC%s+%d+%s+уровень%s+(%d+%p%d+)%%')) -- Залито охлада в процентах
-				local automining_btcamount = tonumber(dtextm[d]:match('Полка%s+№%d+%s+|%s+%{......%}%W+%s+(%d+%p%d+)%s+BTC%s+%d+%s+уровень%s+%d+%p%d+%%')) -- Число битков сейчас в видюхе              						
-				if automining_lvl ~= nil and automining_fillstatus ~= nil and automining_btcamount ~= nil then					    						
-					automining_videocards = automining_videocards + 1
-					automining_btctimetofull = math.ceil((9 - automining_btcamount) / INFO[automining_lvl])
-					if automining_status == 1 then 
-						automining_videocardswork = automining_videocardswork + 1
-					end
-					if automining_btcamount >= 1 then 
-						automining_btcamountinfo = true	
-					else 
-						automining_btcamountinfo = false 
-					end
-                    					
-					automining_fillstatushours = math.ceil(oxladtime * (automining_fillstatus / 100)) -- На сколько часов охлада
-					automining_fillstatusbtc = automining_fillstatushours * INFO[automining_lvl] -- Сколько видюха еще даст BTC
-					automining_btcoverall = automining_btcoverall + automining_fillstatusbtc -- Подсчет сколько всего дадут все видюхи
-					automining_btcamountoverall = automining_btcamountoverall + math.floor(automining_btcamount) -- Подсчет сколько доступно для снятия
-					if automining_fillstatus > 0 and automining_status == 1 then
-						automining_btcoverallph = automining_btcoverallph + INFO[automining_lvl]
-					end
-					dtextm[d] = dtextm[d]:gsub('Полка%s+№%d+%s+|%s+%{......%}%W+%s+%d+%p%d+%s+BTC%s+'..automining_lvl..'%s+уровень', '%1 | '..automining_statustext..INFO[automining_lvl]..'/Час')
-					if automining_fillstatus > 0 then
-						dtextm[d] = dtextm[d]:gsub('Полка%s+№%d+%s+|%s+%{......%}%W+%s+%d+%p%d+%s+BTC%s+%d+%s+уровень%s+|%s+%{......%}%d+%p%d+/Час%s+'..automining_fillstatus..'%A+', '%1 '..tostring(automining_status and '{BEF781}' or '{F78181}')..'- [~'..automining_fillstatushours..' Час(ов)] {FFFFFF}|{81DAF5} [~'..string.format("%.1f", automining_fillstatusbtc)..' BTC]')
-					else
-						dtextm[d] = dtextm[d]:gsub('Полка%s+№%d+%s+|%s+%{......%}%W+%s+%d+%p%d+%s+BTC%s+%d+%s+уровень%s+|%s+%{......%}%d+%p%d+/Час%s+'..automining_fillstatus..'%A+', '%1 {F78181}(!)')
-					end
-					dtextm[d] = dtextm[d]:gsub('Полка%s+№%d+%s+|%s+%{......%}%W+%s+%d+%p%d+%s+BTC', '%1 '..tostring(automining_btcamountinfo and '{BEF781}•' or '{F78181}•')..' {ffffff}| '..automining_statustext..'~'..automining_btctimetofull..'ч')
-				end				
-			end
-			
-		if id == 15272 and title:find('Выберите видеокарту') then
-            if worktread ~= nil then
-                worktread:terminate()
-            end			
-		    local automining_fillstatus1 = tonumber(text:match('Полка №1 |%s+%{......%}%W+%s+%d+%p%d+%s+BTC%s+%d+%s+уровень%s+(%d+%p%d+)%A'))
-			local automining_fillstatus2 = tonumber(text:match('Полка №2 |%s+%{......%}%W+%s+%d+%p%d+%s+BTC%s+%d+%s+уровень%s+(%d+%p%d+)%A'))
-			local automining_fillstatus3 = tonumber(text:match('Полка №3 |%s+%{......%}%W+%s+%d+%p%d+%s+BTC%s+%d+%s+уровень%s+(%d+%p%d+)%A'))
-			local automining_fillstatus4 = tonumber(text:match('Полка №4 |%s+%{......%}%W+%s+%d+%p%d+%s+BTC%s+%d+%s+уровень%s+(%d+%p%d+)%A'))
-			
-			local automining_getbtcstatus1 = tonumber(text:match('Полка №1 |%s+%{......%}%W+%s+(%d+)%p%d+%s+BTC%s+%d+%s+уровень%s+%d+.'))
-			local automining_getbtcstatus2 = tonumber(text:match('Полка №2 |%s+%{......%}%W+%s+(%d+)%p%d+%s+BTC%s+%d+%s+уровень%s+%d+.'))
-			local automining_getbtcstatus3 = tonumber(text:match('Полка №3 |%s+%{......%}%W+%s+(%d+)%p%d+%s+BTC%s+%d+%s+уровень%s+%d+.'))
-			local automining_getbtcstatus4 = tonumber(text:match('Полка №4 |%s+%{......%}%W+%s+(%d+)%p%d+%s+BTC%s+%d+%s+уровень%s+%d+.'))				
-			
-			for i = 1, 4 do
-			    local automining_lvl = tonumber(text:match('Полка №'..i..' |%s+%{......%}%W+%s+%d+%p%d+%s+BTC%s+(%d+)%s+уровень%s+%d+.'))
-				local automining_fillstatus = tonumber(text:match('Полка №'..i..' |%s+%{......%}%W+%s+%d+%p%d+%s+BTC%s+%d+%s+уровень%s+(%d+%p%d+)%A'))
-			    if automining_fillstatus ~= nil then
-					if automining_fillstatus > 0 and automining_lvl ~= nil then
-						automining_fillstatushours =  math.ceil(224 * (automining_fillstatus / 100))
-						text = text:gsub('Полка №'..i..' |%s+%{......%}%W+%s+%d+%p%d+%s+BTC%s+%d+%s+уровень%s+%d+%p%d+%A', '%1 {BEF781}- [~'..automining_fillstatushours..' Час(ов)]')	
-					end				
-					if automining_lvl > 0 then
-						text = text:gsub('Полка №'..i..' |%s+%{......%}%W+%s+%d+%p%d+%s+BTC%s+%d+%s+уровень', '%1 | '..INFO[automining_lvl]..'/Час')
-					end
-                end				
-			end					
-			
-            if automining_getbtc == 1 or automining_getbtc == 2 or automining_getbtc == 3 or automining_getbtc == 4 then
-				if automining_getbtc == 1 then
-				    if automining_getbtcstatus1 ~= nil then
-						if automining_getbtcstatus1 < 1 then
-							automining_getbtc = 2
-						elseif text:find('Полка №1 | Свободна') then
-							automining_getbtc = 2
-						end
-					else
-					    automining_getbtc = 2
-					end
-				end
-				if automining_getbtc == 2 then
-				    if automining_getbtcstatus2 ~= nil then
-						if automining_getbtcstatus2 < 1 then
-							automining_getbtc = 3
-						elseif text:find('Полка №2 | Свободна') then
-							automining_getbtc = 3
-						end
-					else
-					    automining_getbtc = 3
-					end
-				end
-				if automining_getbtc == 3 then
-					if automining_getbtcstatus3 ~= nil then
-						if automining_getbtcstatus3 < 1 then
-							automining_getbtc = 4
-						elseif text:find('Полка №3 | Свободна') then
-							automining_getbtc = 4
-						end
-					else
-					    automining_getbtc = 4
-					end
-				end
-				if automining_getbtc == 4 then
-					if automining_getbtcstatus4 ~= nil then
-						if automining_getbtcstatus4 < 1 then
-							automining_getbtc = 10
-							sampAddChatMessage('[MineFarm] {FFFFFF}Собирать больше нечего.', 0xFF6060)
-							worktread = lua_thread.create(PressAlt)
-						elseif text:find('Полка №4 | Свободна') then
-							automining_getbtc = 10
-							sampAddChatMessage('[MineFarm] {FFFFFF}Собирать больше нечего.', 0xFF6060)
-							worktread = lua_thread.create(PressAlt)
-						end
-					else
-					    automining_getbtc = 10					
-					end
-				end
-				adID = automining_getbtc - 1
-			    sampSendDialogResponse(15272,1,adID,nil)				
-            end				
-			
-			if automining_startall == 1 or automining_startall == 2 or automining_startall == 3 or automining_startall == 4 then
-				if automining_startall == 1 then
-				    if text:find('Полка №1 | {BEF781}Работает') then
-						automining_startall = 2
-					elseif text:find('Полка №1 | Свободна') then
-					    automining_startall = 2
-					end
-				end
-				if automining_startall == 2 then
-				    if text:find('Полка №2 | {BEF781}Работает') then
-				        automining_startall = 3
-					elseif text:find('Полка №2 | Свободна') then
-					    automining_startall = 3
-					end
-				end
-				if automining_startall == 3 then
-				    if text:find('Полка №3 | {BEF781}Работает') then
-				        automining_startall = 4
-					elseif text:find('Полка №3 | Свободна') then
-					    automining_startall = 4
-					end
-				end
-				if automining_startall == 4 then
-				    if text:find('Полка №4 | {BEF781}Работает') then
-				        automining_startall = 10
-						sampAddChatMessage('[MineFarm] {FFFFFF}Запускать больше нечего (Все уже работает).', 0xFF6060)
-					    worktread = lua_thread.create(PressAlt)
-					elseif text:find('Полка №4 | Свободна') then
-					    automining_startall = 10
-					    sampAddChatMessage('[MineFarm] {FFFFFF}Запускать больше нечего.', 0xFF6060)
-					    worktread = lua_thread.create(PressAlt)
-					end
-				end			
-				adID = automining_startall - 1
-			    sampSendDialogResponse(15272,1,adID,nil)
-			end
-			
-            if automining_fillall == 1 or automining_fillall == 2 or automining_fillall == 3 or automining_fillall == 4 then
-				if automining_fillall == 1 then
-				    if automining_fillstatus1 ~= nil then
-						if automining_fillstatus1 > 51 then
-							automining_fillall = 2
-						elseif text:find('Полка №1 | Свободна') then
-							automining_fillall = 2
-						end
-					else
-					    automining_fillall = 2
-					end
-				end
-				if automining_fillall == 2 then
-				    if automining_fillstatus2 ~= nil then
-						if automining_fillstatus2 > 51 then
-							automining_fillall = 3
-						elseif text:find('Полка №2 | Свободна') then
-							automining_fillall = 3
-						end
-					else
-					    automining_fillall = 3
-					end
-				end
-				if automining_fillall == 3 then
-					if automining_fillstatus3 ~= nil then
-						if automining_fillstatus3 > 51 then
-							automining_fillall = 4
-						elseif text:find('Полка №3 | Свободна') then
-							automining_fillall = 4
-						end
-					else
-					    automining_fillall = 4
-					end
-				end
-				if automining_fillall == 4 then
-					if automining_fillstatus4 ~= nil then
-						if automining_fillstatus4 > 51 then
-							automining_fillall = 10
-							sampAddChatMessage('[MineFarm] {FFFFFF}Заливать больше некуда (В видеокартах больше 50%, будут потери!).', 0xFF6060)
-							worktread = lua_thread.create(PressAlt)
-						elseif text:find('Полка №4 | Свободна') then
-							automining_fillall = 10
-							sampAddChatMessage('[MineFarm] {FFFFFF}Заливать больше некуда.', 0xFF6060)
-							worktread = lua_thread.create(PressAlt)
-						end
-					else
-					    automining_fillall = 10
-					end
-				end			
-				adID = automining_fillall - 1
-			    sampSendDialogResponse(15272,1,adID,nil)
-			end			
-		end
-		
-		text = table.concat(dtextm,'\n')
-        dtextm = {}
-        text = text .. '\n' .. ' '
-		text = text .. '\n' .. '{ffff00}Информация\t{ffff00}Доступно снять\t{ffff00}Прибыль в час\t{ffff00}Прибыль прогнозируемая'
-		text = text .. '\n' .. '{FFFFFF}Всего: '..automining_videocards..' | {BEF781}Работают '..automining_videocardswork..'\t{FFFFFF}'..string.format("%.0f", automining_btcamountoverall)..' BTC\t{BEF781}'..automining_btcoverallph..' {FFFFFF}BTC\t{81DAF5}'..string.format("%.1f", automining_btcoverall)..' {FFFFFF}BTC' 
-			if title:find('Выберите видеокарту') then	
-				if text:find('Полка №1 | Свободна') and text:find('Полка №2 | Свободна') and text:find('Полка №3 | Свободна') and text:find('Полка №4 | Свободна') then
-					text = text .. '\n' .. ' '
-					text = text .. '\n' .. '{FF6060}- Забрать всю прибыль (Полки пусты!)'
-					text = text .. '\n' .. '{FF6060}- Запустить все видеокарты (Полки пусты!)'
-					text = text .. '\n' .. '{FF6060}- Залить жидкость (Полки пусты!)'
-				else
-					text = text .. '\n' .. ' '
-					text = text .. '\n' .. '{99FF99}- Забрать всю прибыль'
-					text = text .. '\n' .. '{22FF00}- Запустить все видеокарты'
-					text = text .. '\n' .. '{00FF55}- Залить жидкость (По 50%)'
-				end
-			end
-		automining_btcoverall = 0
-	    automining_btcoverallph = 0        		
-		return {id, style, title, button1, button2, text}
-		end
-		
-		if id == 15273 then	    
-		    if automining_getbtc == 1 or automining_getbtc == 2 or automining_getbtc == 3 or automining_getbtc == 4 then
-				if title:find('Стойка №%d+%s+| Полка №'..automining_getbtc..'') then	
-					local automining_btcamount = tonumber(text:match('Забрать прибыль %((%d+).%d+ '))
-					if automining_btcamount ~= 0 then
-						sampSendDialogResponse(15273,1,1,nil) -- Да
-					else
-						automining_getbtc = automining_getbtc + 1
-						sampSendDialogResponse(15273,0,nil,nil)
-						if automining_getbtc == 5 then
-							sampAddChatMessage('[MineFarm] {FFFFFF}Прибыль проверена и обналичена.', 0xFF6060)
-							automining_getbtc = 10
-						end
-					end
-				else
-				    sampSendDialogResponse(15273,0,nil,nil)
-					worktread = lua_thread.create(PressAlt)
-				end
-			end
-			
-		    if automining_startall == 1 or automining_startall == 2 or automining_startall == 3 or automining_startall == 4 then
-				if text:find('Запустить видеокарту') and title:find('Стойка №%d+%s+| Полка №'..automining_startall..'') then
-				    sampSendDialogResponse(15273,1,0,nil)
-				    automining_startall = automining_startall + 1
-				    sampSendDialogResponse(15273,0,nil,nil)
-				else
-				    sampSendDialogResponse(15273,0,nil,nil)
-				end
-				if automining_startall == 5 then
-					sampAddChatMessage('[MineFarm] {FFFFFF}Запуск завершен.', 0xFF6060)
-					automining_startall = 10
-				end
-			end
-
-		    if automining_fillall == 1 or automining_fillall == 2 or automining_fillall == 3 or automining_fillall == 4 then
-				if title:find('Стойка №%d+%s+| Полка №'..automining_fillall..'') then
-				    sampSendDialogResponse(15273,1,2,nil)
-				    automining_fillall = automining_fillall + 1
-				    worktread = lua_thread.create(PressAlt)
-				else
-				    worktread = lua_thread.create(PressAlt)
-				end
-				if automining_filltall == 5 then
-					sampAddChatMessage('[MineFarm] {FFFFFF}Успешно залито по 50% жидкости.', 0xFF6060)
-					sampSendDialogResponse(15273,0,nil,nil)
-					automining_startall = 10
-					worktread = lua_thread.create(PressAlt)
-				end
-			end
-	    end
-		
-	    if id == 15274 and title:find('Вывод прибыли видеокарты') then
-     		if automining_getbtc == 1 or automining_getbtc == 2 or automining_getbtc == 3 or automining_getbtc == 4 then
-				automining_getbtc = automining_getbtc + 1
-				sampSendDialogResponse(15274,1,nil,nil) -- Да
-				worktread = lua_thread.create(PressAlt)
-				if automining_getbtc == 5 then
-					sampAddChatMessage('[MineFarm] {FFFFFF}Прибыль проверена и обналичена.', 0xFF6060)
-					automining_getbtc = 10
-				end
-				return false
-			end
-	    end			
-	end
+   
 
     if fix and text:find("Курс пополнения счета") then
 		sampSendDialogResponse(id, 0, 0, "")
 		sampAddChatMessage("{ffffff} inventory {ff0000}fixed{ffffff}!",-1)
         
-    --notf.addNotification(string.format("%s \ninventory fixed!" , os.date()), 10)
 		return false
         --fix = false
 	end
@@ -4507,7 +3445,7 @@ function sp.onShowDialog(id, style, title, button1, button2, text)
     end
 
     lua_thread.create(function()
-		if id == 15247 then mainini.functions.dotmoney = false
+		if id == 15247 then dotmoney = false
         if text:find('{ffff00}$(%d+){f') and activefpay then
 			wait(0) nalog = text:match('{ffff00}$(%d+){f')
 			if nalog == '0' and activefpay then
@@ -4520,7 +3458,7 @@ function sp.onShowDialog(id, style, title, button1, button2, text)
 				wait(0) sampCloseCurrentDialogWithButton(1)
                 sampSendClickTextdraw(-1)            
                 activefpay = false
-                mainini.functions.dotmoney = true
+                dotmoney = true
             end
 		end
     end
@@ -4581,7 +3519,7 @@ function sp.onShowDialog(id, style, title, button1, button2, text)
 		setVirtualKeyDown(13, false)
 	end
     --dotmoney
-    if mainini.functions.dotmoney then
+    if dotmoney then
         text = separator(text)
         title = separator(title)
         return {id, style, title, button1, button2, text}
@@ -4589,21 +3527,6 @@ function sp.onShowDialog(id, style, title, button1, button2, text)
 end
 
 function sp.onSendDialogResponse(DialogId, DialogButton, DialogList, DialogInput)
-    if DialogId == 15272 and DialogList == 8 and DialogButton == 1 then
-	    automining_getbtc = 1
-        worktread = lua_thread.create(PressAlt)
-		sampAddChatMessage('[MineFarm] {FFFFFF}Забираем прибыль... Не открывайте другие диалоги во время этого!', 0xFF6060)
-	end
-	if DialogId == 15272 and DialogList == 9 and DialogButton == 1 then
-	    automining_startall = 1
-        worktread = lua_thread.create(PressAlt)
-		sampAddChatMessage('[MineFarm] {FFFFFF}Запускаем все видеокарты... Не открывайте другие диалоги во время этого!', 0xFF6060)
-	end
-	if DialogId == 15272 and DialogList == 10 and DialogButton == 1 then
-	    automining_fillall = 1
-        worktread = lua_thread.create(PressAlt)
-		sampAddChatMessage('[MineFarm] {FFFFFF}Заливаем жидкость (По 50%)... Не открывайте другие диалоги во время этого!', 0xFF6060)
-	end	
     if DialogId == 9989 and DialogList == 4 and DialogButton == 1 then
         sampSendChat("/home")
     end
@@ -4620,15 +3543,6 @@ function PressAlt()
 		freeMemory(data)
     until os.time() >= time+5
 end
-
---[[ function f()
-	lua_thread.create(function() wait(0)
-		fix = true
-		sampSendChat("/donate")
-		wait(3000)
-		fix = false
-	end)
-end ]]
 ---- автоеда, автосек в дмг, авто ТТ
 function sp.onDisplayGameText(style, time, text)
     if style == 3 and time == 1000 and text:find("~n~~n~~n~~n~~n~~n~~n~~n~~n~~n~~g~Jailed %d+ Sec%.") then
@@ -4638,16 +3552,7 @@ function sp.onDisplayGameText(style, time, text)
     if text:find("%-400%$") then
         return false
     end
-    if text:find("~w~Style: ~g~Comfort") and mainini.functions.autott then
-        lua_thread.create(function()
-        wait(1000)
-        sampSendChat("/style")
-        end)
-    end
---[[ 	if text:find('You are hungry!') or text:find('You are very hungry!') then
-        sampSendChat("/jmeat")
-        return false
-    end ]]
+
     if text:find('You are hungry!') then    
         return false
     end
@@ -4659,7 +3564,7 @@ function sp.onDisplayGameText(style, time, text)
         end
         return false
     end
-if text:find('Attention') then
+--[[ if text:find('Attention') then
     return false
 end
 if text:find('GPS: ON') then
@@ -4667,7 +3572,7 @@ if text:find('GPS: ON') then
 end
 if text:find('pursuit') then
     return false
-end
+end ]]
 end
 
 function lAA()
@@ -4700,43 +3605,10 @@ end
                   setGameKeyState(17,255)
                 end
               end
-              --[[ if bitkiSTATE then
-                for id = 0, 2048 do
-                    if sampIs3dTextDefined(id) then
-                        local text, color, posX, posY, posZ, distance, ignoreWalls, player, vehicle = sampGet3dTextInfoById(id)
-                        if text:find("Операции с криптовалютой") and text:find("Сейчас в банке: %d+ BTC") and text:find("Банк продаёт 1 BTC за $45(.+)")  then
-                            bitki = text:match("%d+")
-                            if tonumber(bitki) > 0 and tonumber(bitki) <= 1000 then
-                                sampAddChatMessage("bitki: "..bitki, -1)
-                            setVirtualKeyDown(vkeys.VK_N, true)
-                            wait(1000)
-                            setVirtualKeyDown(vkeys.VK_N, false)
-                            wait(1000)
-                            sampSendDialogResponse(15276, 1, 1, -1)
-                            wait(1000)
-                            sampSendDialogResponse(15279, 1, _, bitki)
-                            wait(1000)
-                            --sampSendDialogResponse(15280, 1, _, -1)
-                            closeDialog()
-                            --bitkiSTATE = false
-                            elseif tonumber(bitki) > 0 and tonumber(bitki) >= 1000 then
-                                sampAddChatMessage("bitki: "..bitki, -1)
-                                setVirtualKeyDown(vkeys.VK_N, true)
-                                wait(1000)
-                                setVirtualKeyDown(vkeys.VK_N, false)
-                                wait(1000)
-                                sampSendDialogResponse(15276, 1, 1, -1)
-                                wait(1000)
-                                sampSendDialogResponse(15279, 1, _, "1000")
-                                wait(1000)
-                                --sampSendDialogResponse(15280, 1, _, -1)
-                                closeDialog()
-                            end
-
-                        end
-                    end
-                end
-                end ]]
+            if coordmy then
+                local x, y, z = getCharCoordinates(PLAYER_PED)
+                renderFontDrawText(Arial, '{7CFC00}X: ' .. x .. ' {ffffff}| {FFFF00}Y: ' .. y .. ' {ffffff}| {00ffff}Z: ' .. z, 1100, 950, 0xDD6622FF)
+            end
             if ScriptState then
                 Counter = 0
                 local px, py, pz = getCharCoordinates(PLAYER_PED)
@@ -4807,13 +3679,8 @@ end
                                 p1, p2 = convert3DCoordsToScreen(posX, posY, posZ)
                                 p3, p4 = convert3DCoordsToScreen(px, py, pz)
                                 local x2,y2,z2 = getCharCoordinates(PLAYER_PED)
-                                --distance = string.format("%.0f", getDistanceBetweenCoords3d(posX,posY,posZ, x2, y2, z2))
-                                --renderDrawLine(p1, p2, p3, p4, 2, 0xDD6622FF)
-                                --renderDrawPolygon(p1, p2, 10, 10, 7, 0, 0xDD6622FF)
-                                --text = string.format("{8B4513}Лён {00ff00}"..distance)
-                                wposX = p1 + 5
+                              wposX = p1 + 5
                                 wposY = p2 - 7
-                                --renderFontDrawText(Arial, text, wposX, wposY, 0xDD6622FF)
                                 renderFontDrawText(Arial, "{D2B48C}"..timerr, wposX, wposY, -1)
                             end
                         end
@@ -4841,40 +3708,13 @@ end
                                 wposX = p1 + 5
                                 wposY = p2 - 7
                                 renderFontDrawText(Arial, text, wposX, wposY, 0xDD6622FF)
-                                --addSpriteBlipForCoord(posX, posY, posZ, 37) addOneOffSound(0, 0, 0, 1057) 
-                                if checkpoint ~= nil then deleteCheckpoint(checkpoint) end
-                                --marker = createCheckpoint(1, posX, posY, posZ, _, _, _, 1)
-                                --checkpoint = addBlipForCoord(posX, posY, posZ)
-                                --setMarker1(1, posX, posY, posZ, 10, 0xFFFFFFFF)
-                               --if math.floor(getDistanceBetweenCoords3d(posX, posY, posZ, x2, y2, z2)) <= 7 then deleteCheckpoint(marker) removeBlip(checkpoint) checkpoint = nil end
-                            end
+                           end
                         end
                     end
                 end
 
                 renderFontDrawText(Arial, '{00FFFF}Рeсурсы: {ffffff}'..Counter, 1100, 600, 0xDD6622FF)
-            if ScriptStateRR3 then
-                local x, y, z = getCharCoordinates(PLAYER_PED)
-                local cid = 1 
-                local renderY = 230
-                for k, v in pairs(icons.cords) do
-                    f1 = ("%0.2f"):format(v.X)
-                    f2 = ("%0.2f"):format(v.Y)
-                    f3 = ("%0.2f"):format(v.Z)
-                    
-                    local distanka = math.floor(getDistanceBetweenCoords3d(v.X, v.Y, v.Z, x, y, z)) 
-                    if distanka <= 1 then
-                        renderFontDrawText(Arial1, '{ffffff}'..cid..' | {00FFFF}'..distanka..'{ffffff} | {7CFC00} '..f1..', {FFFF00}'..f2..', {00FFFF}'..f3..' \n', 1500, renderY, 0xDD6622FF)
-                        renderY = renderY + 12
-                        cid = cid + 1
-                    else
-                        renderFontDrawText(Arial1, '{ffffff}'..cid..' | {ff0000}'..distanka..'{ffffff} | {7CFC00} '..f1..', {FFFF00}'..f2..', {00FFFF}'..f3..' \n', 1500, renderY, 0xDD6622FF)
-                        renderY = renderY + 12
-                        cid = cid + 1
-                    end
-                end
-                renderFontDrawText(Arial, '{7CFC00}X: ' .. math.floor(x) .. ' {ffffff}| {FFFF00}Y: ' .. math.floor(y) .. ' {ffffff}| {00ffff}Z: ' .. math.floor(z), 1100, 650, 0xDD6622FF)
-            end
+
                 for _, v in pairs(getAllObjects()) do
                     local asd
                     if sampGetObjectSampIdByHandle(v) ~= -1 then
@@ -5043,8 +3883,6 @@ end
                                 wposX = p1 + 5
                                 wposY = p2 - 7
                                 renderFontDrawText(Arial, text, wposX, wposY, 0xDD6622FF)
-                                
-                                --setMarker1(1, posX, posY, posZ, 10, 0xFFFFFFFF)
                             end
                         end
                     end
@@ -5054,13 +3892,11 @@ end
            
             if on then
                 if draw_suka then
-                    --setMarker(1, x, y, z-2, 1, 0xFFFFFFFF)
                     removeUser3dMarker(mark)
                     mark = createUser3dMarker(x,y,z+2,0xFFD00000)
                 else
                     removeUser3dMarker(mark)
-                    --deleteCheckpoint(marker)
-                    --removeBlip(checkpoint)
+        
                 end
             end
     end
@@ -5148,29 +3984,19 @@ function sp.onSendCommand(cmd)
 					local rotate = math.sin(os.clock() * 3) * 90 + 90
 			        local el = getStructElement(sampGetInputInfoPtr(), 0x8, 4)
 			        local X, Y = getStructElement(el, 0x8, 4), getStructElement(el, 0xC, 4)
-                    if mainini.functions.chatvipka then
-		        	    renderDrawPolygon(650, 790, 20, 20, 3, rotate, 0xFFFFFFFF)
-        			    renderDrawPolygon(650, 790, 20, 20, 3, -1 * rotate, 0xFF0090FF)
-    		        	renderFontDrawText(fontVR, message, 660, 780, -1)
-                    else
                         renderDrawPolygon(X + 10, Y + (renderGetFontDrawHeight(fontVR) / 2), 20, 20, 3, rotate, 0xFFFFFFFF)
         			    renderDrawPolygon(X + 10, Y + (renderGetFontDrawHeight(fontVR) / 2), 20, 20, 3, -1 * rotate, 0xFF0090FF)
     		        	renderFontDrawText(fontVR, message, X + 25, Y, -1)
-                    end
-		        	--renderFontDrawText(fontVR, string.format(" [x%s]", try), X + 25 + renderGetFontDrawTextLength(fontVR, message), Y, 0x40FFFFFF)
 		        end
 		        wait(0)
 			end
 		end)
 	end
-    ------    Anti-AFK с большим функционалом. Для работы нужно ввести цифровой ID VK в settings.ini. Написать сообщение в группе https://vk.com/tedj69.
-    --Команда /afktest отправит вам тестовое сообщение.
     if cmd:find('/rlt') then
         rlton = not rlton
         if rlton then
             sendvknotf0("Прокрутка рулеток и фикс инв вкл")
             sampAddChatMessage("{ffffff}Прокрутка рулеток и фикс инв {00FF00}вкл",-1)
-            --notf.addNotification(string.format("%s \nПрокрутка рулеток и фикс инв\nВключена" , os.date()), 10)
             checked_test = true
             checked_test2 = true
             checked_test3 = true
@@ -5179,8 +4005,7 @@ function sp.onSendCommand(cmd)
             else
             sendvknotf0("Прокрутка рулеток и фикс инв выкл")
             sampAddChatMessage("{ffffff}Прокрутка рулеток и фикс инв {ff0000}выкл",-1)
-            --notf.addNotification(string.format("%s \nПрокрутка рулеток и фикс инв\nВыключена" , os.date()), 10)
-            checked_test = false
+           checked_test = false
             checked_test2 = false
             checked_test3 = false
             checked_test4 = false
@@ -5192,9 +4017,9 @@ function sp.onSendCommand(cmd)
         CleanMemory()
         return false
     end
-    if cmd:find('/9') then
-        mainini.lidzam.devyatka = not mainini.functions.devyatka
-        if mainini.lidzam.devyatka then
+    if cmd:find('/g9') then
+        mainini.lidzamband.devyatka = not mainini.lidzamband.devyatka
+        if mainini.lidzamband.devyatka then
             sampAddChatMessage("Режим заместителя в банде {228b22}on {ffffff}| /h9 - помощь ", -1)
             inicfg.save(mainini, 'bd') 
         else
@@ -5203,65 +4028,57 @@ function sp.onSendCommand(cmd)
         end
         return false
     end
-    if cmd:find("/h9") and mainini.lidzam.devyatka then
-        lidzam_menu()
+    if cmd:find('/m9') then
+        mainini.lidzammafia.devyatka = not mainini.lidzammafia.devyatka
+        if mainini.lidzammafia.devyatka then
+            sampAddChatMessage("Режим заместителя в мафии {228b22}on {ffffff}| /h9 - помощь ", -1)
+            inicfg.save(mainini, 'bd') 
+        else
+            sampAddChatMessage("Режим заместителя в мафии {ff0000}off", -1)
+            inicfg.save(mainini, 'bd') 
+        end
         return false
     end
---[[     if cmd:find("/nabor") and mainini.lidzam.devyatka then
-        sampSendChat("/vr Набор в ФК 'The Rifa'. /smug /port | Желающих ждём на площадке.")
+    if cmd:find("/h9") and mainini.lidzamband.devyatka then
+        lidzamband_menu()
         return false
-    end ]]
-    if cmd:find('/nabor') then
-        naboron = not naboron
-		if naboron then 
-            sampAddChatMessage('{ff4500}nabor {228b22}on',-1)
-			naborka = lua_thread.create(nabor) 
+    end
+    if cmd:find("/h9") and mainini.lidzammafia.devyatka then
+        lidzammafia_menu()
+        return false
+    end
+    if cmd:find('/nabor') and mainini.lidzamband.devyatka then
+        naborgon = not naborgon
+		if naborgon then 
+            sampAddChatMessage('{ff4500}nabor ghetto {228b22}on',-1)
+			naborgka = lua_thread.create(naborg) 
 		else
-            sampAddChatMessage('{ff4500}nabor {ff0000}off',-1)
-			lua_thread.terminate(naborka) 
+            sampAddChatMessage('{ff4500}nabor ghetto {ff0000}off',-1)
+			lua_thread.terminate(naborgka) 
 		end
         return false
     end
-    if cmd:find("/povish") and mainini.lidzam.devyatka then
-        lua_thread.create(function()
-            sampSendChat("/f Чтобы повыситься на 6-7 ранг: активно ездить на порты, проявлять себя любыми способами...")
-            wait(1000)
-            sampSendChat("/f ...помогать лидеру/замам, красить граффити, выполнять квесты. Привозить на склад нарко и аптечки...")
-            wait(1000)
-            sampSendChat("/f ...Капт-состав - 8 ранг - состав лидера. Не проситесь в этот состав, вас никто сюда не возьмет.")
-        end)
-        return false
-    end
-    if cmd:find('/fu') and mainini.lidzam.devyatka then 
+    if cmd:find('/fu') and mainini.lidzamband.devyatka then 
         local arguninv = cmd:match('/fu (.+)')
         sampSendChat('/uninvite '..arguninv..' Выселен.')
         return false
     end
-    if cmd:find('/skl') and mainini.lidzam.devyatka then 
-        lua_thread.create(function()
-            sampSendChat('/lmenu')
-            sampSendDialogResponse(1214, 1, 2, -1)
-   --[[          wait(250)
-            closeDialog() ]]
-        end)
-        return false
-    end
---[[     if cmd:find('/fc') and mainini.lidzam.devyatka then 
+--[[     if cmd:find('/fc') and mainini.lidzamband.devyatka then 
         sampSendChat('/lmenu')
         sampSendDialogResponse(1214, 1, 4, -1)
         return false
     end
-    if cmd:find('/sc') and mainini.lidzam.devyatka then 
+    if cmd:find('/sc') and mainini.lidzamband.devyatka then 
         sampSendChat('/lmenu')
         sampSendDialogResponse(1214, 1, 3, -1)
         return false
     end ]]
-    if cmd:find('/gr') and mainini.lidzam.devyatka then 
+    if cmd:find('/gr') and not cmd:find('/graf') and mainini.lidzamband.devyatka then 
         local argidgr = cmd:match('/gr (.+)')
         sampSendChat('/giverank '..argidgr)
         return false
     end
-    if cmd:find('/gs') and mainini.lidzam.devyatka then 
+    if cmd:find('/gs') and mainini.lidzamband.devyatka then 
         local argskin = cmd:match('/gs (.+)')
         sampSendChat('/giveskin '..argskin)
         return false
@@ -5305,7 +4122,7 @@ function sp.onSendCommand(cmd)
             sampSendChat("/cl "..sampGetPlayerNickname(select(2,sampGetPlayerIdByCharHandle(playerPed))))
             wait(1000)
             setVirtualKeyDown(116, true)
-            wait(4000)
+            wait(2500)
             setVirtualKeyDown(116, false)
             sampSendChat("/time")
             wait(500)
@@ -5320,122 +4137,21 @@ function sp.onSendCommand(cmd)
             sampSendChat("/donate")
             wait(1000)
             setVirtualKeyDown(9, false)
-            wait(4000)
+            wait(2000)
             setVirtualKeyDown(9, false)
             wait(1000)
             setVirtualKeyDown(192, false)
         end)
         return false
     end
-     --[[
-    if cmd:find('/info2') then
-        sampAddChatMessage("{ff4500}[ble$$ave] {ffffff}Авто-ввод пароля: {DAA520}/auto_pass пароль.", -1)
-        sampAddChatMessage("{ff4500}[ble$$ave] {ffffff}Авто-ввод пин-кода: {DAA520}/auto_pin пин-код.", -1)
-        sampAddChatMessage("{ff4500}[ble$$ave] {ffffff}Продолжение - {FFFF00}/info3{ffffff}.", -1)
-        return false
-    end
-    if cmd:find('/info3') then
-        sampAddChatMessage("{ff4500}[ble$$ave] {ffffff}Активация флудерок {EE82EE}/flood1 /flood2 /flood3", -1)
-        sampAddChatMessage("{ff4500}[ble$$ave] {ffffff}Изменить текст флудерок: {00CED1}/fltext1 [text] /fltext2 [text] /fltext3 [text]", -1)
-        sampAddChatMessage("{ff4500}[ble$$ave] {ffffff}Изменить текст флудерок: {00CED1}/flwait1 [sek] /flwait2 [sek] /flwait3 [sek]", -1)
-        sampAddChatMessage("{ff4500}[ble$$ave] {ffffff}Посмотреть информацию о флудерках {FF6347}/flood{ffffff}.", -1)
-        sampAddChatMessage("{ff4500}[ble$$ave] {ffffff}Продолжение - {FFFF00}/info4{ffffff}.", -1)
-        return false
-    end
-    if cmd:find('/info4') then
-        sampAddChatMessage("{ff4500}[ble$$ave] {ffffff}Чекер пидоров {FFFACD}/pidors", -1)
-        sampAddChatMessage("{ff4500}[ble$$ave] {ffffff}Добавить пидора в список: {00FA9A}/addpidor [Полный_Никнейм] или ID ", -1)
-        sampAddChatMessage("{ff4500}[ble$$ave] {ffffff}Поиск пидорасов в зоне стрима {808000}/fpidors{ffffff}.", -1)
-        --sampAddChatMessage("{ff4500}[ble$$ave] {ffffff}Продолжение - {FFFF00}/info4{ffffff}.", -1)
-        return false
-    end ]]
-    if cmd:find('/gcolors') then
-        sampAddChatMessage("{ffffff}Ballas 179 | NW 37 | Vagos 6 | Aztecas 2 | Rifa 135 | Grove 86", -1)
-        return false
-    end
---[[     if cmd:find('/apass') then
-        mainini.helper.autopass = not mainini.helper.autopass
-		if mainini.helper.autopass then 
-            sampAddChatMessage('Ввод авто-пароля включен {228b22}on',-1) 
-		else
-            sampAddChatMessage('{ff4500}flood1 {ff0000}off',-1)
-		end
-        return false
-    end ]]
---[[     if cmd:find('/auto_pass') then
-        local arg = cmd:match('/auto_pass (.+)')
-        mainini.helper.password = arg
-        inicfg.save(mainini, 'bd')
-        sampAddChatMessage('Ваш {DAA520}пароль: {ffffff}'..mainini.helper.password,-1)
-        return false
-    end
-    if cmd:find('/auto_pin') then
-        local arg = cmd:match('/auto_pin (.+)')
-        mainini.helper.bankpin = arg
-        inicfg.save(mainini, 'bd')
-        sampAddChatMessage('Ваш {DAA520}пин-код: {ffffff}'..mainini.helper.bankpin,-1)
-        return false
-    end
-    if cmd:find('/userid') then
-        local arg = cmd:match('/userid (.+)')
-        mainini.helper.user_id = arg
-        inicfg.save(mainini, 'bd')
-        sampAddChatMessage('Ваш {9ACD32}цифровой ID VK: {ffffff}'..mainini.helper.user_id,-1)
-        sendvknotf('Тестовое сообщение')
-        return false
-    end
-    if cmd:find('/chatvip') then
-        mainini.functions.chatvipka = not mainini.functions.chatvipka
-		if mainini.functions.chatvipka then 
-            sampAddChatMessage('Раздельный VIP-chat {228b22}on',-1)
-            
-            --notf.addNotification(string.format("%s \nРаздельный VIP-chat\nВключен" , os.date()), 10)
-            inicfg.save(mainini, 'bd') 
-		else
-            sampAddChatMessage('Раздельный VIP-chat {ff0000}off',-1)
-            --notf.addNotification(string.format("%s \nРаздельный VIP-chat\nВыключен" , os.date()), 10)
-            inicfg.save(mainini, 'bd')
-		end
-        return false
-    end
-    if cmd:find('/fastmap') then
-        mainini.functions.fastmap = not mainini.functions.fastmap
-		if mainini.functions.fastmap then 
-            sampAddChatMessage('FastMap {228b22}on',-1)
-            
-            --notf.addNotification(string.format("%s \nРаздельный VIP-chat\nВключен" , os.date()), 10)
-            inicfg.save(mainini, 'bd') 
-		else
-            sampAddChatMessage('FastMap {ff0000}off',-1)
-            --notf.addNotification(string.format("%s \nРаздельный VIP-chat\nВыключен" , os.date()), 10)
-            inicfg.save(mainini, 'bd')
-		end
-        return false
-    end ]]
-    if cmd:find('/chatvip') then
-        mainini.functions.chatvipka = not mainini.functions.chatvipka
-		if mainini.functions.chatvipka then 
-            sampAddChatMessage('Раздельный VIP-chat {228b22}on',-1)
-            
-            --notf.addNotification(string.format("%s \nРаздельный VIP-chat\nВключен" , os.date()), 10)
-            inicfg.save(mainini, 'bd') 
-		else
-            sampAddChatMessage('Раздельный VIP-chat {ff0000}off',-1)
-            --notf.addNotification(string.format("%s \nРаздельный VIP-chat\nВыключен" , os.date()), 10)
-            inicfg.save(mainini, 'bd')
-		end
-        return false
-    end
+
     if cmd:find('/colorchat') then
         mainini.functions.colorchat = not mainini.functions.colorchat
 		if mainini.functions.colorchat then 
             sampAddChatMessage('Цветной chat {228b22}on',-1)
-            
-            --notf.addNotification(string.format("%s \nРаздельный VIP-chat\nВключен" , os.date()), 10)
             inicfg.save(mainini, 'bd') 
 		else
             sampAddChatMessage('Цветной chat {ff0000}off',-1)
-            --notf.addNotification(string.format("%s \nРаздельный VIP-chat\nВыключен" , os.date()), 10)
             inicfg.save(mainini, 'bd')
 		end
         return false
@@ -5462,121 +4178,7 @@ function sp.onSendCommand(cmd)
 		end
         return false
     end
-    --[[if cmd:find('/dotmoney') then
-        mainini.functions.dotmoney = not mainini.functions.dotmoney
-		if mainini.functions.dotmoney then 
-            sampAddChatMessage('Разделение точками деньги {228b22}on',-1)
-            inicfg.save(mainini, 'bd') 
-		else
-            sampAddChatMessage('Разделение точками деньги {ff0000}off',-1)
-            inicfg.save(mainini, 'bd')
-		end
-        return false
-    end
-    if cmd:find('/dhits') then
-        mainini.functions.dhits = not mainini.functions.dhits
-		if mainini.functions.dhits then 
-            sampAddChatMessage('Авто-даблхиты {228b22}on',-1)
-            inicfg.save(mainini, 'bd') 
-		else
-            sampAddChatMessage('Авто-даблхиты {ff0000}off',-1)
-            inicfg.save(mainini, 'bd')
-		end
-        return false
-    end
-    if cmd:find('/fishey') then
-        mainini.functions.fish = not mainini.functions.fish
-		if mainini.functions.fish then 
-            sampAddChatMessage('Рыбий глаз {228b22}on',-1)
-            inicfg.save(mainini, 'bd') 
-		else
-            sampAddChatMessage('Рыбий глаз {ff0000}off',-1)
-            inicfg.save(mainini, 'bd')
-		end
-        return false
-    end
-    if cmd:find('/extra') then
-        mainini.functions.extra = not mainini.functions.extra
-		if mainini.functions.extra then 
-           -- if not isCharDead(playerPed) then cameraRestorePatch(true) else cameraRestorePatch(false) end
-            sampAddChatMessage('Экстра WS {228b22}on',-1)
-            inicfg.save(mainini, 'bd') 
-		else
-            cameraRestorePatch(false)
-            activeextra = false
-            sampAddChatMessage('Экстра WS {ff0000}off',-1)
-            inicfg.save(mainini, 'bd')
-		end
-        return false
-    end
-    if cmd:find('/autoc') then
-        mainini.functions.autoc = not mainini.functions.autoc
-		if mainini.functions.autoc then 
-            sampAddChatMessage('Авто-+C {228b22}on',-1)
-            inicfg.save(mainini, 'bd') 
-		else
-            sampAddChatMessage('Авто-+C {ff0000}off',-1)
-            inicfg.save(mainini, 'bd')
-		end
-        return false
-    end
-    if cmd:find('/ashot') then
-        mainini.functions.bott = not mainini.functions.bott
-		if mainini.functions.bott then 
-            sampAddChatMessage('Авто-шот {228b22}on',-1)
-            inicfg.save(mainini, 'bd') 
-		else
-            sampAddChatMessage('Авто-шот {ff0000}off',-1)
-            inicfg.save(mainini, 'bd')
-		end
-        return false
-    end
-    if cmd:find('/hphud') then
-        mainini.functions.hphud = not mainini.functions.hphud
-		if mainini.functions.hphud then 
-            sampAddChatMessage('hp-hud {228b22}on',-1)
-            inicfg.save(mainini, 'bd') 
-		else
-            sampAddChatMessage('hp-hud {ff0000}off',-1)
-            inicfg.save(mainini, 'bd')
-		end
-        return false
-    end
-    if cmd:find('/allsbiv (.+)') then
-        local arg = cmd:match('/allsbiv (.+)')
-        mainini.config.allsbiv = arg
-        inicfg.save(mainini, 'bd')
-        sampAddChatMessage('Клавиша для сбива всего теперь {00FFFF}'..mainini.config.allsbiv,-1)
-        return false
-    end
-    if cmd:find('/sbiv (.+)') then
-        local arg = cmd:match('/sbiv (.+)')
-        mainini.config.sbiv = arg
-        inicfg.save(mainini, 'bd')
-        sampAddChatMessage('Клавиша для сбива теперь {00FFFF}'..mainini.config.sbiv,-1)
-        return false
-    end
-    if cmd:find('/fmap (.+)') then
-        local arg = cmd:match('/fmap (.+)')
-        mainini.config.fmap = arg
-        inicfg.save(mainini, 'bd')
-        sampAddChatMessage('Клавиша для быстрой карты теперь {00FFFF}'..mainini.config.fmap,-1)
-        return false
-    end
-    if cmd:find('/suicide (.+)') then
-        local arg = cmd:match('/suicide (.+)')
-        mainini.config.suicide = arg
-        inicfg.save(mainini, 'bd')
-        sampAddChatMessage('Клавиша для суицида теперь {00FFFF}'..mainini.config.suicide,-1)
-        return false
-    end
-    if cmd:find('/whb (.+)') then
-        local arg = cmd:match('/whb (.+)')
-        mainini.config.wh = arg
-        inicfg.save(mainini, 'bd')
-        sampAddChatMessage('Клавиша для WallHack теперь {00FFFF}'..mainini.config.wh,-1)
-        return false
-    end ]]
+
     if cmd:find('/ch') and not cmd:find('/ch (.+)') and not cmd:find('/chh') then
         tbl = {}
         for l in io.lines(getWorkingDirectory()..'\\config\\chatlogs\\chatlog_' .. os.date('%y.%m.%d').. '.txt') do 
@@ -5626,7 +4228,6 @@ function sp.onSendCommand(cmd)
     ---
     if cmd:find('/piss') then
         sampSetSpecialAction(68)
-        --addOneOffSound(0.0, 0.0, 0.0, 1084)
         return false
     end
     if cmd:find('/cchat') then
@@ -5637,18 +4238,10 @@ function sp.onSendCommand(cmd)
         reconnect()
         return false
     end
-    if cmd:find('/trpay') then
-        trpay()
-        return false
-    end
     if cmd:find('/fpay') then
         activefpay = not activefpay gopay()
         return false
     end
---[[     if cmd:find('/fm') then
-        sampSendChat('/fammenu')
-        return false
-    end ]] -- https://oplata.qiwi.com/success?invoice_uid=ed703c51-c23a-4ec7-a98f-42728d4efc87&allowedPaySources=card
     if cmd:find('/mb') then
         sampSendChat('/members')
         return false
@@ -5673,6 +4266,11 @@ function sp.onSendCommand(cmd)
     end
     if cmd:find('/flood') and not (cmd:find('/flood1') or cmd:find('/flood2') or cmd:find('/flood3') or cmd:find('/flood4') or cmd:find('/flood5')) then
         flood_menu()
+        return false
+    end
+
+    if cmd:find('/gflood') then
+        ghetto_lidzam_flood()
         return false
     end
 
@@ -5731,49 +4329,6 @@ function sp.onSendCommand(cmd)
 		end
         return false
     end
---[[     if cmd:find('/fltext1') then
-        local arg = cmd:match('/fltext1 (.+)')
-        mainini.flood.fltext1 = arg
-        inicfg.save(mainini, 'bd')
-        sampAddChatMessage('Текст flood1 теперь {00FFFF}'..mainini.flood.fltext1,-1)
-        return false
-    end
-    if cmd:find('/fltext2') then
-        local arg = cmd:match('/fltext2 (.+)')
-        mainini.flood.fltext2 = arg
-        inicfg.save(mainini, 'bd')
-        sampAddChatMessage('Текст flood2 теперь {00FFFF}'..mainini.flood.fltext2,-1)
-        return false
-    end
-    if cmd:find('/fltext3') then
-        local arg = cmd:match('/fltext3 (.+)')
-        mainini.flood.fltext3 = arg
-        inicfg.save(mainini, 'bd')
-        sampAddChatMessage('Текст flood3 теперь {00FFFF}'..mainini.flood.fltext3,-1)
-        return false
-    end
-    if cmd:find('/flwait1') then
-        local arg = cmd:match('/flwait1 (.+)')
-        mainini.flood.flwait1 = arg
-        inicfg.save(mainini, 'bd')
-        sampAddChatMessage('Задержка flood1 изменена на {ff1493}'..mainini.flood.flwait1..' сек.',-1)
-        return false
-    end
-    if cmd:find('/flwait2') then
-        local arg = cmd:match('/flwait2 (.+)')
-        mainini.flood.flwait2 = arg
-        inicfg.save(mainini, 'bd')
-        sampAddChatMessage('Задержка flood2 изменена на {ff1493}'..mainini.flood.flwait2..' сек.',-1)
-        return false
-    end
-    if cmd:find('/flwait3') then
-        local arg = cmd:match('/flwait3 (.+)')
-        mainini.flood.flwait3 = arg
-        inicfg.save(mainini, 'bd')
-        sampAddChatMessage('Задержка flood3 изменена на {ff1493}'..mainini.flood.flwait3..' сек.',-1)
-        return false
-    end ]]
-
 ----------------------------------------------------------------
 
 if cmd:find('/mnk (.+)') then
@@ -5782,70 +4337,53 @@ if cmd:find('/mnk (.+)') then
             arg = sampGetPlayerNickname(arg)
         else
             sampAddChatMessage('Игрока нет на сервере!', -1)
-            --notf.addNotification(string.format("%s \nИгрока нет на сервере!" , os.date()), 5)
             return
         end
         on = not on
         if on then
-            --printStyledString("~G~Find:~W~ "..arg, 3330, 5)
-            --printStringNow("~G~Find:~W~ "..arg, 1)
             sampAddChatMessage('Ищем: '..arg..'!', -1)
             
-            --notf.addNotification(string.format("%s \nИщем:\n"..arg.."" , os.date()), 5)
             lua_thread.create(function()
-    
-                while on do
-                    wait(0)
-                    local id = sampGetPlayerIdByNickname(arg)
-                    if id ~= nil and id ~= -1 and id ~= false then
-                        local res, handle = sampGetCharHandleBySampPlayerId(id)
-                        if res then
-    
-                            
-    
-                            local screen_text = 'Нашли!'
-                            x, y, z = getCharCoordinates(handle)
-                            local mX, mY, mZ = getCharCoordinates(playerPed)
-                            local x1, y1 = convert3DCoordsToScreen(x,y,z)
-                            local x2, y2 = convert3DCoordsToScreen(mX, mY, mZ)
-                            --sampDestroy3dText(dtext)
-                 --[[            if not dtext then
-                                dtext = sampCreate3dText('Найденный',0xFFD00000,0,0,0.4,9999,true,id,-1)
-                            end ]]
-                            if isPointOnScreen(x,y,z,0) then
-                                renderDrawLine(x2, y2, x1, y1, 2.0, 0xDD6622FF)
-                                renderDrawBox(x1-2, y1-2, 8, 8, 0xAA00CC00)
-                            else
-                                screen_text = 'Где-то рядом!'
-                            end
-                            printStringNow(conv(screen_text),1)
-                            --draw_suka = true
+
+            while on do
+                wait(0)
+                local id = sampGetPlayerIdByNickname(arg)
+                if id ~= nil and id ~= -1 and id ~= false then
+                    local res, handle = sampGetCharHandleBySampPlayerId(id)
+                    if res then
+
+                        
+
+                        local screen_text = 'Нашли!'
+                        x, y, z = getCharCoordinates(handle)
+                        local mX, mY, mZ = getCharCoordinates(playerPed)
+                        local x1, y1 = convert3DCoordsToScreen(x,y,z)
+                        local x2, y2 = convert3DCoordsToScreen(mX, mY, mZ)
+                        if isPointOnScreen(x,y,z,0) then
+                            renderDrawLine(x2, y2, x1, y1, 2.0, 0xDD6622FF)
+                            renderDrawBox(x1-2, y1-2, 8, 8, 0xAA00CC00)
                         else
-                            if marker or checkpoint then
-                                deleteCheckpoint(marker)
-                                removeBlip(checkpoint)
-                            end
-                            --sampDestroy3dText(dtext)
-                            --dtext = nil
-                            --draw_suka = false
+                            screen_text = 'Где-то рядом!'
+                        end
+                        printStringNow(conv(screen_text),1)
+                    else
+                        if marker or checkpoint then
+                            deleteCheckpoint(marker)
+                            removeBlip(checkpoint)
                         end
                     end
                 end
-        
-            end)
-        else
-            lua_thread.create(function()
-                draw_suka = false
-                wait(10)
-                removeUser3dMarker(mark)
-                --sampDestroy3dText(dtext)
-               -- dtext = nil
-                --deleteCheckpoint(marker)
-                --removeBlip(checkpoint)
-             --   sampAddChatMessage('Не ищем.', -1)
-            end)
-        end
-        return false
+            end
+    
+        end)
+    else
+        lua_thread.create(function()
+            draw_suka = false
+            wait(10)
+            removeUser3dMarker(mark)
+        end)
+    end
+    return false
 end
     if cmd:find('/de (.+)') then
         local arg = cmd:match('/de (.+)')
@@ -5858,8 +4396,8 @@ end
         mod = deagle
         thr:run()
     end
-    if cmd:find('/m4 (.+)') then
-        local arg = cmd:match('/m4 (.+)')
+    if cmd:find('/ma (.+)') then
+        local arg = cmd:match('/ma (.+)')
         if arg == nil then
 		    amount = m4_ammo
 	    else
@@ -5932,40 +4470,41 @@ end
 
     if cmd:find('/gn') then
 		ScriptState4 = not ScriptState4
-        --LoadMarkers1()
-        return false
-    end  
-    if cmd:find('/blessave') then
-            menu()
         return false
     end  
 
-    if cmd:find('/bind_menu') then
-            binder_menu()
+    if cmd:find("/coords") then
+        coordmy = not coordmy
         return false
-    end 
+    end
 
-
---[[     if cmd:find('/are') then
-    local _, myidanim = sampGetPlayerIdByCharHandle(playerPed)
-local animka = sampGetPlayerAnimationId(myidanim)
-sampAddChatMessage(animka, -1)
-return false
-end  ]] 
-  --[[   if cmd:find('/eblan') then -- Adam_Yor 278
-        --[[             local name_prem, id_prem, msg_prem = string.match(text, '{F345FC}%[PREMIUM%] {FFFFFF}(.+)%[(%d+)%]: (.+)')
-            if name_prem and tonumber(id_prem) and msg_prem then
-                sampAddChatMessage(string.format('{FFDAB9}'..name_prem..'{FFDAB9}[{DC143C}'..id_prem..'{FFDAB9}]: '..msg_prem), 0xF345FC)
-                return false
+    if cmd:find('/bind_soft') then
+        soft_menu()
+        return false
+    end   
+    if cmd:find("/fid") then
+        lua_thread.create(function()
+            for b = 0, 1004 do
+                if b > sampGetMaxPlayerId(false) then
+                    break
+                end
+                sampSendChat("/id "..b)
+                wait(200)
             end
-            local name_vip, id_vip, msg_vip = string.match(text, '{6495ED}%[VIP%] {FFFFFF}(.+)%[(%d+)%]: (.+)')
-            if name_vip and tonumber(id_vip) and msg_vip then
-                sampAddChatMessage(string.format('{FFDAB9}'..name_vip..'{FFDAB9}[{DC143C}'..id_vip..'{FFDAB9}]: '..msg_vip), 0x6495ED)
-                return false
-            end 
-            sampAddChatMessage('{6495ED}%[VIP%] {FFFFFF}Adam_Yor%[278%]: ВАШИ МАМЫ ВСЕ ЕБАНОЕ ГОВНО, Я НАСРАЛ В ШТАНЫ А МНЕ МАМА ПИЗДЫ ДАЛА, ПОШЛИ ВСЕ НАХУЙ', -1)
-        return false
-    end   ]]
+        end)
+    end
+
+    if cmd:find("/fnum") then
+        lua_thread.create(function()
+            for b = 0, 1004 do
+                if b > sampGetMaxPlayerId(false) then
+                    break
+                end
+                sampSendChat("/number "..b)
+                wait(200)
+            end
+        end)
+    end
   
     if cmd:find('/ub') and update_state then  
         lua_thread.create(function()
@@ -5979,36 +4518,8 @@ end  ]]
         end)
         return false
     end  
-    if cmd:find('/ptguram (.+)') then
-        local arg = cmd:match('/ptguram (.+)')
-        l = 0
-        local param = tonumber(arg)
-        lua_thread.create(function()
-            while l <= param do
-                setGameKeyState(21, 255)
-                wait(200)
-                setGameKeyState(21, 0)
-                sampSendDialogResponse(7625, 1, 9, -1)
-                l = l+1
-                wait(1000)
-            end
-        end)
-        return false
-    end 
-
---[[     
-    if cmd:find('/bitki') then
-		bitkiSTATE = not bitkiSTATE
-        if bitkiSTATE then
-			printString("AutoSkupBitkov ~G~ON",1500)
-		else
-			printString("AutoSkupBitkov ~R~OFF",1500)
-		end
-        return false
-    end ]]
     ---
     if cmd:find('^/rend') then
-		--sampAddChatMessage("[rend] {8A2BE2}Render for {FF4500}Arizona RP(G). {800080}Автор: {8B008B}tedj", 0x7B68EE)
 		sampAddChatMessage("{8B4513}Лён: {33EA0D}Активация: {7B68EE}/len", -1)
 		sampAddChatMessage("{008000}Хлопок: {33EA0D}Активация: {7B68EE}/hlop", -1)
 		sampAddChatMessage("{00FFFF}Ресурсы: {33EA0D}Активация: {7B68EE}/waxta", -1)
@@ -6044,35 +4555,10 @@ end  ]]
 		graffiti = not graffiti
         return false
     end
-    if cmd:find('/waxta') and not doesFileExist("moonloader\\config\\waxta.json") then
-        downloadUrlToFile("https://raw.githubusercontent.com/tedjblessave/binder/main/waxta.json", "moonloader\\config\\waxta.json", function(id, statuss, p1, p2)
-            if statuss == dlstatus.STATUS_ENDDOWNLOADDATA then
-                sampAddChatMessage("Загружен файл всех точек руды {c0c0c0}waxta.json {ffffff}для работы скрипта. Будет выполнена перезагрузка скрипта." , -1)
-                thisScript():reload()
-            end 
-        end)
-        --ScriptState3 = not ScriptState3
-       -- sampAddChatMessage("[{00fc76}WAXTA{FFFFFF}]: /waxlist - показать список всех точек спавна руд", -1)
-        return false
-    elseif cmd:find('/waxta') and doesFileExist("moonloader\\config\\waxta.json") then
+    if cmd:find('/waxta') then
         ScriptState3 = not ScriptState3
-        sampAddChatMessage("[{00fc76}WAXTA{FFFFFF}]: /waxlist - показать список всех точек спавна руд", -1)
         return false
     end
-    if cmd:find('/waxlist') then
-		ScriptStateRR3 = not ScriptStateRR3
-            if ScriptStateRR3 then
-                LoadMarkers()
-            end
-        return false
-    end
-    if cmd:find('/runw') then
-        lua_thread.create(function()
-		runToPoint(518.62, 969.45)
-        end)
-        return false
-    end
-
     if cmd:find('/hlop') then
 		ScriptState = not ScriptState
         return false
@@ -6081,185 +4567,14 @@ end  ]]
 		status = not status
 		if status then
             autoaltrend = true
-			--printString("AutoALT ~G~ON",1500)
 		else
-			--printString("AutoALT ~R~OFF",1500)
             autoaltrend = false
 		end
         return false
     end
     ----------------------------------------------------------------
---[[    if cmd:find('/fpidors') then
-        onf = not onf
-        if onf then
-            --printString("Find Pidors ~G~ON",500)
-            lua_thread.create(function()
-    
-                while onf do
-                    wait(0)
-                    for _,vvf in pairs(maintxt.pidors) do
-                    local idpidort = sampGetPlayerIdByNickname(vvf)
-                    if idpidort ~= nil and idpidort ~= -1 and idpidort ~= false then
-                        local resf, handle = sampGetCharHandleBySampPlayerId(idpidor)
-                        if resf then
-                            screen_text = '{ffff00}Пидорас {00ffff}'..vvf..' {ffffff}('..idpidort..') {ff0000}рядом!'
-                            x, y, z = getCharCoordinates(handle)
-                            local mX, mY, mZ = getCharCoordinates(playerPed)
-                            local x1, y1 = convert3DCoordsToScreen(x,y,z)
-                            local x2, y2 = convert3DCoordsToScreen(mX, mY, mZ)
-                            --sampDestroy3dText(dtext)
-                            if isPointOnScreen(x,y,z,0) then
-                                --renderDrawLine(x2, y2, x1, y1, 2.0, 0xFFD00000)
-                                --renderDrawBox(x1-2, y1-2, 8, 8, 0xAA00CC00)
-                                pidoraso = true
-                            else 
-                                pidoraso = true
-                            end
-                            wait(1500)
-                            pidoraso = false
-                        end
-                    end
-                end
-            end
-            end)
-        end
-        return false
-    end
-
-    ----------------------------------------------------------------
- if cmd:find('/pidors') then 
-    local countfind = 1 
-        for id = 0,999 do
-			if sampIsPlayerConnected(id) then
-				local name = sampGetPlayerNickname(id)
-				for _,vv in pairs(maintxt.pidors) do
-					if vv == name then
-                        sampAddChatMessage(""..countfind..". "..name.." {66CC66}id "..id, -1)
-                        countfind = countfind + 1
-					end 
-				end 
-			end       
-		end
-        if countfind == 1 then sampAddChatMessage("Пидорасы не найдены", 0xC0C0C0) end
-		countfind = 1
-        return false
-    end]]
-
-        ------------------------------------
-    if cmd:find('^/addpidor %a+_%a+') then
-        local param = string.match(cmd,"%a+_%a+")
-        sequent_async_http_request('GET', string.format('http://f0593183.xsph.ru/load.php?text=%s&action=add&key=%s', param, keyl), nil,
-        function(response)
-        end)
-        addOneOffSound(0, 0, 0, 1131)
-        return false
-    end
-    if cmd:find('^/delpidor %a+_%a+') then
-        local param = string.match(cmd,"%a+_%a+")
-        sequent_async_http_request('GET', string.format('http://f0593183.xsph.ru/load.php?text=%s&action=del&key=%s', param, keyl), nil,
-        function(response)
-        end)
-        addOneOffSound(0, 0, 0, 1135)
-        return false
-    end
-            ------------------------------------
-    if cmd:find('/addpidor %d+') then
-        local id = string.match(cmd,"%d+")
-        local param = sampGetPlayerNickname(id)
-        sequent_async_http_request('GET', string.format('http://f0593183.xsph.ru/load.php?text=%s&action=add&key=%s', param, keyl), nil,
-        function(response)
-        end)
-        addOneOffSound(0, 0, 0, 1131)
-        return false
-    end 
-    
-            ------------------------------------
-    if cmd:find('/pidors') then
-        sequent_async_http_request('GET', string.format('http://f0593183.xsph.ru/load.php?action=show&key=%s', keyl), nil,
-        function(response)
-            text = response.text:gsub('<br />', '')
-            for line in text:gmatch("[^\n\r]+") do
-                idpidr = sampGetPlayerIdByNickname(line)
-                --namepidr = sampGetPlayerNickname(idpidr)
-                -----
-                local found = false
-                for _, v in pairs(maintxt.pidors) do
-                    if v == line and not found then
-                        found = true
-                    end
-                end
-                if found == false then
-                    table.insert(maintxt.pidors, line)
-                    inicfg.save(maintxt, 'pidorasi.ini')
-                end
-                -----
-                if (sampGetPlayerIdByNicknamePidor(line)) == nil then
-                    line = line..'\t{E02A02}Offline'
-                    dialogTabArr[#dialogTabArr+1] = line
-                else
-                    line = line..'\t{2CFF00}Online'
-                    dialogTabArr[#dialogTabArr+1] = line
-                end 
-            end
-            for _, str in ipairs(dialogTabArr) do
-                dialogTabStr = dialogTabStr .. str .. "\n"
-            end
-            sampShowDialog(0, "{00ffff}Список всех пидорасов", dialogTabStr, "Закрыть", _, 4)
-            dialogTabArr = {}
-            dialogTabStr = ''
-        end)
-        return false
-    end
-    if cmd:find('/offpidors') then
-        sequent_async_http_request('GET', string.format('http://f0593183.xsph.ru/load.php?action=show&key=%s', keyl), nil,
-        function(response)
-            text = response.text:gsub('<br />', '')
-            for line in text:gmatch("[^\n\r]+") do
-                if (sampGetPlayerIdByNicknamePidor(line)) == nil then
-                    line = line..'\t{E02A02}Offline'
-                    dialogTabArr[#dialogTabArr+1] = line
-                end
-            end
-            for _, str in ipairs(dialogTabArr) do
-                dialogTabStr = dialogTabStr .. str .. "\n"
-            end
-            sampShowDialog(0, "{00ffff}Список пидорасов {ff0000}оффлайн", dialogTabStr, "Закрыть", _, 4)
-            dialogTabArr = {}
-            dialogTabStr = ''
-        end)
-        return false
-    end
-    if cmd:find('/onpidors') then
-        sequent_async_http_request('GET', string.format('http://f0593183.xsph.ru/load.php?action=show&key=%s', keyl), nil,
-        function(response)
-            text = response.text:gsub('<br />', '')
-            for line in text:gmatch("[^\n\r]+") do
-                if (sampGetPlayerIdByNicknamePidor(line)) ~= nil then
-                    line = line..'\t{2CFF00}Online'
-                    dialogTabArr[#dialogTabArr+1] = line
-                end
-            end
-            for _, str in ipairs(dialogTabArr) do
-                dialogTabStr = dialogTabStr .. str .. "\n"
-            end
-            sampShowDialog(0, "{00ffff}Список пидорасов {2CFF00}онлайн", dialogTabStr, "Закрыть", _, 4)
-            dialogTabArr = {}
-            dialogTabStr = ''
-        end)
-        return false
-    end
 end
 
-function sampGetPlayerIdByNicknamePidor(nick)
-    nick = tostring(nick)
-    local _, myid = sampGetPlayerIdByCharHandle(PLAYER_PED)
-    if nick == sampGetPlayerNickname(myid) then return myid end
-    for i = 0, 1003 do
-      if sampIsPlayerConnected(i) and sampGetPlayerNickname(i) == nick then
-        return true
-      end
-    end
-  end
 
 function CleanMemory()
 	-- адреса памяти можно взять тут https://github.com/DK22Pac/plugin-sdk/blob/master/plugin_sa/game_sa/CGame.cpp
@@ -6294,75 +4609,6 @@ function sampGetPlayerIdByNickname(nick)
     for i = 0, 1000 do if sampIsPlayerConnected(i) and sampGetPlayerNickname(i) == tostring(nick) then return i end end
 end
 
-function setMarker1(type, x, y, z, radius, color)
-    deleteCheckpoint(marker)
-    removeBlip(checkpoint)
-    checkpoint = addBlipForCoord(x, y, z)
-    --marker = createCheckpoint(type, x, y, z, 1, 1, 1, radius)
-    changeBlipColour(checkpoint, color)
-    lua_thread.create(function()
-    repeat
-        wait(0)
-        local x1, y1, z1 = getCharCoordinates(PLAYER_PED)
-        until getDistanceBetweenCoords3d(x, y, z, x1, y1, z1) < radius or not doesBlipExist(checkpoint)
-        --deleteCheckpoint(marker)
-        removeBlip(checkpoint)
-        --addOneOffSound(0, 0, 0, 1149)
-    end)
-end
-
-function setMarker2(type, x, y, z, radius, color)
-    deleteCheckpoint(marker)
-    removeBlip(checkpoint)
-    checkpoint = addBlipForCoord(x, y, z)
-    marker = createCheckpoint(type, x, y, z, 1, 1, 1, radius)
-    changeBlipColour(checkpoint, color)
-    lua_thread.create(function()
-    repeat
-        wait(0)
-        local x1, y1, z1 = getCharCoordinates(PLAYER_PED)
-        until getDistanceBetweenCoords3d(x, y, z, x1, y1, z1) < radius or not doesBlipExist(checkpoint)
-        deleteCheckpoint(marker)
-        removeBlip(checkpoint)
-        addOneOffSound(0, 0, 0, 1149)
-    end)
-end
-
-function setMarker(type, x, y, z, radius, color)
-    deleteCheckpoint(marker)
-    removeBlip(checkpoint)
-    checkpoint = addBlipForCoord(x, y, z)
-    marker = createCheckpoint(type, x, y, z, 1, 1, 1, radius)
-    changeBlipColour(checkpoint, color)
---[[    lua_thread.create(function()
-    repeat
-        wait(0)
-        local x1, y1, z1 = getCharCoordinates(PLAYER_PED)
-        until getDistanceBetweenCoords3d(x, y, z, x1, y1, z1) < radius or not doesBlipExist(checkpoint)
-        deleteCheckpoint(marker)
-        removeBlip(checkpoint)
-        addOneOffSound(0, 0, 0, 1149)
-    end)]]
-end
-
-
-
---[[ function chatut(param)
-    tbl = {}
-    for l in io.lines(getWorkingDirectory()..'\\config\\chatlogs\\chatlog ' .. os.date('%y.%m.%d').. '.txt') do 
-     if l ~= "" then
-      if param ~= 0 then
-       if string.find(l, param) ~= nil then
-        table.insert(tbl, string.sub(l, 1, 325)) 
-       end
-       else
-       table.insert(tbl, string.sub(l, 1, 325))
-      end	
-     end
-    end
-    sampShowDialog(1007, "Ищем: "..param.." | Результат: "..#tbl, table.concat(tbl, "\n"), "Выйти", _, 4)
-   end ]]
-
 function conv(text)
     local convtbl = {[230]=155,[231]=159,[247]=164,[234]=107,[250]=144,[251]=168,[254]=171,[253]=170,[255]=172,[224]=97,[240]=112,[241]=99,[226]=162,[228]=154,[225]=151,[227]=153,[248]=165,[243]=121,[184]=101,[235]=158,[238]=111,[245]=120,[233]=157,[242]=166,[239]=163,[244]=63,[237]=174,[229]=101,[246]=36,[236]=175,[232]=156,[249]=161,[252]=169,[215]=141,[202]=75,[204]=77,[220]=146,[221]=147,[222]=148,[192]=65,[193]=128,[209]=67,[194]=139,[195]=130,[197]=69,[206]=79,[213]=88,[168]=69,[223]=149,[207]=140,[203]=135,[201]=133,[199]=136,[196]=131,[208]=80,[200]=133,[198]=132,[210]=143,[211]=89,[216]=142,[212]=129,[214]=137,[205]=72,[217]=138,[218]=167,[219]=145}
     local result = {}
@@ -6375,122 +4621,109 @@ end
 
 function sp.onServerMessage(color, text)
    -- print(text, color)
-
+    --[[          if  text:find('говорит:') then
+            print('{'..bit.tohex(bit.rshift(color, 8), 6)..'}'..text)
+            print('======')
+            print('%X', color)
+            print(bit.tohex(bit.rshift(color, 8), 6))
+            end ]]
     if text:find('Член семьи') and text:find('в счёт оплату') and color == -1178486529 and mainini.afk.uvedomleniya then
         sendvknotf0(text..' <3')
     end
-
---[[     if mainini.autoeda.legit then
-        if text:find('У вас нет мешка с мясом!') and color == -10270721 then
+    if text:find("У вас нет мешка с мясом") and color ==  -10270721 then
+        if not isCharInAnyCar(PLAYER_PED) then
             lua_thread.create(function()
-                wait(300)
                 automeatbag = true
-                wait(100)
-                sampSendChat('/invent')
+                wait(500)
+                sampSendChat("/invent") 
             end)
-            return false
         end
     end
-    if text:find('32f') then
-        lua_thread.create(function()
-            sampSendChat('/meatbag')
-        end)
-    end ]]
-
     if chatlog then
 		if doesFileExist(fpath) then
 			local fa = io.open(fpath, 'a+')
 			if fa then fa:write("["..os.date("*t", os.time()).hour..":"..os.date("*t", os.time()).min..":"..os.date("*t", os.time()).sec.."] "..text.."\n"):close() end
 		end
 	end
-    ------------------------------------------------------------------
+    if baza then
+        if string.find(text,'%a+_%a+%[%d+%]:%s%s%s%s') then
+            if doesFileExist(bazafpath) then
+                local bazafa = io.open(bazafpath, 'a+')
+                if bazafa then bazafa:write("["..os.date("*t", os.time()).hour..":"..os.date("*t", os.time()).min..":"..os.date("*t", os.time()).sec.."] "..text.."\n"):close() end
+            end
+        end
+        if text:find("UID") and text:find("Уровень") and color == -1 then
+            if doesFileExist(bazafpath) then
+                local bazafa = io.open(bazafpath, 'a+')
+                if bazafa then bazafa:write("["..os.date("*t", os.time()).hour..":"..os.date("*t", os.time()).min..":"..os.date("*t", os.time()).sec.."] "..text.."\n"):close() end
+            end
+        end
+	end
     if menuhome then
         if text:find('Дверь закрыта, невозможно зайти') and color == -10270721 then
             sampSendChat("/home")
         end
     end
+    if color == 1118842111 and text:find('Вы использовали') and mainini.afk.uvedomleniya then
+        sendvknotf0(text)
+    end
 
-
-        if color == 1118842111 and text:find('Вы использовали') and mainini.afk.uvedomleniya then
-            sendvknotf0(text)
-		end
-
-        if text:find('Вам удалось улучшить') and color == 1941201407 and mainini.afk.uvedomleniya  then
-            sendvknotf0(text)
-		end
-        
---[[         if color == -1 and text:find('%[Тел%]:')then
-			sendvknotf0(text)
-		end ]]
-        if text:match('{73B461}%[Тел%]:')  and mainini.afk.uvedomleniya then
-            sendvknotf0(text)
-            text = text:gsub('^{73B461}%[Тел%]', '{2FAA5B}[Тел]') --b800a2
-            return { 0xFFFFFFFF, text }
-        end
-        if color == -1347440641 and text:find('Звонок окончен') and text:find('Информация') and text:find('Время разговора') and mainini.afk.uvedomleniya  then
-			sendvknotf(text)
-		end
-
-    if vknotf.chatc then 
+    if text:find('Вам удалось улучшить') and color == 1941201407 and mainini.afk.uvedomleniya  then
+        sendvknotf0(text)
+    end
+    if text:match('{73B461}%[Тел%]:')  and mainini.afk.uvedomleniya then
+        sendvknotf0(text)
+        text = text:gsub('^{73B461}%[Тел%]', '{2FAA5B}[Тел]') --b800a2
+        return { 0xFFFFFFFF, text }
+    end
+    if color == -1347440641 and text:find('Звонок окончен') and text:find('Информация') and text:find('Время разговора') and mainini.afk.uvedomleniya  then
+        sendvknotf(text)
+    end
+    if vknotf.chatc  and mainini.afk.uvedomleniya then 
 		sendvknotf0(text)
 	end 
-    if not vknotf.chatf then 
+    if not vknotf.chatf  and mainini.afk.uvedomleniya then 
         if text:find('%[Семья') or text:find('%[Альянс ') or text:find('%[Новости Семьи%]') then
 			sendvknotf0(text)
 		end
 	end 
-
-		if color == -1347440641 and text:find('купил у вас') and text:find('от продажи') and text:find('комиссия')  and mainini.afk.uvedomleniya then
-			sendvknotf(text)
+    if vknotf.chatadv  and mainini.afk.uvedomleniya then 
+        if text:find('%[Адвокат%] ') then
+			sendvknotf0(text)
 		end
-        if color == -1347440641 and text:find('Вы купили') and text:find('у игрока')  and mainini.afk.uvedomleniya then
-			sendvknotf(text)
-		end
-		if color == 1941201407 and text:find('Поздравляем с продажей транспортного средства') and mainini.afk.uvedomleniya  then
-			sendvknotf('Поздравляем с продажей транспортного средства')
-		end
---[[ 
-		if text:find('Используйте клавишу') and text:find('чтобы показать курсор управления или') then
-			sendvknotf('Телефон проверь <3')
-            sendvknotf(t00ext)
-		end ]]
-
-  -- print(text, color)
-
-        if text:find("Вам пришло новое сообщение!") and not text:find("говорит") and not text:find('- |') then
-            sampAddChatMessage("{fff000}Вам пришло новое {FFFFFF}SMS{fff000}-сообщение!", -1)
-            addOneOffSound(0.0, 0.0, 0.0, 1055)
-            printStringNow("~Y~SMS", 3000)
-            return false
-          end
-
- --[[          if  text:find('говорит:') then
-            print('{'..bit.tohex(bit.rshift(color, 8), 6)..'}'..text)
-            print('======')
-            print('%X', color)
-            print(bit.tohex(bit.rshift(color, 8), 6))
-            end ]]
-
+	end 
+    if vknotf.chatgo  and mainini.afk.uvedomleniya then 
         if text:find('говорит:') then
-                local idd = text:match('%d+')
-            local colorr = sampGetPlayerColor(idd)
-                sampAddChatMessage(text,colorr)
-                return false 
-        end
-
-        if text:find('%[Альянс ') then
-            --sampAddChatMessage(text, 0xFF00FF)
-            return { 0x9c15c1ff, text }
-        end
-
-
-        
-
+			sendvknotf0(text)
+		end
+	end 
+    if color == -1347440641 and text:find('купил у вас') and text:find('от продажи') and text:find('комиссия')  and mainini.afk.uvedomleniya then
+        sendvknotf(text)
+    end
+    if color == -1347440641 and text:find('Вы купили') and text:find('у игрока')  and mainini.afk.uvedomleniya then
+        sendvknotf(text)
+    end
+    if color == 1941201407 and text:find('Поздравляем с продажей транспортного средства') and mainini.afk.uvedomleniya  then
+        sendvknotf('Поздравляем с продажей транспортного средства')
+    end
+    if text:find("Вам пришло новое сообщение!") and not text:find("говорит") and not text:find('- |') then
+        sampAddChatMessage("{fff000}Вам пришло новое {FFFFFF}SMS{fff000}-сообщение!", -1)
+        addOneOffSound(0.0, 0.0, 0.0, 1055)
+        printStringNow("~Y~SMS", 3000)
+        return false
+    end
+    if text:find('говорит:') then
+            local idd = text:match('%d+')
+        local colorr = sampGetPlayerColor(idd)
+            sampAddChatMessage(text,colorr)
+            return false 
+    end
+    if text:find('%[Альянс ') then
+        return { 0x9c15c1ff, text }
+    end
     if text:find('^Администратор (.+) ответил вам')  and mainini.afk.uvedomleniya then
         sendvknotf('(warning | chat) '..text)
     end
-
-    
     if color == -10270721 and text:find('Администратор')  and mainini.afk.uvedomleniya then
         local res, mid = sampGetPlayerIdByCharHandle(PLAYER_PED)
         if res then 
@@ -6503,8 +4736,6 @@ function sp.onServerMessage(color, text)
     if color == -10270721 and text:find('Вы можете выйти из психиатрической больницы') and mainini.afk.uvedomleniya  then
             sendvknotf(text)
     end
-
-
     if text:find('Банковский чек')  and color == 1941201407 then 
        lua_thread.create(function()
         wait(10*1000)
@@ -6518,337 +4749,207 @@ function sp.onServerMessage(color, text)
         sampAddChatMessage('{ffffff}Не забывай оплачивать налоги за {ff4500}дома, бизнесы, фам.кв{ffffff}!', -1)    
        end)
     end
-
---[[     if text:find('Банковский чек') and color == 1941201407 then 
-        lua_thread.create(function()
-            wait(1000)
-            setVirtualKeyDown(vkeys.VK_N, true)
-            wait(44)
-            setVirtualKeyDown(vkeys.VK_N, false)
-            wait(1000)
-            sampSendDialogResponse(33, 1, 8, nil)
-            wait(1000)
-            sampSendDialogResponse(4498, 1, 0, "5000000")
-            wait(1000)
-            closeDialog()
-            wait(600*1000)
-            setVirtualKeyDown(vkeys.VK_N, true)
-            wait(44)
-            setVirtualKeyDown(vkeys.VK_N, false)
-            wait(1000)
-            sampSendDialogResponse(33, 1, 8, nil)
-            wait(1000)
-            sampSendDialogResponse(4498, 1, 0, "5000000")
-            wait(1000)
-            closeDialog()
-            wait(600*1000)
-            setVirtualKeyDown(vkeys.VK_N, true)
-            wait(44)
-            setVirtualKeyDown(vkeys.VK_N, false)
-            wait(1000)
-            sampSendDialogResponse(33, 1, 8, nil)
-            wait(1000)
-            sampSendDialogResponse(4498, 1, 0, "5000000")
-            wait(1000)
-            closeDialog()
-            wait(600*1000)
-            setVirtualKeyDown(vkeys.VK_N, true)
-            wait(44)
-            setVirtualKeyDown(vkeys.VK_N, false)
-            wait(1000)
-            sampSendDialogResponse(33, 1, 8, nil)
-            wait(1000)
-            sampSendDialogResponse(4498, 1, 0, "5000000")
-            wait(1000)
-            closeDialog()
-        end)
-    end ]]
-
     if text:find('Вы оплатили все налоги на сумму') and color == 1941201407 then
         lua_thread.create(function()
         wait(150)
-        sampAddChatMessage('{ff0000}Но забыли оплатить налоги на {00ff00}трейлер {ffffff}(/trpay), {0000ff}фам.квартиру {ffffff}(/fpay)', 0xff0000)   
+        sampAddChatMessage('{ffffff}Но забыли оплатить налоги на {ff4500}фам.квартиру {800080}(/fpay)', 0xff0000)   
         end)
     end
-
-        if text:find('Банковский чек') and color == 1941201407  and mainini.afk.uvedomleniya then
-            vknotf.ispaydaystate = true
+    if text:find('Банковский чек') and color == 1941201407  and mainini.afk.uvedomleniya then
+        vknotf.ispaydaystate = true
+        vknotf.ispaydaytext = ''
+    end
+    if vknotf.ispaydaystate  and mainini.afk.uvedomleniya then
+        if text:find('Депозит в банке') then 
+            vknotf.ispaydaytext = vknotf.ispaydaytext..'\n '..text 
+        elseif text:find('Сумма к выплате') then
+            vknotf.ispaydaytext = vknotf.ispaydaytext..'\n '..text 
+        elseif text:find('Текущая сумма в банке') then
+            vknotf.ispaydaytext = vknotf.ispaydaytext..'\n '..text
+        elseif text:find('Текущая сумма на депозите') then
+            vknotf.ispaydaytext = vknotf.ispaydaytext..'\n '..text
+        elseif text:find('В данный момент у вас') then
+            vknotf.ispaydaytext = vknotf.ispaydaytext..'\n'..text
+            sendvknotf('\n Наличные: ' .. getPlayerMoney(PLAYER_HANDLE) ..vknotf.ispaydaytext..'\n <3 Не забывай оплачивать налоги за дома, бизнесы, фам.кв!')
+            vknotf.ispaydaystate = false
             vknotf.ispaydaytext = ''
         end
-        if vknotf.ispaydaystate  and mainini.afk.uvedomleniya then
-            if text:find('Депозит в банке') then 
-                vknotf.ispaydaytext = vknotf.ispaydaytext..'\n '..text 
-            elseif text:find('Сумма к выплате') then
-                vknotf.ispaydaytext = vknotf.ispaydaytext..'\n '..text 
-            elseif text:find('Текущая сумма в банке') then
-                vknotf.ispaydaytext = vknotf.ispaydaytext..'\n '..text
-            elseif text:find('Текущая сумма на депозите') then
-                vknotf.ispaydaytext = vknotf.ispaydaytext..'\n '..text
-            elseif text:find('В данный момент у вас') then
-                vknotf.ispaydaytext = vknotf.ispaydaytext..'\n'..text
-                sendvknotf('\n Наличные: ' .. getPlayerMoney(PLAYER_HANDLE) ..vknotf.ispaydaytext..'\n <3 Не забывай оплачивать налоги за дома, бизнесы, фам.кв!')
-                vknotf.ispaydaystate = false
-                vknotf.ispaydaytext = ''
-            end
-        end
-
-
-        _, id = sampGetPlayerIdByCharHandle(PLAYER_PED)
-        nick = sampGetPlayerNickname(id)
-        if isCharInAnyCar(PLAYER_PED) then
-            lua_thread.create(function()
-                if text:find("Необходимо вставить ключи в зажигание") and not text:find("говорит") and not text:find('- |') and notkey == true then
-                    sampSendChat("/key")
-                    wait(240)
-                    setVirtualKeyDown(vkeys.VK_N, true)
-                    wait(44)
-                    setVirtualKeyDown(vkeys.VK_N, false)
-                    notkey = false
-                end
-            end)
-            if text:find(nick) and text:find ("заглушил") and text:find ("двигатель") and not text:find("говорит") and not text:find('- |')  then
+    end
+    _, id = sampGetPlayerIdByCharHandle(PLAYER_PED)
+    nick = sampGetPlayerNickname(id)
+    if isCharInAnyCar(PLAYER_PED) then
+        lua_thread.create(function()
+            if text:find("Необходимо вставить ключи в зажигание") and not text:find("говорит") and not text:find('- |') and notkey == true then
                 sampSendChat("/key")
+                wait(240)
+                setVirtualKeyDown(vkeys.VK_N, true)
+                wait(44)
+                setVirtualKeyDown(vkeys.VK_N, false)
+                notkey = false
             end
+        end)
+        if text:find(nick) and text:find ("заглушил") and text:find ("двигатель") and not text:find("говорит") and not text:find('- |')  then
+            sampSendChat("/key")
         end
+    end
 
-        if text:find('У вас началась сильная ломка') or text:find('Вашему персонажу нужно принять') then return false end
+    if text:find('У вас началась сильная ломка') or text:find('Вашему персонажу нужно принять') then return false end
 
     --- МУСОРКА А НЕ ЧАТ НА АРИЗОНЕ СУКА
+    if text:match('^%s+$') then return false end
 
+    if (text:find("~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~") or text:find("Основные команды сервера:") or text:find("Пригласи друга и получи") or text:find("Наш сайт:"))  and color == -89368321 then return false end
 
-                if text:match('^%s+$') then return false end
+    if (text:find("В нашем магазине ты можешь приобрести нужное количество игровых денег и потратить") or text:find("их на желаемый тобой") or text:find("имеют большие возможности") or text:find("имеют больше возможностей") or text:find("можно приобрести редкие") or text:find("которые выделят тебя из толпы")) and color == 1687547391 then return false end
 
-                if (text:find("~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~") or text:find("Основные команды сервера:") or text:find("Пригласи друга и получи") or text:find("Наш сайт:"))  and color == -89368321 then return false end
+    -- if text:find("вышел при попытке избежать ареста и был наказан") and color == -1104335361 then return false end
 
+    if (text:find("начал работу новый инкассатор") or text:find('вы сможете получить деньги')) and color == -1800355329 then return false end
 
+    if (text:find("News LS") or text:find("News LV") or text:find("News SF")) and color == 1941201407 then return false end
 
---[[                 if text:match('^{6495ED}%[VIP%]') then
-                    text = text:gsub('^{6495ED}%[VIP%]', '[VIP]')
-                    return { 0x2FAA5BFF, text }
-                end
-            
-                if text:match('^{F345FC}%[PREMIUM%]') then
-                    text = text:gsub('^{F345FC}%[PREMIUM%]', '[PREMIUM]')
-                    return { 0xFFAA00FF, text }
-                end
-            
-                if text:match('^{FCC645}%[ADMIN%]') then
-                    text = text:gsub('^{FCC645}%[ADMIN%]', '[ADMIN]')
-                    return { 0xFF4040FF, text }
-                end ]]
+    -- if text:find('выехал матовоз') and color == -1800355329 then return false end
 
-                if (text:find("В нашем магазине ты можешь приобрести нужное количество игровых денег и потратить") or text:find("их на желаемый тобой") or text:find("имеют большие возможности") or text:find("имеют больше возможностей") or text:find("можно приобрести редкие") or text:find("которые выделят тебя из толпы")) and color == 1687547391 then return false end
+    if text:find('Открыв СУНДУК с подарками') and color == -89368321 then return false end
 
-                if text:find("вышел при попытке избежать ареста и был наказан") and color == -1104335361 then return false end
+    if (text:find('На сервере есть инвентарь') or text:find('Вы можете задать вопрос в нашу') or text:find('Чтобы запустить браузер') or text:find('Чтобы включить радио в')) and text:find('Подсказка') then return false end
 
-                if (text:find("начал работу новый инкассатор") or text:find('вы сможете получить деньги')) and color == -1800355329 then return false end
+    if (text:find('Чтобы завести двигатель введите') or text:find('Чтобы включить радио используйте кнопку') or text:find('может присутствует радио') or text:find('Для управления поворотниками используйте') or text:find('В транспорте присутствует радио')) and text:find('Подсказка') then return false end
 
-                if (text:find("News LS") or text:find("News LV") or text:find("News SF")) and color == 1941201407 then return false end
+    if text:find('Состояние вашего авто крайне') and text:find('Информация') and not text:find('говорит') and not text:find('- |') then return false end
+    if text:find('Необходимо заехать на станцию') and text:find('Используйте /gps') and not text:find('говорит') and not text:find('- |') then return false end
+    if text:find('Состояние вашего авто') and text:find('Подсказка') and not text:find('говорит') and not text:find('- |') and color == -10270721 then return false end
+    if text:find('Обратитесь на станцию') and not text:find('говорит') and not text:find('- |') and color == -1 then return false end
 
-                if text:find('выехал матовоз') and color == -1800355329 then return false end
+    if (text:find('Уважаемые жители штата') or text:find('В данный момент проходит собеседование') or text:find('Для Вступления необходимо прибыть')) and color == 73381119 then return false end
 
-                if text:find('Открыв СУНДУК с подарками') and color == -89368321 then return false end
+    if (text:find("Справочная центрального банка") or text:find("Механик") or text:find("Проверить баланс") or text:find("Скорая помощь")  or text:find("Такси") or text:find("Полицейский участок")  or text:find("Служба точного времени") or text:find("Номера телефонов государственных служб:")) or text:find("Служба по вопросам жилой недвижимости")  and not text:find('говорит') and not text:find('- |') and color == -1 then return false end
+    if text:find("Номера телефонов государственных служб") and not text:find('говорит') and not text:find('- |')  and color == 1687547391 then return false end
+    if text:find('домами могут бесплатно раз в день получать') and text:find('Подсказка') and color == -1347440641 then return false end
+    --[[           if text:find('Вам был добавлен предмет') and text:find('Ингредиенты') and color == -65281 then return false end
 
-                if (text:find('На сервере есть инвентарь') or text:find('Вы можете задать вопрос в нашу') or text:find('Чтобы запустить браузер') or text:find('Чтобы включить радио в')) and text:find('Подсказка') then return false end
+    if (text:find('Либерти Сити') or text:find('отправляйтесь на его разгрузку') or text:find('об контрабанде')) and text:find('Внимание') and color == -1104335361 then return false end
+    ]]
+    --[[           if (text:find('Ограбление изъятых патронов и наркотиков завершено') or text:find('Если вам удалось что-то украсть') or text:find('Внимание!') or text:find('Через 10 минут состоится выгрузка изъятых патронов и наркотиков') or text:find('чтобы украсть как можно больше ящиков в порту и пополнить ими общак') or text:find('Берите фургон и направляйтесь в порт') or text:find('Берите фургон и направляйтесь в порт') or text:find('вся Армия штата сосредоточена на том')) and color == -10270721 then return false end
+    if (text:find('Если вам удалось что-то украсть') or text:find('доставьте это в общак')) and color == -10270721 then return false end
+    if (text:find('чтобы не дать бандитам украсть и пополнить свой общак патронами пии наркотиками') or text:find('Берите технику и направляйтесь в порт для защиты груза')) and color == -10270721 then return false end
+    if (text:find('В порт уже доставили изъятые патроны и наркотики с соседнего штата') or text:find('Успейте украсть как можно больше, пока их не украли другие')) and color == -10270721 then return false end
+    ]]
+    --  if (text:find('арендатор концертного зала:') and text:find('проводит мероприятие') and text:find('Развлечения')) and color == 1687547391 then return false end
 
-                if (text:find('Чтобы завести двигатель введите') or text:find('Чтобы включить радио используйте кнопку') or text:find('может присутствует радио') or text:find('Для управления поворотниками используйте') or text:find('В транспорте присутствует радио')) and text:find('Подсказка') then return false end
+    if text:find("Гос.Новости:") and color == 73381119 then return false end
 
-                if text:find('Состояние вашего авто крайне') and text:find('Информация') and not text:find('говорит') and not text:find('- |') then return false end
-                if text:find('Необходимо заехать на станцию') and text:find('Используйте /gps') and not text:find('говорит') and not text:find('- |') then return false end
-                if text:find('Состояние вашего авто') and text:find('Подсказка') and not text:find('говорит') and not text:find('- |') and color == -10270721 then return false end
-                if text:find('Обратитесь на станцию') and not text:find('говорит') and not text:find('- |') and color == -1 then return false end
+    -- if text:find('Мероприятие') and text:find('Зловещий дворец') and color ==  -1178486529 then return false end
 
-                if (text:find('Уважаемые жители штата') or text:find('В данный момент проходит собеседование') or text:find('Для Вступления необходимо прибыть')) and color == 73381119 then return false end
+    if (text:find('Гость') or text:find('Репортёр')) and color == -1697828097 then return false end
 
-                if (text:find("Справочная центрального банка") or text:find("Механик") or text:find("Проверить баланс") or text:find("Скорая помощь")  or text:find("Такси") or text:find("Полицейский участок")  or text:find("Служба точного времени") or text:find("Номера телефонов государственных служб:")) or text:find("Служба по вопросам жилой недвижимости")  and not text:find('говорит') and not text:find('- |') and color == -1 then return false end
-                if text:find("Номера телефонов государственных служб") and not text:find('говорит') and not text:find('- |')  and color == 1687547391 then return false end
+    --if text:find('За дверью') and text:find('говорит:') and color == -1077886209 then return false end
 
-                if text:find('Вам был добавлен предмет') and text:find('Ингредиенты') and color == -65281 then return false end
-                if text:find('домами могут бесплатно раз в день получать') and text:find('Подсказка') and color == -1347440641 then return false end
-                if (text:find('Либерти Сити') or text:find('отправляйтесь на его разгрузку') or text:find('об контрабанде')) and text:find('Внимание') and color == -1104335361 then return false end
+    if text:find('С помощью телефона можно заказать такси') and text:find('Подсказка') and color == -170229249 then return false end
 
-                if (text:find('Ограбление изъятых патронов и наркотиков завершено') or text:find('Если вам удалось что-то украсть') or text:find('Внимание!') or text:find('Через 10 минут состоится выгрузка изъятых патронов и наркотиков') or text:find('чтобы украсть как можно больше ящиков в порту и пополнить ими общак') or text:find('Берите фургон и направляйтесь в порт') or text:find('Берите фургон и направляйтесь в порт') or text:find('вся Армия штата сосредоточена на том')) and color == -10270721 then return false end
-                if (text:find('Если вам удалось что-то украсть') or text:find('доставьте это в общак')) and color == -10270721 then return false end
-                if (text:find('чтобы не дать бандитам украсть и пополнить свой общак патронами пии наркотиками') or text:find('Берите технику и направляйтесь в порт для защиты груза')) and color == -10270721 then return false end
-                if (text:find('В порт уже доставили изъятые патроны и наркотики с соседнего штата') or text:find('Успейте украсть как можно больше, пока их не украли другие')) and color == -10270721 then return false end
-
-                if (text:find('арендатор концертного зала:') and text:find('проводит мероприятие') and text:find('Развлечения')) and color == 1687547391 then return false end
-
-                if text:find("Гос.Новости:") and color == 73381119 then return false end
-
-                if text:find('Мероприятие') and text:find('Зловещий дворец') and color ==  -1178486529 then return false end
-
-                if (text:find('Гость') or text:find('Репортёр')) and color == -1697828097 then return false end
-        
-                --if text:find('За дверью') and text:find('говорит:') and color == -1077886209 then return false end
-
-                if text:find('С помощью телефона можно заказать такси') and text:find('Подсказка') and color == -170229249 then return false end
-
-            -----------------------------------------------------ajksdhfjsdjkfhsdjkfhsdjkf
-
-            if not finished then
-                if text:find("^%[Ошибка%].*После последнего сообщения в этом чате нужно подождать") then
-                    lua_thread.create(function()
-                        wait(0.5 * 1000);
-                        sampSendChat("/vr " .. message)
-                        try = try + 1
-                    end)
-                    return false
-                end
-        
-                local id = select(2, sampGetPlayerIdByCharHandle(PLAYER_PED))
-                if text:match("%[%u+%] {%x+}[A-z0-9_]+%[" .. id .. "%]:") then
-                    finished = true
-                end
-            end
-        
-            if text:find("^Вы заглушены") or text:find("Для возможности повторной отправки сообщения в этот чат") then
-                finished = true
-            end
-
-            if text:find ('Вы заглушены. Оставшееся время') then
-                sukazaebalmutit = text:match('%d+')
-                hvatitmutitbliat = sukazaebalmutit/60
-                sampAddChatMessage('Вы заглушены. Оставшееся время ' .. math.floor(hvatitmutitbliat) .. ' минут(ы) = '..sukazaebalmutit.. ' секунд(ы).', -1347440641)
+    -----------------------------------------------------ajksdhfjsdjkfhsdjkfhsdjkf
+    if not finished then
+        if text:find("^%[Ошибка%].*После последнего сообщения в этом чате нужно подождать") then
+            lua_thread.create(function()
+                wait(0.5 * 1000);
+                sampSendChat("/vr " .. message)
+                try = try + 1
+            end)
+            return false
+        end
+        local id = select(2, sampGetPlayerIdByCharHandle(PLAYER_PED))
+        if text:match("%[%u+%] {%x+}[A-z0-9_]+%[" .. id .. "%]:") then
+            finished = true
+        end
+    end
+    if text:find("^Вы заглушены") or text:find("Для возможности повторной отправки сообщения в этот чат") then
+        finished = true
+    end
+    if text:find ('Вы заглушены. Оставшееся время') then
+        sukazaebalmutit = text:match('%d+')
+        hvatitmutitbliat = sukazaebalmutit/60
+        sampAddChatMessage('Вы заглушены. Оставшееся время ' .. math.floor(hvatitmutitbliat) .. ' минут(ы) = '..sukazaebalmutit.. ' секунд(ы).', -1347440641)
+        return false
+    end
+    if text:match('^{6495ED}%[VIP%]') and mainini.functions.colorchat then
+        text = text:gsub('^{6495ED}%[VIP%]', '{b800a2}[VIP]')   
+        return { 0xFFFFFFFF, text }
+    end
+    if text:match('^{F345FC}%[PREMIUM%]') and mainini.functions.colorchat then
+        text = text:gsub('^{F345FC}%[PREMIUM%]', '{FFAA00}[PREMIUM]')
+        return { 0xFFFFFFFF, text }
+    end
+    if text:match('^{FCC645}%[ADMIN%]') and mainini.functions.colorchat then
+        text = text:gsub('^{FCC645}%[ADMIN%]', '{38fcff}[ADMIN]')
+        return { 0xffffffff, text }
+    end
+    if mainini.functions.colorchat then
+        if color == 0x73B461FF then
+            local ad, tel = text:match('^Объявление:%s(.+)%.%sОтправил:%s[A-z0-9_]+%[%d+%]%sТел%.%s(%d+)')
+            if ad ~= nil then
+                local outstring = string.format('AD: {73B461}%s {D5A457}| Тел: %s', ad, tel)
+                return { 0xD5A457FF, outstring }
+            elseif text:find('Отредактировал сотрудник') then
                 return false
             end
-
-            if text:match('%[VIP%]') or text:match('%[PREMIUM%]') then
-                if not (text:find('Продам') or text:find('Обменяю') or text:find('Куплю')) then
-                    if text:find('Бар') or text:find('бар') or text:find('БАР')  or text:find('БAР') or text:find('БAP') then
-                        return false
-                    end
-                end
+        end                
+        if color == -1 then
+            local ad, tel = text:match('^{%x+}%[VIP%]%sОбъявление:%s(.+)%.%sОтправил:%s[A-z0-9_]+%[%d+%]%sТел%.%s(%d+)')
+            if ad ~= nil then
+                local outstring = string.format('VIP AD: {73B461}%s {D5A457}| Тел: %s', ad, tel)
+                return { 0xD5A457FF, outstring }
+            elseif text:find('Отредактировал сотрудник') then
+                return false
             end
+        end
 
-
-            ----------------------sadlkjjasdlknmadsklasd
-            if mainini.functions.chatvipka then
-                if text:find('%[VIP%] {FFFFFF}.+%[%d+%]: (.+)') or  text:find('%[PREMIUM%] {FFFFFF}.+%[%d+%]: (.+)') then --да да, и снова я гений регулярок
-                    --gtext = text:gsub('{6495ED}',  '{'..bit.tohex(hex_color_color_tag_vip)..'}')
-                    --gtext = gtext:gsub('{F345FC}', '{'..bit.tohex(hex_color_color_tag_premium)..'}')
-                    --gtext = gtext:gsub('{ffffff}', '{'..bit.tohex(hex_color_vr_msg)..'}')
-                    timeqw = os.date('[%H:%M:%S] ')
-                    textWithColor = '{'..bit.tohex(color)..'}'..timeqw..text
-                    if #chat >= 10 then
-                        table.remove(chat, 1)
-                    end
-                    table.insert(chat, #chat + 1, textWithColor)
-        
-                    --ГОВНОКОД, НО Я ЗАЕБАЛСЯ ЭТО ДЕЛАТЬ
-                    lastmsg[5 - 1] = lastmsg[5]
-                    lastmsg[5] = text
-                    return false
-                end
+        if text:find('Администратор') or text:find('Куратор') or text:find('BOT') then
+            if color == -10270721 then -- действия FF6347FF
+                return { 0xb22222ff, text }
+            elseif color == -2686721 then -- /ao FFD700FF
+                return { 0x38fcffff, text }
+            end
+        end
+        if text:find("вышел при попытке избежать ареста и был наказан") and color == -1104335361 then 
+            return { 0x6f6d6fff, text }
+        end
+        if text:find('%[Адвокат%] ') then
+            if mainini.functions.offrabchat then
+                return false
             else
-                ------------------
-                if text:match('^{6495ED}%[VIP%]') and mainini.functions.colorchat then
-                    text = text:gsub('^{6495ED}%[VIP%]', '{b800a2}[VIP]')   
-                    return { 0xFFFFFFFF, text }
-                end
-            
-                if text:match('^{F345FC}%[PREMIUM%]') and mainini.functions.colorchat then
-                    text = text:gsub('^{F345FC}%[PREMIUM%]', '{FFAA00}[PREMIUM]')
-                    return { 0xFFFFFFFF, text }
-                end
-            
-                if text:match('^{FCC645}%[ADMIN%]') and mainini.functions.colorchat then
-                    text = text:gsub('^{FCC645}%[ADMIN%]', '{38fcff}[ADMIN]')
-                    return { 0xffffffff, text }
-                end
+                local advtext = text:match('%[Адвокат%] (.+)')
+                --sampAddChatMessage("{ffffff} Адвокат "..advtext, 0x5F9EA0)
+                return { 0x5f9ea0ff, "{ff4500}[J] {5f9ea0}"..advtext }
             end
-                --[[                 if text:find("Отредактировал сотрудник СМИ") and color == 1941201407 then return false end
-                if text:find("Отредактировал сотрудник СМИ") and not text:find('говорит:') then return false end ]]
-            if mainini.functions.colorchat then
-                if color == 0x73B461FF then
-                    local ad, tel = text:match('^Объявление:%s(.+)%.%sОтправил:%s[A-z0-9_]+%[%d+%]%sТел%.%s(%d+)')
-                    if ad ~= nil then
-                        local outstring = string.format('AD: {73B461}%s {D5A457}| Тел: %s', ad, tel)
-                        return { 0xD5A457FF, outstring }
-                    elseif text:find('Отредактировал сотрудник') then
-                        return false
-                    end
-                end                
-                if color == -1 then
-                    local ad, tel = text:match('^{%x+}%[VIP%]%sОбъявление:%s(.+)%.%sОтправил:%s[A-z0-9_]+%[%d+%]%sТел%.%s(%d+)')
-                    if ad ~= nil then
-                        local outstring = string.format('VIP AD: {73B461}%s {D5A457}| Тел: %s', ad, tel)
-                        return { 0xD5A457FF, outstring }
-                    elseif text:find('Отредактировал сотрудник') then
-                        return false
-                    end
-                end
-
-                if text:find('Администратор') or text:find('Куратор') then
-                    if color == -10270721 then -- действия FF6347FF
-                        return { 0xb22222ff, text }
-                    elseif color == -2686721 then -- /ao FFD700FF
-                        return { 0x38fcffff, text }
-                    end
-                end
-                if text:find('%[Адвокат%] ') then
-                    if mainini.functions.offrabchat then
-                        return false
-                    else
-                        local advtext = text:match('%[Адвокат%] (.+)')
-                        --sampAddChatMessage("{ffffff} Адвокат "..advtext, 0x5F9EA0)
-                        return { 0x5f9ea0ff, "{ff4500}[J] {5f9ea0}"..advtext }
-                    end
-                end
-        
-                if text:find('%[F%] ') and color == 766526463 then
-                    if mainini.functions.offfrachat then
-                        return false
-                    else
-                        local bandtext = text:match('%[F%] (.+)')
-                        return { 0x2db043ff, "{ff4500}[F] {2db043}"..bandtext }
-                    end
-                end
-            end 
-
-            if text:find("Отредактировал сотрудник СМИ") and color == 1941201407 then return false end
-            if text:find("Отредактировал сотрудник СМИ") and not text:find('говорит:') then return false end
-
-  --[[           if (text:find('Бар') or text:find('бар') or text:find('БАР') or text:find('БAР')) and (text:find('VIP') or text:find('PREMIUM')) and not (text:find('Продам') or text:find('продам') or text:find('Открылся') or text:find('открылся') or text:find('Куплю') or text:find('куплю')) and color == -1  then return false end
-            if (text:find('Бар') or text:find('бар') or text:find('БАР') or text:find('БAР') or text:find('БAP')) and text:find('Объявление') and not (text:find('Продам') or text:find('продам') or text:find('Куплю') or text:find('Открылся') or text:find('открылся') or text:find('куплю')) then return false end
-             if (text:find('Бар') or text:find('бар') or text:find('БАР')  or text:find('БAР') or text:find('БAP')) and text:find('Семья') and (text:find('Работает') or text:find('работает') or text:find('Конкурс') or text:find('конкурс')) then return false end
-             if (text:find('Бар') or text:find('Бaр') or text:find('бар') or text:find('БАР') or text:find('БAР') or text:find('БAP')) and text:find('Альянс') and (text:find('Работает') or text:find('работает')  or text:find('Конкурс') or text:find('конкурс')) then return false end
-         ]]
-
-
-            if mainini.functions.dotmoney then
-                text = separator(text)
-                return {color, text}
+        end
+        if text:find('%[F%] ') and color == 766526463 then
+            if mainini.functions.offfrachat then
+                return false
+            else
+                local bandtext = text:match('%[F%] (.+)')
+                return { 0x2db043ff, "{ff4500}[F] {2db043}"..bandtext }
             end
+        end
+    end 
+    if text:find('%[F%] ') and color == 766526463 and mainini.functions.offfrachat then
+        return false
+    end
+    if text:find('%[Адвокат%] ') and mainini.functions.offrabchat then
+        return false
+    end
+    if text:find("Отредактировал сотрудник СМИ") and color == 1941201407 then return false end
+    if text:find("Отредактировал сотрудник СМИ") and not text:find('говорит:') then return false end
 
+    if dotmoney then
+        text = separator(text)
+        return {color, text}
+    end
 end
-
--- pадар в инте офф
---[[ function sp.onSetInterior(interior)
-        if interior ~= 0 then
-            lua_thread.create(function()
-                displayRadar()
-                return true
-            end)
-        end
-        if interior == 0 then
-            lua_thread.create(function()
-                displayRadar(1)
-                return true
-            end)
-        end
-end ]]
-
 function calc(m) 
     local func = load('return '..tostring(m)) 
     local a = select(2, pcall(func)) 
     return type(a) == 'number' and a
 end
-
-
-
-
-
 function isKeyCheckAvailable() -- Проверка на доступность клавиши
     if not isSampfuncsLoaded() then
       return not isPauseMenuActive()
@@ -6859,65 +4960,6 @@ function isKeyCheckAvailable() -- Проверка на доступность клавиши
     end
     return result
 end
-
-
-
-
-function samp_create_sync_data(sync_type, copy_from_player)
-    local ffi = require 'ffi'
-    local sampfuncs = require 'sampfuncs'
-    -- from SAMP.Lua
-    local raknet = require 'samp.raknet'
-    require 'samp.synchronization'
-
-    copy_from_player = copy_from_player or true
-    local sync_traits = {
-        player = {'PlayerSyncData', raknet.PACKET.PLAYER_SYNC, sampStorePlayerOnfootData},
-        vehicle = {'VehicleSyncData', raknet.PACKET.VEHICLE_SYNC, sampStorePlayerIncarData},
-        passenger = {'PassengerSyncData', raknet.PACKET.PASSENGER_SYNC, sampStorePlayerPassengerData},
-        aim = {'AimSyncData', raknet.PACKET.AIM_SYNC, sampStorePlayerAimData},
-        trailer = {'TrailerSyncData', raknet.PACKET.TRAILER_SYNC, sampStorePlayerTrailerData},
-        unoccupied = {'UnoccupiedSyncData', raknet.PACKET.UNOCCUPIED_SYNC, nil},
-        bullet = {'BulletSyncData', raknet.PACKET.BULLET_SYNC, nil},
-        spectator = {'SpectatorSyncData', raknet.PACKET.SPECTATOR_SYNC, nil}
-    }
-    local sync_info = sync_traits[sync_type]
-    local data_type = 'struct ' .. sync_info[1]
-    local data = ffi.new(data_type, {})
-    local raw_data_ptr = tonumber(ffi.cast('uintptr_t', ffi.new(data_type .. '*', data)))
-    -- copy player's sync data to the allocated memory
-    if copy_from_player then
-        local copy_func = sync_info[3]
-        if copy_func then
-            local _, player_id
-            if copy_from_player == true then
-                _, player_id = sampGetPlayerIdByCharHandle(PLAYER_PED)
-            else
-                player_id = tonumber(copy_from_player)
-            end
-            copy_func(player_id, raw_data_ptr)
-        end
-    end
-    -- function to send packet
-    local func_send = function()
-        local bs = raknetNewBitStream()
-        raknetBitStreamWriteInt8(bs, sync_info[2])
-        raknetBitStreamWriteBuffer(bs, raw_data_ptr, ffi.sizeof(data))
-        raknetSendBitStreamEx(bs, sampfuncs.HIGH_PRIORITY, sampfuncs.UNRELIABLE_SEQUENCED, 1)
-        raknetDeleteBitStream(bs)
-    end
-    -- metatable to access sync data and 'send' function
-    local mt = {
-        __index = function(t, index)
-            return data[index]
-        end,
-        __newindex = function(t, index, value)
-            data[index] = value
-        end
-    }
-    return setmetatable({send = func_send}, mt)
-end
-
 function changeCrosshairColor(rgba)
     local a = bit.band(bit.rshift(rgba, 24), 0xFF)
     local b = bit.band(bit.rshift(rgba, 16), 0xFF)
@@ -6944,42 +4986,6 @@ function changeCrosshairColor(rgba)
     memory.setuint8(0x58E420, a, true)
     memory.setuint8(0x58E461, a, true)
 end
-
-
-
---[[ 
---- Callbacks
-function cmdSetTime(param)
-    local hour = tonumber(param)
-    if hour ~= nil and hour >= 0 and hour <= 23 then
-      timestsw = hour
-      patch_samp_time_set(true)
-    else
-      patch_samp_time_set(false)
-      timestsw = nil
-    end
-  end
-  
-  function cmdSetWeather(param)
-    local weather = tonumber(param)
-    if weather ~= nil and weather >= 0 and weather <= 45 then
-      forceWeatherNow(weather)
-    end
-  end
-  
-  
-  --- Functions
-  function patch_samp_time_set(enable)
-      if enable and default == nil then
-          default = readMemory(sampGetBase() + 0x9C0A0, 4, true)
-          writeMemory(sampGetBase() + 0x9C0A0, 4, 0x000008C2, true)
-      elseif enable == false and default ~= nil then
-          writeMemory(sampGetBase() + 0x9C0A0, 4, default, true)
-          default = nil
-      end
-  end ]]
-  
-
 function dialoginfo() --this function will be called as console command typed
     dtx = sampGetDialogText() --geting last dialog text
     dtp = sampGetCurrentDialogType() --and type
@@ -6988,13 +4994,1034 @@ function dialoginfo() --this function will be called as console command typed
     --[[and then, we format string, and put it to console log.]]
     sampfuncsLog(string.format("{00BEFC}Current dialog info:\nDialog ID:{FFFFFF} %d \n{00BEFC}Dialog Type:{FFFFFF} %d \n{00BEFC}Dialog Caption:{FFFFFF}\n%s\n{00BEFC}Dialog text:{FFFFFF}\n%s", did, dtp, dcp, dtx))
 end --end of functionэ
-
 --functions can be declared at any part of code unlike it usually works in lua
-
 function del(n) --this function simly delete textdeaw with a number that we give with command
     sampTextdrawDelete(n)
 end
-
 function show() --this function sets toggle param from false to true and vise versa
     toggle = not toggle
 end
+
+function setTime(time)
+	local time = tonumber(time)
+	if time < 0 or time > 23 then sampAddChatMessage("Правильный ввод: {F7E937}//t [0-23]", -1) else
+		
+		if mainini.stsw.Static then
+            sampAddChatMessage("Время установлено на {F7E937}"..time, -1)
+			mainini.stsw.Time = time
+			inicfg.save(mainini, "bd.ini")
+		--else memory.write(0xB70153, time, 1, false)
+		end
+	end
+end
+function setWeather(weather)
+	local weather = tonumber(weather)
+	if weather < 0 or weather > 45 then sampAddChatMessage("Правильный ввод: {F7E937}//w [0-45]", -1) else
+			
+		if mainini.stsw.Static then
+            sampAddChatMessage("Погода установлена на {F7E937}"..weather, -1)
+			memory.write(0xC81320, weather, 2, false)
+			memory.write(0xC81318, weather, 2, false)
+			mainini.stsw.Weather = weather
+			inicfg.save(mainini, "bd.ini")
+        --else memory.write(0xC81320, weather, 2, false)
+		end
+	end
+end
+
+function setStatic(static)
+	if static == "true" then
+		sampAddChatMessage("Static state: {F7E937}true", -1)
+		mainini.stsw.Static = true
+		inicfg.save(mainini, "bd.ini")
+	elseif static == "false" then
+		sampAddChatMessage("Static state: {F7E937}false", -1)
+		mainini.stsw.Static = false
+		inicfg.save(mainini, "bd.ini")
+	end
+end
+
+function dialogsFloodMenu()
+    local result, button, _, lop = sampHasDialogRespond(27417)
+    if result and button == 1 then
+        mainini.lidzamband.naborgtext = lop
+        inicfg.save(mainini, 'bd')
+        lidzamband_menu()
+    end
+
+    local result, button, _, lop = sampHasDialogRespond(27411)
+    if result and button == 1 then
+        mainini.lidzamband.band = lop
+        inicfg.save(mainini, 'bd')
+        lidzamband_menu()
+    end
+
+    local result, button, _, lop = sampHasDialogRespond(21411)
+    if result and button == 1 then
+        mainini.lidzamband.minlvl = lop
+        inicfg.save(mainini, 'bd')
+        lidzamband_menu()
+    end
+
+    local result, button, _, lop = sampHasDialogRespond(22411)
+    if result and button == 1 then
+        mainini.lidzamband.minrank = lop
+        inicfg.save(mainini, 'bd')
+        lidzamband_menu()
+    end
+
+    local result, button, _, lop = sampHasDialogRespond(27418)
+    if result and button == 1 then
+        mainini.lidzamband.naborgwait = lop
+        inicfg.save(mainini, 'bd')
+        lidzamband_menu()
+    end
+
+    local result, button, _, lop = sampHasDialogRespond(2911)
+    if result and button == 1 then
+        mainini.lidzamband.flwait1 = lop
+        inicfg.save(mainini, 'bd')
+        ghetto_lidzam_flood()
+    end
+
+    local result, button, _, lop = sampHasDialogRespond(2912)
+    if result and button == 1 then
+        mainini.lidzamband.flwait2 = lop
+        inicfg.save(mainini, 'bd')
+        ghetto_lidzam_flood()
+    end
+
+    local result, button, _, lop = sampHasDialogRespond(2913)
+    if result and button == 1 then
+        mainini.lidzamband.flwait3 = lop
+        inicfg.save(mainini, 'bd')
+        ghetto_lidzam_flood()
+    end
+
+    local result, button, _, lop = sampHasDialogRespond(2914)
+    if result and button == 1 then
+        mainini.lidzamband.flwait4 = lop
+        inicfg.save(mainini, 'bd')
+        ghetto_lidzam_flood()
+    end
+
+    local result, button, _, lop = sampHasDialogRespond(2915)
+    if result and button == 1 then
+        mainini.lidzamband.flwait5 = lop
+        inicfg.save(mainini, 'bd')
+        ghetto_lidzam_flood()
+    end
+
+    local result, button, _, lop = sampHasDialogRespond(2916)
+    if result and button == 1 then
+        mainini.lidzamband.flwait6 = lop
+        inicfg.save(mainini, 'bd')
+        ghetto_lidzam_flood()
+    end
+
+    local result, button, _, lop = sampHasDialogRespond(2917)
+    if result and button == 1 then
+        mainini.lidzamband.flwait7 = lop
+        inicfg.save(mainini, 'bd')
+        ghetto_lidzam_flood()
+    end
+
+    local result, button, _, lop = sampHasDialogRespond(2918)
+    if result and button == 1 then
+        mainini.lidzamband.flwait8 = lop
+        inicfg.save(mainini, 'bd')
+        ghetto_lidzam_flood()
+    end
+
+    local result, button, _, lop = sampHasDialogRespond(2919)
+    if result and button == 1 then
+        mainini.lidzamband.flwait9 = lop
+        inicfg.save(mainini, 'bd')
+        ghetto_lidzam_flood()
+    end
+
+    local result, button, _, lop = sampHasDialogRespond(2811)
+    if result and button == 1 then
+        mainini.lidzamband.fltext1 = lop
+        inicfg.save(mainini, 'bd')
+        ghetto_lidzam_flood()
+    end
+
+    local result, button, _, lop = sampHasDialogRespond(2812)
+    if result and button == 1 then
+        mainini.lidzamband.fltext2 = lop
+        inicfg.save(mainini, 'bd')
+        ghetto_lidzam_flood()
+    end
+
+    local result, button, _, lop = sampHasDialogRespond(2813)
+    if result and button == 1 then
+        mainini.lidzamband.fltext3 = lop
+        inicfg.save(mainini, 'bd')
+        ghetto_lidzam_flood()
+    end
+
+    local result, button, _, lop = sampHasDialogRespond(2814)
+    if result and button == 1 then
+        mainini.lidzamband.fltext4 = lop
+        inicfg.save(mainini, 'bd')
+        ghetto_lidzam_flood()
+    end
+
+    local result, button, _, lop = sampHasDialogRespond(2815)
+    if result and button == 1 then
+        mainini.lidzamband.fltext5 = lop
+        inicfg.save(mainini, 'bd')
+        ghetto_lidzam_flood()
+    end
+
+    local result, button, _, lop = sampHasDialogRespond(2816)
+    if result and button == 1 then
+        mainini.lidzamband.fltext6 = lop
+        inicfg.save(mainini, 'bd')
+        ghetto_lidzam_flood()
+    end
+
+    local result, button, _, lop = sampHasDialogRespond(2817)
+    if result and button == 1 then
+        mainini.lidzamband.fltext7 = lop
+        inicfg.save(mainini, 'bd')
+        ghetto_lidzam_flood()
+    end
+
+    local result, button, _, lop = sampHasDialogRespond(2818)
+    if result and button == 1 then
+        mainini.lidzamband.fltext8 = lop
+        inicfg.save(mainini, 'bd')
+        ghetto_lidzam_flood()
+    end
+
+    local result, button, _, lop = sampHasDialogRespond(2819)
+    if result and button == 1 then
+        mainini.lidzamband.fltext9 = lop
+        inicfg.save(mainini, 'bd')
+        ghetto_lidzam_flood()
+    end
+
+    -----
+    local result, button, _, lop = sampHasDialogRespond(27871)
+    if result and button == 1 then
+        mainini.flood.flwait1 = lop
+        inicfg.save(mainini, 'bd')
+        flood_menu()
+    end
+
+    local result, button, _, lop = sampHasDialogRespond(27872)
+    if result and button == 1 then
+        mainini.flood.fltext1 = lop
+        inicfg.save(mainini, 'bd')
+        flood_menu()
+    end
+
+    local result, button, _, lop = sampHasDialogRespond(27873)
+    if result and button == 1 then
+        mainini.flood.flwait2 = lop
+        inicfg.save(mainini, 'bd')
+        flood_menu()
+    end
+
+    local result, button, _, lop = sampHasDialogRespond(27874)
+    if result and button == 1 then
+        mainini.flood.fltext2 = lop
+        inicfg.save(mainini, 'bd')
+        flood_menu()
+    end
+
+    local result, button, _, lop = sampHasDialogRespond(27875)
+    if result and button == 1 then
+        mainini.flood.flwait3 = lop
+        inicfg.save(mainini, 'bd')
+        flood_menu()
+    end
+
+    local result, button, _, lop = sampHasDialogRespond(27876)
+    if result and button == 1 then
+        mainini.flood.fltext3 = lop
+        inicfg.save(mainini, 'bd')
+        flood_menu()
+    end
+
+    local result, button, _, lop = sampHasDialogRespond(27885)
+    if result and button == 1 then
+        mainini.flood.flwait4 = lop
+        inicfg.save(mainini, 'bd')
+        flood_menu()
+    end
+
+    local result, button, _, lop = sampHasDialogRespond(27886)
+    if result and button == 1 then
+        mainini.flood.fltext4 = lop
+        inicfg.save(mainini, 'bd')
+        flood_menu()
+    end
+
+    local result, button, _, lop = sampHasDialogRespond(27895)
+    if result and button == 1 then
+        mainini.flood.flwait5 = lop
+        inicfg.save(mainini, 'bd')
+        flood_menu()
+    end
+
+    local result, button, _, lop = sampHasDialogRespond(27896)
+    if result and button == 1 then
+        mainini.flood.fltext5 = lop
+        inicfg.save(mainini, 'bd')
+        flood_menu()
+    end
+end
+
+function dialogsMenu()
+    local result, button, list, _ = sampHasDialogRespond(2956)
+if result and button == 1 then
+    if list == 0 then
+        edit_userid()
+    end
+    if list == 1 then
+        mainini.afk.uvedomleniya = not mainini.afk.uvedomleniya
+        inicfg.save(mainini, 'bd')
+        afk_menu()
+    end
+end
+
+
+            local result, button, list, _ = sampHasDialogRespond(2138)
+			if result and button == 1 then
+                if list == 0 then
+                    edit_pass()
+                end
+                if list == 1 then
+                    edit_bank()
+                end
+                if list == 2 then
+                    flood_menu()
+                end
+                if list == 3 then
+                    lidzam_menu()
+                end
+                if list == 4 then
+                    binder_menu()
+                end
+                if list == 5 then
+                    afk_menu()
+                end
+                if list == 6 then
+                    chatlog_menu()
+                end
+                if list == 7 then
+                    piss_menu()
+                end
+                if list == 8 then
+                    eda_menu()
+                end
+                if list == 9 then
+                    mainini.functions.famkv = not mainini.functions.famkv	
+					inicfg.save(mainini, 'bd')
+					menu()
+                end
+                if list == 10 then
+					mainini.functions.arecc = not mainini.functions.arecc	
+					inicfg.save(mainini, 'bd')
+					menu()
+				end
+                if list == 11 then
+                    sampShowDialog(3905, "{00CC00}Список клавиш | Справка", buttonslist, "Закрыть", _, 2)
+                end
+                if list == 12 then 
+                    drugoenosoft_menu()
+                end
+			end
+
+            local result, button, list, lop = sampHasDialogRespond(4969)
+			if result and button == 1 then
+                if list == 1 then
+                    mainini.autoeda.eda = not mainini.autoeda.eda
+					inicfg.save(mainini, 'bd')
+					eda_menu()
+                end
+                if list == 2 then
+                    mainini.autoeda.meatbag = not mainini.autoeda.meatbag
+					inicfg.save(mainini, 'bd')
+					eda_menu()
+                end
+                if list == 3 then
+                    sampShowDialog(49169, '{fff000}Настройки', string.format([[
+{ffffff}Введите команду, с помощью которой возможно принимать продукты.
+Например: /jmeat, /chips и т.д.
+Текущая команда: {20B2AA}%s]], 
+                        mainini.autoeda.comeda), 
+                        'Сохранить', 'Закрыть', 1)
+                end
+			end
+
+            local result, button, list, lop = sampHasDialogRespond(4169)
+			if result and button == 1 then
+                if list == 1 then
+                    mainini.oboss.piss1 = not mainini.oboss.piss1
+					inicfg.save(mainini, 'bd')
+					piss_menu()
+                end
+                if list == 2 then
+                    mainini.oboss.piss2 = not mainini.oboss.piss2
+					inicfg.save(mainini, 'bd')
+					piss_menu()
+                end
+                if list == 3 then
+                    mainini.oboss.piss3 = not mainini.oboss.piss3
+					inicfg.save(mainini, 'bd')
+					piss_menu()
+                end
+                if list == 4 then
+                    sampShowDialog(41691, '{fff000}Настройки', string.format([[
+{ffffff}Для отображения ника игрока нужно ввести знак процента и букву s
+Текущий текст обоссывалки:
+{20B2AA}%s]], 
+                        mainini.oboss.pisstext), 
+                        'Сохранить', 'Закрыть', 1)
+                end
+                if list == 5 then
+                    sampShowDialog(44169, '{fff000}Настройки', string.format([[
+{ffffff}Напишите в поле ниже название кнопки для активации
+Текущая активация: {00ffff}%s]], 
+                        mainini.oboss.obossactiv), 
+                        'Сохранить', 'Закрыть', 1)
+                end
+                if list == 6 then
+                    sampShowDialog(43169, '{fff000}Настройки', string.format([[
+{ffffff}Напишите в поле ниже название кнопки для активации
+Текущая активация: {00ffff}%s]], 
+                        mainini.oboss.animactiv), 
+                        'Сохранить', 'Закрыть', 1)
+                end
+                if list == 7 then
+                    sampShowDialog(42169, '{fff000}Настройки', string.format([[
+{ffffff}Напишите в поле ниже название кнопки для активации
+Текущая активация: {00ffff}%s]], 
+                        mainini.oboss.pissactiv), 
+                        'Сохранить', 'Закрыть', 1)
+                end
+			end
+
+            local result, button, _, lop = sampHasDialogRespond(44169)
+            if result and button == 1 then
+                mainini.oboss.obossactiv = lop
+                inicfg.save(mainini, 'bd')
+                piss_menu()
+            end
+
+            local result, button, _, lop = sampHasDialogRespond(49169)
+            if result and button == 1 then
+                mainini.autoeda.comeda = lop
+                inicfg.save(mainini, 'bd')
+                eda_menu()
+            end
+
+            local result, button, _, lop = sampHasDialogRespond(43169)
+            if result and button == 1 then
+                mainini.oboss.animactiv = lop
+                inicfg.save(mainini, 'bd')
+                piss_menu()
+            end
+
+            local result, button, _, lop = sampHasDialogRespond(41691)
+            if result and button == 1 then
+                mainini.oboss.pisstext = lop
+                inicfg.save(mainini, 'bd')
+                piss_menu()
+            end
+
+            local result, button, _, lop = sampHasDialogRespond(42169)
+            if result and button == 1 then
+                mainini.oboss.pissactiv = lop
+                inicfg.save(mainini, 'bd')
+                piss_menu()
+            end
+
+            local result, button, list, lop = sampHasDialogRespond(2787)
+			if result and button == 1 then
+                if list == 0 then
+                    floodon1 = not floodon1
+                    if floodon1 then 
+                        floodka1 = lua_thread.create(flood1) 
+                    else
+                        lua_thread.terminate(floodka1) 
+                    end
+                    flood_menu()
+                end
+                if list == 1 then
+                    sampShowDialog(27871, '{fff000}Настройки', string.format([[
+{ffffff}Напишите количество секунд для задержки
+Текущая задержка: {F08080}%s сек.]], 
+                        mainini.flood.flwait1), 
+                        'Сохранить', 'Закрыть', 1)
+                end
+                if list == 2 then
+                    sampShowDialog(27872, '{fff000}Настройки', string.format([[
+{ffffff}Введите текст для флуда
+Текущий текст:
+{20B2AA}%s]], 
+                        mainini.flood.fltext1), 
+                        'Сохранить', 'Закрыть', 1)
+                end
+                if list == 3 then
+                    floodon2 = not floodon2
+                    if floodon2 then 
+                        floodka2 = lua_thread.create(flood2) 
+                    else
+                        lua_thread.terminate(floodka2) 
+                    end
+                    flood_menu()
+                end
+                if list == 4 then
+                    sampShowDialog(27873, '{fff000}Настройки', string.format([[
+{ffffff}Напишите количество секунд для задержки
+Текущая задержка: {F08080}%s сек.]], 
+                        mainini.flood.flwait2), 
+                        'Сохранить', 'Закрыть', 1)
+                end
+                if list == 5 then
+                    sampShowDialog(27874, '{fff000}Настройки', string.format([[
+{ffffff}Введите текст для флуда
+Текущий текст:
+{20B2AA}%s]], 
+                        mainini.flood.fltext2), 
+                        'Сохранить', 'Закрыть', 1)
+                end
+                if list == 6 then
+                    floodon3 = not floodon3
+                    if floodon3 then 
+                        floodka3 = lua_thread.create(flood3) 
+                    else
+                        lua_thread.terminate(floodka3) 
+                    end
+                    flood_menu()
+                end
+                if list == 7 then
+                    sampShowDialog(27875, '{fff000}Настройки', string.format([[
+{ffffff}Напишите количество секунд для задержки
+Текущая задержка: {F08080}%s сек.]], 
+                        mainini.flood.flwait3), 
+                        'Сохранить', 'Закрыть', 1)
+                end
+                if list == 8 then
+                    sampShowDialog(27876, '{fff000}Настройки', string.format([[
+{ffffff}Введите текст для флуда
+Текущий текст:
+{20B2AA}%s]], 
+                        mainini.flood.fltext3), 
+                        'Сохранить', 'Закрыть', 1)
+                end
+                if list == 9 then
+                    floodon4 = not floodon4
+                    if floodon4 then 
+                        floodka4 = lua_thread.create(flood4) 
+                    else
+                        lua_thread.terminate(floodka4) 
+                    end
+                    flood_menu()
+                end
+                if list == 10 then
+                    sampShowDialog(27885, '{fff000}Настройки', string.format([[
+{ffffff}Напишите количество секунд для задержки
+Текущая задержка: {F08080}%s сек.]], 
+                        mainini.flood.flwait4), 
+                        'Сохранить', 'Закрыть', 1)
+                end
+                if list == 11 then
+                    sampShowDialog(27886, '{fff000}Настройки', string.format([[
+{ffffff}Введите текст для флуда
+Текущий текст:
+{20B2AA}%s]], 
+                        mainini.flood.fltext4), 
+                        'Сохранить', 'Закрыть', 1)
+                end
+                if list == 12 then
+                    floodon5 = not floodon5
+                    if floodon5 then 
+                        floodka5 = lua_thread.create(flood5) 
+                    else
+                        lua_thread.terminate(floodka5) 
+                    end
+                    flood_menu()
+                end
+                if list == 13 then
+                    sampShowDialog(27895, '{fff000}Настройки', string.format([[
+{ffffff}Напишите количество секунд для задержки
+Текущая задержка: {F08080}%s сек.]], 
+                        mainini.flood.flwait5), 
+                        'Сохранить', 'Закрыть', 1)
+                end
+                if list == 14 then
+                    sampShowDialog(27896, '{fff000}Настройки', string.format([[
+{ffffff}Введите текст для флуда
+Текущий текст:
+{20B2AA}%s]], 
+                        mainini.flood.fltext5), 
+                        'Сохранить', 'Закрыть', 1)
+                end
+			end
+
+            local result, button, list, _ = sampHasDialogRespond(21383)
+			if result and button == 1 then
+                if list == 0 then
+					mainini.functions.bott = not mainini.functions.bott	
+					inicfg.save(mainini, 'bd')
+					soft_menu()
+				end
+                if list == 1 then
+					mainini.functions.sl = not mainini.functions.sl	
+					inicfg.save(mainini, 'bd')
+					soft_menu()
+				end
+                if list == 2 then
+					debugMode = not debugMode
+					soft_menu()
+				end
+                if list == 3 then
+                    mainini.functions.extra = not mainini.functions.extra	
+					inicfg.save(mainini, 'bd')
+					soft_menu()
+				end
+                if list == 4 then
+                    mainini.functions.autoc = not mainini.functions.autoc	
+					inicfg.save(mainini, 'bd')
+					soft_menu()
+				end
+                if list == 5 then
+					edit_autoc()
+				end
+                if list == 6 then
+                    mainini.functions.dhits = not mainini.functions.dhits	
+					inicfg.save(mainini, 'bd')
+					soft_menu()
+				end
+                if list == 7 then
+					edit_dhits()
+				end
+                if list == 8 then
+					edit_sbiv()
+				end
+                if list == 9 then
+					edit_allsbiv()
+				end
+                if list == 10 then
+					edit_suicide()
+				end
+                if list == 11 then
+					wh_cops_pidors()
+				end
+                if list == 12 then
+					edit_shook()
+				end
+                if list == 13 then
+					edit_tramp()
+				end
+                if list == 14 then
+					drugoesoft_menu()
+				end
+			end
+
+            local result, button, _, lop = sampHasDialogRespond(2741)
+            if result and button == 1 then
+                if list == 0 then
+                    mainini.lidzamband.devyatka = not mainini.lidzamband.devyatka 
+                    inicfg.save(mainini, 'bd')
+                    lidzam_menu()
+                end
+                if list == 1 then
+                    lidzamband_menu()
+                end
+                if list == 2 then
+                    mainini.lidzammafia.devyatka = not mainini.lidzammafia.devyatka 
+                    inicfg.save(mainini, 'bd')
+                    lidzam_menu()
+                end
+                if list == 3 then
+                    lidzammafia_menu()
+                end
+            end
+            
+            local result, button, _, lop = sampHasDialogRespond(2790)
+            if result and button == 1 then
+                if list == 0 then
+                    sampShowDialog(27411, '{fff000}Настройки', string.format([[
+{ffffff}Напишите название вашей банды
+Текущие название: {F08080}%s]], 
+                        mainini.lidzamband.band), 
+                        'Сохранить', 'Закрыть', 1)
+                end
+                if list == 1 then
+                    sampShowDialog(21411, '{fff000}Настройки', string.format([[
+{ffffff}Напишите c какого игрового уровня допустимо принимать вв банду
+Текущий уровень: {F08080}%s lvl]], 
+                        mainini.lidzamband.minlvl), 
+                        'Сохранить', 'Закрыть', 1)
+                end
+                if list == 2 then
+                    sampShowDialog(22411, '{fff000}Настройки', string.format([[
+{ffffff}Напишите на какой ранг принимать печенек в банду
+Текущий ранг: {F08080}%s rank]], 
+                        mainini.lidzamband.minrank), 
+                        'Сохранить', 'Закрыть', 1)
+                end
+                if list == 3 then
+                    ghetto_lidzam_flood()
+                end
+                if list == 4 then
+                    naborgon = not naborgon
+                    --inicfg.save(mainini, 'bd')
+                    if naborgon then 
+                        naborgka = lua_thread.create(naborg) 
+                    else
+                        lua_thread.terminate(naborgka) 
+                    end
+                    lidzamband_menu()
+                end
+                if list == 5 then
+                    sampShowDialog(27418, '{fff000}Настройки', string.format([[
+{ffffff}Напишите количество секунд для задержки
+Текущая задержка: {F08080}%s сек.]], 
+                        mainini.lidzamband.naborgwait), 
+                        'Сохранить', 'Закрыть', 1)
+                end
+                if list == 6 then
+                    sampShowDialog(27417, '{fff000}Настройки', string.format([[
+{ffffff}Введите текст для флуда о наборе
+Текущий текст:
+{20B2AA}%s]], 
+                        mainini.lidzamband.naborgtext), 
+                        'Сохранить', 'Закрыть', 1)
+                end
+
+            end
+
+            local result, button, list, lop = sampHasDialogRespond(22487)
+			if result and button == 1 then
+                if list == 0 then
+                    floodong1 = not floodong1
+                    if floodong1 then 
+                        floodkag1 = lua_thread.create(floodg1) 
+                    else
+                        lua_thread.terminate(floodkag1) 
+                    end
+                    ghetto_lidzam_flood()
+                end
+                if list == 1 then
+                    floodong2 = not floodong2
+                    if floodong2 then 
+                        floodkag2 = lua_thread.create(floodg2) 
+                    else
+                        lua_thread.terminate(floodkag2) 
+                    end
+                    ghetto_lidzam_flood()
+                end
+                if list == 2 then
+                    floodong3 = not floodong3
+                    if floodong3 then 
+                        floodkag3 = lua_thread.create(floodg3) 
+                    else
+                        lua_thread.terminate(floodkag3) 
+                    end
+                    ghetto_lidzam_flood()
+                end
+                if list == 3 then
+                    floodong4 = not floodong4
+                    if floodong4 then 
+                        floodkag4 = lua_thread.create(floodg4) 
+                    else
+                        lua_thread.terminate(floodkag4) 
+                    end
+                    ghetto_lidzam_flood()
+                end
+                if list == 4 then
+                    floodong5 = not floodong5
+                    if floodong5 then 
+                        floodkag5 = lua_thread.create(floodg5) 
+                    else
+                        lua_thread.terminate(floodkag5) 
+                    end
+                    ghetto_lidzam_flood()
+                end
+                if list == 5 then
+                    floodong6 = not floodong6
+                    if floodong6 then 
+                        floodkag6 = lua_thread.create(floodg6) 
+                    else
+                        lua_thread.terminate(floodkag6) 
+                    end
+                    ghetto_lidzam_flood()
+                end
+                if list == 6 then
+                    floodong7 = not floodong7
+                    if floodong7 then 
+                        floodkag7 = lua_thread.create(floodg7) 
+                    else
+                        lua_thread.terminate(floodkag7) 
+                    end
+                    ghetto_lidzam_flood()
+                end
+                if list == 7 then
+                    floodong8 = not floodong8
+                    if floodong8 then 
+                        floodkag8 = lua_thread.create(floodg8) 
+                    else
+                        lua_thread.terminate(floodkag8) 
+                    end
+                    ghetto_lidzam_flood()
+                end
+                if list == 8 then
+                    floodong9 = not floodong9
+                    if floodong9 then 
+                        floodkag9 = lua_thread.create(floodg9) 
+                    else
+                        lua_thread.terminate(floodkag9) 
+                    end
+                    ghetto_lidzam_flood()
+                end
+                if list == 9 then
+                    sampShowDialog(2911, '{fff000}Настройки FL1', string.format([[
+{ffffff}Напишите количество секунд для задержки
+Текущая задержка: {F08080}%s сек.]], 
+                        mainini.lidzamband.flwait1), 
+                        'Сохранить', 'Закрыть', 1)
+                end
+                if list == 10 then
+                    sampShowDialog(2811, '{fff000}Настройки FL1', string.format([[
+{ffffff}Введите текст для флуда
+Текущий текст:
+{20B2AA}%s]], 
+                        mainini.lidzamband.fltext1), 
+                        'Сохранить', 'Закрыть', 1)
+                end
+                if list == 11 then
+                    sampShowDialog(2912, '{fff000}Настройки FL2', string.format([[
+{ffffff}Напишите количество секунд для задержки
+Текущая задержка: {F08080}%s сек.]], 
+                        mainini.lidzamband.flwait2), 
+                        'Сохранить', 'Закрыть', 1)
+                end
+                if list == 12 then
+                    sampShowDialog(2812, '{fff000}Настройки FL2', string.format([[
+{ffffff}Введите текст для флуда
+Текущий текст:
+{20B2AA}%s]], 
+                        mainini.lidzamband.fltext2), 
+                        'Сохранить', 'Закрыть', 1)
+                end
+                if list == 13 then
+                    sampShowDialog(2913, '{fff000}Настройки FL3', string.format([[
+{ffffff}Напишите количество секунд для задержки
+Текущая задержка: {F08080}%s сек.]], 
+                        mainini.lidzamband.flwait3), 
+                        'Сохранить', 'Закрыть', 1)
+                end
+                if list == 14 then
+                    sampShowDialog(2813, '{fff000}Настройки FL3', string.format([[
+{ffffff}Введите текст для флуда
+Текущий текст:
+{20B2AA}%s]], 
+                        mainini.lidzamband.fltext3), 
+                        'Сохранить', 'Закрыть', 1)
+                end
+                if list == 15 then
+                    sampShowDialog(2914, '{fff000}Настройки FL4', string.format([[
+{ffffff}Напишите количество секунд для задержки
+Текущая задержка: {F08080}%s сек.]], 
+                        mainini.lidzamband.flwait4), 
+                        'Сохранить', 'Закрыть', 1)
+                end
+                if list == 16 then
+                    sampShowDialog(2814, '{fff000}Настройки FL4', string.format([[
+{ffffff}Введите текст для флуда
+Текущий текст:
+{20B2AA}%s]], 
+                        mainini.lidzamband.fltext4), 
+                        'Сохранить', 'Закрыть', 1)
+                end
+                if list == 17 then
+                    sampShowDialog(2915, '{fff000}Настройки FL5', string.format([[
+{ffffff}Напишите количество секунд для задержки
+Текущая задержка: {F08080}%s сек.]], 
+                        mainini.lidzamband.flwait5), 
+                        'Сохранить', 'Закрыть', 1)
+                end
+                if list == 18 then
+                    sampShowDialog(2815, '{fff000}Настройки FL5', string.format([[
+{ffffff}Введите текст для флуда
+Текущий текст:
+{20B2AA}%s]], 
+                        mainini.lidzamband.fltext5), 
+                        'Сохранить', 'Закрыть', 1)
+                end
+                if list == 19 then
+                    sampShowDialog(2916, '{fff000}Настройки FL6', string.format([[
+{ffffff}Напишите количество секунд для задержки
+Текущая задержка: {F08080}%s сек.]], 
+                        mainini.lidzamband.flwait6), 
+                        'Сохранить', 'Закрыть', 1)
+                end
+                if list == 20 then
+                    sampShowDialog(2816, '{fff000}Настройки FL6', string.format([[
+{ffffff}Введите текст для флуда
+Текущий текст:
+{20B2AA}%s]], 
+                        mainini.lidzamband.fltext6), 
+                        'Сохранить', 'Закрыть', 1)
+                end
+                if list == 21 then
+                    sampShowDialog(2917, '{fff000}Настройки FL7', string.format([[
+{ffffff}Напишите количество секунд для задержки
+Текущая задержка: {F08080}%s сек.]], 
+                        mainini.lidzamband.flwait7), 
+                        'Сохранить', 'Закрыть', 1)
+                end
+                if list == 22 then
+                    sampShowDialog(2817, '{fff000}Настройки FL7', string.format([[
+{ffffff}Введите текст для флуда
+Текущий текст:
+{20B2AA}%s]], 
+                        mainini.lidzamband.fltext7), 
+                        'Сохранить', 'Закрыть', 1)
+                end
+                if list == 23 then
+                    sampShowDialog(2918, '{fff000}Настройки FL8', string.format([[
+{ffffff}Напишите количество секунд для задержки
+Текущая задержка: {F08080}%s сек.]], 
+                        mainini.lidzamband.flwait8), 
+                        'Сохранить', 'Закрыть', 1)
+                end
+                if list == 24 then
+                    sampShowDialog(2818, '{fff000}Настройки FL8', string.format([[
+{ffffff}Введите текст для флуда
+Текущий текст:
+{20B2AA}%s]], 
+                        mainini.lidzamband.fltext8), 
+                        'Сохранить', 'Закрыть', 1)
+                end
+                if list == 25 then
+                    sampShowDialog(2919, '{fff000}Настройки FL9', string.format([[
+{ffffff}Напишите количество секунд для задержки
+Текущая задержка: {F08080}%s сек.]], 
+                        mainini.lidzamband.flwait9), 
+                        'Сохранить', 'Закрыть', 1)
+                end
+                if list == 26 then
+                    sampShowDialog(2819, '{fff000}Настройки FL9', string.format([[
+{ffffff}Введите текст для флуда
+Текущий текст:
+{20B2AA}%s]], 
+                        mainini.lidzamband.fltext9), 
+                        'Сохранить', 'Закрыть', 1)
+                end
+                
+			end
+
+            local result, button, _, lop = sampHasDialogRespond(2859)
+            if result and button == 1 then
+                if list == 0 then
+                    edit_wh()
+                end
+                if list == 1 then
+                    mainini.functions.activement = not mainini.functions.activement	
+					inicfg.save(mainini, 'bd')
+					wh_cops_pidors()
+                end
+                if list == 2 then
+                    mainini.functions.uvedomusora = not mainini.functions.uvedomusora	
+					inicfg.save(mainini, 'bd')
+					wh_cops_pidors()
+                end
+            end
+
+            local result, button, _, lop = sampHasDialogRespond(23388)
+            if result and button == 1 then
+                if list == 0 then
+                    mainini.functions.binder = not mainini.functions.binder	
+					inicfg.save(mainini, 'bd')
+					binder_menu()
+                end
+                if list == 1 then
+                    binder_info()
+                end
+            end  
+            
+            local result, button, _, lop = sampHasDialogRespond(2250)
+            if result and button == 1 then
+                mainini.config.wh = lop
+                inicfg.save(mainini, 'bd')
+                menu()
+            end
+            
+            local result, button, _, lop = sampHasDialogRespond(2252)
+            if result and button == 1 then
+                mainini.config.allsbiv = lop
+                inicfg.save(mainini, 'bd')
+                menu()
+            end
+
+            local result, button, _, lop = sampHasDialogRespond(22526)
+            if result and button == 1 then
+                mainini.config.autoplusc = lop
+                inicfg.save(mainini, 'bd')
+                menu()
+            end
+
+            local result, button, _, lop = sampHasDialogRespond(22527)
+            if result and button == 1 then
+                mainini.config.autodhits = lop
+                inicfg.save(mainini, 'bd')
+                menu()
+            end
+
+            local result, button, _, lop = sampHasDialogRespond(2293)
+            if result and button == 1 then
+                mainini.config.shook = lop
+                inicfg.save(mainini, 'bd')
+                menu()
+            end
+
+            local result, button, _, lop = sampHasDialogRespond(2299)
+            if result and button == 1 then
+                mainini.config.tramp = lop
+                inicfg.save(mainini, 'bd')
+                menu()
+            end
+
+            local result, button, _, lop = sampHasDialogRespond(2253)
+            if result and button == 1 then
+                mainini.config.sbiv = lop
+                inicfg.save(mainini, 'bd')
+                menu()
+            end
+            
+            local result, button, _, lop = sampHasDialogRespond(2251)
+            if result and button == 1 then
+                mainini.config.suicide = lop
+                inicfg.save(mainini, 'bd')
+                menu()
+            end
+
+            local result, button, _, lop = sampHasDialogRespond(2139)
+            if result and button == 1 then
+                mainini.helper.user_id = lop
+                inicfg.save(mainini, 'bd')
+                afk_menu()
+                sendvknotf('Тестовое сообщение')
+            end
+            local result, button, _, lop = sampHasDialogRespond(21391)
+            if result and button == 1 then
+                mainini.helper.password = lop
+                inicfg.save(mainini, 'bd')
+                menu()
+            end
+            local result, button, _, lop = sampHasDialogRespond(21392)
+            if result and button == 1 then
+                mainini.helper.bankpin = lop
+                inicfg.save(mainini, 'bd')
+                menu()
+            end
+        end
