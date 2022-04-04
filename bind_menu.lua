@@ -28,7 +28,7 @@ local activeextra = false
 
 update_state = false 
  
-local script_vers = 30
+local script_vers = 31
 local script_vers_text = "04.04.2022"
 
 local update_url = "https://raw.githubusercontent.com/tedjblessave/binder/main/update.ini" -- тут тоже свою ссылку
@@ -2091,7 +2091,7 @@ addEventHandler("onWindowMessage", function (msg, wparam, lparam)
 end)
 
 function onScriptTerminate(scr, quitgame)
-    if s == thisScript() then
+    if scr == thisScript() then
         if marker or checkpoint or mark or dtext then
             removeUser3dMarker(mark)
             deleteCheckpoint(marker)
@@ -2129,10 +2129,10 @@ end
 
 function sp.onShowTextDraw(id, data)
 
-
+--[[ 
         if id == 527 or id == 528 or id == 521 or id == 523 or id == 524 or id == 525 or id == 526 or id == 522 or id == 520 then
             return false
-        end
+        end ]]
 
         --fast gun
         if info ~= nil then
@@ -3252,7 +3252,8 @@ end
 function rltao()
 	while true do wait(0)
         while not isPlayerPlaying(PLAYER_HANDLE) do wait(0) end
-        if work then 
+        local textdrawtelefon = sampTextdrawGetString(2103)
+        if work and not (textdrawtelefon:find('Incoming') or textdrawtelefon:find('Outcoming')) then 
             sampSendClickTextdraw(65535)
             wait(355)
             sundukwork = true
@@ -3262,6 +3263,7 @@ function rltao()
             fix = false
             sampSendChat('/invent')
             wait(400)
+            --printStringNow("~P~Fuck off", 10000)
             for i = 1, 5 do
                 if not work then break end
                 sampSendClickTextdraw(textdraw[i][1])
@@ -3271,6 +3273,7 @@ function rltao()
             end
             wait(100)
             sampSendClickTextdraw(65535)
+            --sampAddChatMessage("Завершено", -1)
             sundukwork = false
             wait(mainini.sunduk.waiting*60000)
         end
