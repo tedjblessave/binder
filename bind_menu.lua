@@ -28,8 +28,8 @@ local activeextra = false
 
 update_state = false 
  
-local script_vers = 31
-local script_vers_text = "04.04.2022"
+local script_vers = 32
+local script_vers_text = "05.04.2022"
 
 local update_url = "https://raw.githubusercontent.com/tedjblessave/binder/main/update.ini" -- тут тоже свою ссылку
 local update_path = getWorkingDirectory() .. "\\config\\update.ini" -- и тут свою ссылку
@@ -357,6 +357,10 @@ local mainini = inicfg.load({
         animactiv = "1",
         pissactiv = "2",
         pisstext = "/me обоссал жертву рваного дюрекса по кличке %s"
+    },
+    target = {
+        cure = "J",
+        free = "H",
     },
     autoeda = {
         eda = false,
@@ -1016,11 +1020,6 @@ function getCarDrivenByPlayer(ped)
 end
 local Arial1g = renderCreateFont("Tahoma", 14, 0x4)
 
-
-
-
-
-
 function menu()
 	sampShowDialog(2138, 'off: {ff0000}SHIFT+F5 {ffffff}| update: {C71585}/ub {ffffff}| legal: {8A2BE2}SHIFT+F2 {ffffff}| vers: {EE82EE}'..script_vers, string.format([[
 {00FA9A}Изменить пароль для {ff0000}авто-логина
@@ -1030,6 +1029,7 @@ function menu()
 {9ACD32}Биндер binds.bind
 {C0C0C0}Анти-АФК
 {DEB887}Чат-лог
+{17ab92}Таргеты
 {ff4500}Обоссывалка
 {E9967A}Жрачка
 {00ff00}Сундуки, боксы и рулетки
@@ -1276,6 +1276,15 @@ function piss_menu()
     mainini.oboss.obossactiv,
     mainini.oboss.animactiv,
     mainini.oboss.pissactiv),
+        'Выбрать', 'Закрыть', 2)
+end
+
+function target_menu()
+    sampShowDialog(4119, '{fff000}Таргеты', string.format([[
+Изменить активацию для /cure. Сейчас: %s
+Изменить активацию для /free. Сейчас: %s]], 
+    mainini.target.cure,
+    mainini.target.free),
         'Выбрать', 'Закрыть', 2)
 end
 
@@ -2374,8 +2383,12 @@ if valid and doesCharExist(ped) then
         local nickkk = string.match(name, '_(.*)')
         local namee = string.gsub(name, "_", " ");
         local lvlped = sampGetPlayerScore(id)
-        if isKeyJustPressed(20) and isKeyCheckAvailable() then 
-            sampSendChat(string.format('/free %s', id))
+        if isKeyJustPressed(_G['VK_'..mainini.target.cure]) and isKeyCheckAvailable() then 
+            sampSendChat(string.format('/cure %s', id))
+        end
+        if isKeyJustPressed(_G['VK_'..mainini.target.free]) and isKeyCheckAvailable() then 
+            sampSetChatInputText(string.format("/free %s ", id))
+            sampSetChatInputEnabled(true)
         end
         if mainini.oboss.piss1 then
             if isKeyJustPressed(_G['VK_'..mainini.oboss.obossactiv]) and isKeyCheckAvailable() then 
@@ -5326,28 +5339,31 @@ end
                     chatlog_menu()
                 end
                 if list == 7 then
-                    piss_menu()
+                    target_menu()
                 end
                 if list == 8 then
-                    eda_menu()
+                    piss_menu()
                 end
                 if list == 9 then
-                    sunduk_menu()
+                    eda_menu()
                 end
                 if list == 10 then
+                    sunduk_menu()
+                end
+                if list == 11 then
                     mainini.functions.famkv = not mainini.functions.famkv	
 					inicfg.save(mainini, 'bd')
 					menu()
                 end
-                if list == 11 then
+                if list == 12 then
 					mainini.functions.arecc = not mainini.functions.arecc	
 					inicfg.save(mainini, 'bd')
 					menu()
 				end
-                if list == 12 then
+                if list == 13 then
                     sampShowDialog(3905, "{00CC00}Список клавиш | Справка", buttonslist, "Закрыть", _, 2)
                 end
-                if list == 13 then 
+                if list == 14 then 
                     drugoenosoft_menu()
                 end
 			end
@@ -5462,6 +5478,24 @@ end
                 end
 			end
 
+            local result, button, list, lop = sampHasDialogRespond(4119)
+			if result and button == 1 then
+                if list == 0 then
+                    sampShowDialog(41191, '{fff000}Настройки', string.format([[
+{ffffff}Напишите в поле ниже название кнопки для активации
+Текущая активация: ПКМ+{00ffff}%s]], 
+                        mainini.target.cure), 
+                        'Сохранить', 'Закрыть', 1)
+                end
+                if list == 1 then
+                    sampShowDialog(41169, '{fff000}Настройки', string.format([[
+{ffffff}Напишите в поле ниже название кнопки для активации
+Текущая активация: ПКМ+{00ffff}%s]], 
+                        mainini.target.free), 
+                        'Сохранить', 'Закрыть', 1)
+                end
+			end
+
             local result, button, _, lop = sampHasDialogRespond(44169)
             if result and button == 1 then
                 mainini.oboss.obossactiv = lop
@@ -5502,6 +5536,20 @@ end
                 mainini.oboss.pissactiv = lop
                 inicfg.save(mainini, 'bd')
                 piss_menu()
+            end
+
+            local result, button, _, lop = sampHasDialogRespond(41191)
+            if result and button == 1 then
+                mainini.target.cure = lop
+                inicfg.save(mainini, 'bd')
+                target_menu()
+            end
+
+            local result, button, _, lop = sampHasDialogRespond(41169)
+            if result and button == 1 then
+                mainini.target.free = lop
+                inicfg.save(mainini, 'bd')
+                target_menu()
             end
 
             local result, button, list, lop = sampHasDialogRespond(2787)
