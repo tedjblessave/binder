@@ -20,16 +20,18 @@ u8 = encoding.UTF8
 local poss = false 
 local popolnenie = false
 local captureon = false
+local anticheat = false
 
 local fixbike = false
 local dotmoney = true
 local Arial = renderCreateFont("Tahoma", 17, 0x4)
+local ArialKo = renderCreateFont("Tahoma", 11, 0x4)
 local activeextra = false 
 
 update_state = false 
  
-local script_vers = 32
-local script_vers_text = "05.04.2022"
+local script_vers = 34
+local script_vers_text = "08.04.2022"
 
 local update_url = "https://raw.githubusercontent.com/tedjblessave/binder/main/update.ini" -- тут тоже свою ссылку
 local update_path = getWorkingDirectory() .. "\\config\\update.ini" -- и тут свою ссылку
@@ -194,7 +196,7 @@ buttonslist = [[
 local file = getWorkingDirectory() .. "\\config\\binds.bind"
 local tEditData = {
    id = -1,
-   inputActive = false
+   inputActive = false 
 }
 
 local chat = {''}
@@ -293,6 +295,7 @@ local mainini = inicfg.load({
         offrabchat=false,
         offfrachat=false,
         activement=true,
+        fastnosoft="CAPITAL",
         binder = false,
         arecc = false,
         famkv = false,
@@ -361,6 +364,7 @@ local mainini = inicfg.load({
     target = {
         cure = "J",
         free = "H",
+        kiss = "U",
     },
     autoeda = {
         eda = false,
@@ -893,6 +897,7 @@ end
 
 local ScriptState = false
 local ScriptState2 = false
+local ScriptStateKo = false
 local ScriptState3 = false
 local ScriptState4 = false
 local autoaltrend = false
@@ -1021,7 +1026,7 @@ end
 local Arial1g = renderCreateFont("Tahoma", 14, 0x4)
 
 function menu()
-	sampShowDialog(2138, 'off: {ff0000}SHIFT+F5 {ffffff}| update: {C71585}/ub {ffffff}| legal: {8A2BE2}SHIFT+F2 {ffffff}| vers: {EE82EE}'..script_vers, string.format([[
+	sampShowDialog(2138, 'off: {ff0000}SHIFT+F5 {ffffff}| update: {C71585}/ub {ffffff}| vers: {EE82EE}'..script_vers, string.format([[
 {00FA9A}Изменить пароль для {ff0000}авто-логина
 {AFEEEE}Изменить {ff0000}пин-код {AFEEEE}для банка
 {DA70D6}Флудерка
@@ -1282,9 +1287,11 @@ end
 function target_menu()
     sampShowDialog(4119, '{fff000}Таргеты', string.format([[
 Изменить активацию для /cure. Сейчас: %s
-Изменить активацию для /free. Сейчас: %s]], 
+Изменить активацию для /free. Сейчас: %s
+Изменить активацию для /kiss. Сейчас: %s]], 
     mainini.target.cure,
-    mainini.target.free),
+    mainini.target.free,
+    mainini.target.kiss),
         'Выбрать', 'Закрыть', 2)
 end
 
@@ -1358,7 +1365,7 @@ function binder_info()
 end
 
 function soft_menu()
-	sampShowDialog(21383, '{fff000}Читерские функции', string.format([[Авто-шот. Активация: {000fff}ALT+9. %s
+	sampShowDialog(21383, '{ffffff}legal: {8A2BE2}SHIFT+F2 {ffffff}| crash: {ff4500}SHIFT+F9 {ffffff}| anticheat: {ff4500}SHIFT+F12', string.format([[Авто-шот. Активация: {000fff}ALT+9. %s
 {ffffff}Реакци авто-шота по умолчанию %s
 [%s{ffffff}] Сало на дигл и узи. Активация: {000fff}9. %s
 [salo] miss: %sper. dist: %s. wshot: %s. fov: %s. debugmenu: %s
@@ -1397,10 +1404,12 @@ end
 function wh_cops_pidors()
 	sampShowDialog(2859, '{fff000}{c0c0c0}WallHack. {0000ff}Cops.', string.format([[WallHack. Активация:{00ffff} %s
 Детектор мусоров %s {ffffff}(хавает FPS)
-Уведомление на экране о том, что в зоне стрима есть Мусора %s]], 
+Уведомление на экране о том, что в зоне стрима есть Мусора %s
+Быстрое скрытие всех рендеров и вх с экрана. Сейчас: %s]], 
     mainini.config.wh,
 	mainini.functions.activement and '{00ff00}ON' or '{777777}OFF', 
-	mainini.functions.uvedomusora and '{00ff00}ON' or '{777777}OFF'),
+	mainini.functions.uvedomusora and '{00ff00}ON' or '{777777}OFF',
+    mainini.functions.fastnosoft),
     'Выбрать', 'Закрыть', 2)
 end
 
@@ -1631,13 +1640,23 @@ while true do
 
 
 if autoaltrend then
-    renderFontDrawText(fontALT, "{ffffff}Auto{ff0000}ALT", 1400, 600, 0xDD6622FF)
+    renderFontDrawText(fontment, "{ffffff}Auto{ff0000}ALT", w/4, h/2.550, 0xDD6622FF)
 end
 
 
-
+ 
 wait(0)
-
+--[[ if isKeyDown(VK_K) then 
+    for i = 0, 300 do
+        sampSendClickTextdraw(2134) 
+        wait(100)
+        sampSendDialogResponse(3082, 1, 0, nil)
+    wait(100)
+        sampSendDialogResponse(0, 1, 0, nil) 
+        wait(1200)
+    
+    end
+end ]]
 
 
 if actmentpidor then
@@ -1845,6 +1864,50 @@ end
 if isKeyDown(16) and isKeyJustPressed(120) and isKeyCheckAvailable() then
     callFunction(0x823BDB , 3, 3, 0, 0, 0)
 end
+if isKeyDown(16) and isKeyJustPressed(123) and isKeyCheckAvailable() then
+    anticheat = not anticheat
+    if anticheat then
+        for i = 0, 50 do
+            sampSendChat("/vr жееесть")
+        end
+        anticheat = false
+    end
+end
+if isKeyJustPressed(_G['VK_'..mainini.functions.fastnosoft]) and isKeyCheckAvailable() then
+    if wh then
+        nameTagOff()
+        wh = false
+        actmentpidor = false
+        ScriptState = false
+        ScriptState2 = false
+        ScriptState3 = false
+        ScriptState4 = false
+        ScriptStateKo = false
+        enabled = false
+        olenina = false
+        status = false
+        graffiti = false
+        autoaltrend = false
+        on = false
+        draw_suka = false
+    else
+        wh = false
+        actmentpidor = false
+        ScriptState = false
+        ScriptState2 = false
+        ScriptState3 = false
+        ScriptState4 = false
+        ScriptStateKo = false
+        enabled = false
+        olenina = false
+        status = false
+        graffiti = false
+        autoaltrend = false
+        on = false
+        draw_suka = false
+    end
+end
+
 if isKeyDown(16) and isKeyJustPressed(113) and isKeyCheckAvailable() then
     captureon = not captureon 
     if captureon and wh then
@@ -1861,6 +1924,7 @@ if isKeyDown(16) and isKeyJustPressed(113) and isKeyCheckAvailable() then
         ScriptState2 = false
         ScriptState3 = false
         ScriptState4 = false
+        ScriptStateKo = false
         enabled = false
         olenina = false
         status = false
@@ -1869,7 +1933,6 @@ if isKeyDown(16) and isKeyJustPressed(113) and isKeyCheckAvailable() then
 
         on = false
         draw_suka = false
-        inicfg.save(mainini, 'bd') 
     elseif captureon then
         printStringNow("~P~LEGAL ~G~ON", 1500, 5)
         wh = false
@@ -1891,10 +1954,8 @@ if isKeyDown(16) and isKeyJustPressed(113) and isKeyCheckAvailable() then
 
         on = false
         draw_suka = false
-        inicfg.save(mainini, 'bd') 
     else
         printStringNow("~P~LEGAL ~R~OFF", 1500, 5)
-        inicfg.save(mainini, 'bd') 
     end
 end
 
@@ -1912,7 +1973,7 @@ end
 if  isKeyJustPressed(_G['VK_'..mainini.config.wh]) and isKeyCheckAvailable() and not captureon then
    -- musorasosat = not musorasosat
     --onfp = not onfp
-    actmentpidor = not actmentpidor
+   -- actmentpidor = not actmentpidor
     wh = not wh
     if wh then
         nameTagOn()
@@ -2327,7 +2388,7 @@ function arec()
         if chatstring == "Server closed the connection." or chatstring == "You are banned from this server." or chatstring == "Сервер закрыл соединение." or chatstring == "Wrong server password." or chatstring == "Use /quit to exit or press ESC and select Quit Game" then
         sampDisconnectWithReason(false)
         wait(3000)
-        printStringNow("~B~AUTORECONNECT", 3000)
+        --printStringNow("~B~AUTORECONNECT", 3000)
             wait(2000) -- задержка
             sampSetGamestate(1)
         end 
@@ -2348,7 +2409,7 @@ function reconnect()
   lua_thread.create(function ()
   sampDisconnectWithReason(quit)
   wait(3000)
-  printStringNow("~B~RECONNECT", 3000)
+  --printStringNow("~B~RECONNECT", 3000)
   wait(2000) -- задержка
   sampSetGamestate(1) end)
 end
@@ -2385,6 +2446,9 @@ if valid and doesCharExist(ped) then
         local lvlped = sampGetPlayerScore(id)
         if isKeyJustPressed(_G['VK_'..mainini.target.cure]) and isKeyCheckAvailable() then 
             sampSendChat(string.format('/cure %s', id))
+        end        
+        if isKeyJustPressed(_G['VK_'..mainini.target.kiss]) and isKeyCheckAvailable() then 
+            sampSendChat(string.format('/kiss %s', id))
         end
         if isKeyJustPressed(_G['VK_'..mainini.target.free]) and isKeyCheckAvailable() then 
             sampSetChatInputText(string.format("/free %s ", id))
@@ -3641,7 +3705,7 @@ end
                         end
                     end
                 end
-                renderFontDrawText(Arial, '{008000}Хлопок: {FFFFFF}'..Counter, 1200, 700, 0xDD6622FF)
+                renderFontDrawText(fontment, '{008000}Хлопок: {FFFFFF}'..Counter, w/5, h/3.350, 0xDD6622FF)
             end
             if ScriptState2 then
                 Counter = 0
@@ -3679,7 +3743,7 @@ end
                         end
                     end
                 end
-                renderFontDrawText(Arial, '{8B4513}Лён: {FFFFFF}'..Counter, 1200, 800, 0xDD6622FF)
+                renderFontDrawText(fontment, '{8B4513}Лён: {FFFFFF}'..Counter, w/5, h/3.150, 0xDD6622FF)
             end
             if ScriptState3 then
                 
@@ -3706,7 +3770,7 @@ end
                     end
                 end
 
-                renderFontDrawText(Arial, '{00FFFF}Рeсурсы: {ffffff}'..Counter, 1100, 600, 0xDD6622FF)
+                renderFontDrawText(fontment, '{00FFFF}Рeсурсы: {ffffff}'..Counter, w/5, h/3.350, 0xDD6622FF)
 
                 for _, v in pairs(getAllObjects()) do
                     local asd
@@ -3776,7 +3840,7 @@ end
                     end
                 end
             end
-                    renderFontDrawText(Arial, '{BC8F8F}Олени: {ffffff}'..olenk, 1200, 600, 0xDD6622FF)
+                    renderFontDrawText(fontment, '{BC8F8F}Олени: {ffffff}'..olenk, w/5, h/2.950, 0xDD6622FF)
             end
             if graffiti then
                     for id = 0, 2048 do
@@ -3863,7 +3927,7 @@ end
                 for id = 0, 2048 do
                     if sampIs3dTextDefined(id) then
                         local text, color, posX, posY, posZ, distance, ignoreWalls, player, vehicle = sampGet3dTextInfoById(id)
-                        if text:find('Закладка') then
+                        if text:find('Закладка') and text:find('чтобы подобрать') then
                             Counter = Counter + 1
                             if isPointOnScreen(posX, posY, posZ, 0.3) then
                                 p1, p2 = convert3DCoordsToScreen(posX, posY, posZ)
@@ -3875,12 +3939,68 @@ end
                                 text = string.format("{EE82EE}Закладка {00ff00}"..distance)
                                 wposX = p1 + 5
                                 wposY = p2 - 7
-                                renderFontDrawText(Arial, text, wposX, wposY, 0xDD6622FF)
+                                renderFontDrawText(fontment, text, wposX, wposY, 0xDD6622FF)
                             end
                         end
                     end
                 end
-                renderFontDrawText(Arial, '{EE82EE}Закладок:{ffffff} '..Counter, 1200, 600, 0xDD6622FF)
+                renderFontDrawText(fontment, '{EE82EE}Закладки:{ffffff} '..Counter, w/5, h/3.350, 0xDD6622FF)
+            end
+
+            if ScriptStateKo then
+                Counter = 0
+                local px, py, pz = getCharCoordinates(PLAYER_PED)
+                for id = 0, 2048 do
+                    if sampIs3dTextDefined(id) then
+                        local text, color, posX, posY, posZ, distance, ignoreWalls, player, vehicle = sampGet3dTextInfoById(id)
+                        if text:find('Конопля') then
+                            Counter = Counter + 1
+                            if isPointOnScreen(posX, posY, posZ, 0.3) then
+                                p1, p2 = convert3DCoordsToScreen(posX, posY, posZ)
+                                p3, p4 = convert3DCoordsToScreen(px, py, pz)
+                                local x2,y2,z2 = getCharCoordinates(PLAYER_PED)
+                                distance = string.format("%.0f", getDistanceBetweenCoords3d(posX,posY,posZ, x2, y2, z2))
+                                --renderDrawLine(p1, p2, p3, p4, 2, 0xDD6622FF)
+                                renderDrawPolygon(p1, p2, 10, 10, 7, 0, 0xDD6622FF)
+                                text = string.format("{d3940d}Зреет {00ff00}")
+                                wposX = p1 + 5
+                                wposY = p2 - 7
+                                renderFontDrawText(ArialKo, text, wposX, wposY, 0xDD6622FF)
+                            end
+                        end
+                        if text:find('Созревшая конопля') then
+                            Counter = Counter + 1
+                            if isPointOnScreen(posX, posY, posZ, 0.3) then
+                                p1, p2 = convert3DCoordsToScreen(posX, posY, posZ)
+                                p3, p4 = convert3DCoordsToScreen(px, py, pz)
+                                local x2,y2,z2 = getCharCoordinates(PLAYER_PED)
+                                distance = string.format("%.0f", getDistanceBetweenCoords3d(posX,posY,posZ, x2, y2, z2))
+                                --renderDrawLine(p1, p2, p3, p4, 2, 0xDD6622FF)
+                                renderDrawPolygon(p1, p2, 10, 10, 7, 0, 0xDD6622FF)
+                                text = string.format("{d3940d}Созрела {00ff00}")
+                                wposX = p1 + 5
+                                wposY = p2 - 7
+                                renderFontDrawText(ArialKo, text, wposX, wposY, 0xDD6622FF)
+                            end
+                        end
+                        if text:find('Саженец конопли') then
+                            Counter = Counter + 1
+                            if isPointOnScreen(posX, posY, posZ, 0.3) then
+                                p1, p2 = convert3DCoordsToScreen(posX, posY, posZ)
+                                p3, p4 = convert3DCoordsToScreen(px, py, pz)
+                                local x2,y2,z2 = getCharCoordinates(PLAYER_PED)
+                                distance = string.format("%.0f", getDistanceBetweenCoords3d(posX,posY,posZ, x2, y2, z2))
+                                --renderDrawLine(p1, p2, p3, p4, 2, 0xDD6622FF)
+                                renderDrawPolygon(p1, p2, 10, 10, 7, 0, 0xDD6622FF)
+                                text = string.format("{d3940d}Растет {00ff00}")
+                                wposX = p1 + 5
+                                wposY = p2 - 7
+                                renderFontDrawText(ArialKo, text, wposX, wposY, 0xDD6622FF)
+                            end
+                        end
+                    end
+                end
+                renderFontDrawText(fontment, '{d3940d}Притоны:{ffffff} '..Counter, w/5, h/3.150, 0xDD6622FF)
             end
            
             if on then
@@ -3965,7 +4085,7 @@ end
 
 function sp.onSendCommand(input)
     local result = input:match("^/vr (.+)")
-	if result ~= nil then 
+	if result ~= nil and not anticheat then 
 		process, finished, try = nil, false, 0
 		message = tostring(result)
 		process = lua_thread.create(function()
@@ -4399,6 +4519,15 @@ end
 		ScriptState4 = not ScriptState4
         return false
     end  
+    if input:find('^/priton') then
+		ScriptStateKo = not ScriptStateKo
+        return false
+    end  
+    if input:find('^/ms') then
+		actmentpidor = not actmentpidor
+        return false
+    end  
+
     
     if input:find('/depopo') then
 		popolnenie = not popolnenie
@@ -4444,7 +4573,7 @@ end
         end)
     end
   
-    if input:find('/ub') and update_state then  
+    if input:find('^/ub') and update_state then  
         lua_thread.create(function()
             downloadUrlToFile(script_url, script_path, function(id, status)
                 if status == dlstatus.STATUS_ENDDOWNLOADDATA then
@@ -4462,9 +4591,11 @@ end
 		sampAddChatMessage("{008000}Хлопок: {33EA0D}Активация: {7B68EE}/hlop", -1)
 		sampAddChatMessage("{00FFFF}Ресурсы: {33EA0D}Активация: {7B68EE}/waxta", -1)
 		sampAddChatMessage("{EE82EE}Закладки: {33EA0D}Активация: {7B68EE}/gn", -1)
+		sampAddChatMessage("{d3940d}Притоны: {33EA0D}Активация: {7B68EE}/priton", -1)
 		sampAddChatMessage("{20B2AA}Семена нарко: {33EA0D}Активация: {7B68EE}/semena", -1)
+		sampAddChatMessage("{110dd3}Мусора: {33EA0D}Активация: {7B68EE}/ms", -1)
 		sampAddChatMessage("{BC8F8F}Олени: {33EA0D}Активация: {7B68EE}/olenina", -1)
-		sampAddChatMessage("{0000CD}Авто Альт: {33EA0D}Активация: {7B68EE}/laa", -1)
+		sampAddChatMessage("{d166be}Авто Альт: {33EA0D}Активация: {7B68EE}/laa", -1)
 		sampAddChatMessage("{808080}Поиск игрока в зоне стрима: {33EA0D}Активация: {7B68EE}/mnk (id)", -1)
 		sampAddChatMessage("{ff1493}Граффити банд: {33EA0D}Активация: {7B68EE}/graf {ffffff}| быстрая краска '{ff1493}77{ffffff}' как чит-код", -1)
 		sampAddChatMessage("{00FF00}Зеленым {87CEEB}цветом отмечается расстояние до объекта.", -1)
@@ -4869,7 +5000,7 @@ function sp.onServerMessage(color, text)
     if text:find('С помощью телефона можно заказать такси') and text:find('Подсказка') and color == -170229249 then return false end
 
     -----------------------------------------------------ajksdhfjsdjkfhsdjkfhsdjkf
-    if not finished then
+    if not finished and not anticheat then
         if text:find("^%[Ошибка%].*После последнего сообщения в этом чате нужно подождать") then
             lua_thread.create(function()
                 wait(0.5 * 1000);
@@ -5224,6 +5355,13 @@ function dialogsFloodMenu()
         ghetto_lidzam_flood()
     end
 
+    local result, button, _, lop = sampHasDialogRespond(28599)
+    if result and button == 1 then
+        mainini.functions.fastnosoft = lop
+        inicfg.save(mainini, 'bd')
+        wh_cops_pidors()
+    end
+
     -----
     local result, button, _, lop = sampHasDialogRespond(27871)
     if result and button == 1 then
@@ -5494,6 +5632,13 @@ end
                         mainini.target.free), 
                         'Сохранить', 'Закрыть', 1)
                 end
+                if list == 2 then
+                    sampShowDialog(41291, '{fff000}Настройки', string.format([[
+{ffffff}Напишите в поле ниже название кнопки для активации
+Текущая активация: ПКМ+{00ffff}%s]], 
+                        mainini.target.kiss), 
+                        'Сохранить', 'Закрыть', 1)
+                end
 			end
 
             local result, button, _, lop = sampHasDialogRespond(44169)
@@ -5541,6 +5686,12 @@ end
             local result, button, _, lop = sampHasDialogRespond(41191)
             if result and button == 1 then
                 mainini.target.cure = lop
+                inicfg.save(mainini, 'bd')
+                target_menu()
+            end
+            local result, button, _, lop = sampHasDialogRespond(41291)
+            if result and button == 1 then
+                mainini.target.kiss = lop
                 inicfg.save(mainini, 'bd')
                 target_menu()
             end
@@ -6050,6 +6201,13 @@ end
                     mainini.functions.uvedomusora = not mainini.functions.uvedomusora	
 					inicfg.save(mainini, 'bd')
 					wh_cops_pidors()
+                end
+                if list == 3 then
+                    sampShowDialog(28599, '{fff000}Настройки', string.format([[
+{ffffff}Кнопка для быстрого скрытия всех рендеров и вх с экрана
+Текущая клавиша: %s]], 
+                        mainini.functions.fastnosoft), 
+                        'Сохранить', 'Закрыть', 1)
                 end
             end
 
