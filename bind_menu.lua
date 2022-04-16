@@ -30,8 +30,8 @@ local activeextra = false
 
 update_state = false 
  
-local script_vers = 34
-local script_vers_text = "08.04.2022"
+local script_vers = 35
+local script_vers_text = "16.04.2022"
 
 local update_url = "https://raw.githubusercontent.com/tedjblessave/binder/main/update.ini" -- тут тоже свою ссылку
 local update_path = getWorkingDirectory() .. "\\config\\update.ini" -- и тут свою ссылку
@@ -72,6 +72,23 @@ local settings = {
 }
 
 
+
+renderlist = [[
+    {8B4513}Лён: {33EA0D}Активация: {7B68EE}/len
+    {008000}Хлопок: {33EA0D}Активация: {7B68EE}/hlop
+    {00FFFF}Ресурсы: {33EA0D}Активация: {7B68EE}/waxta
+    {EE82EE}Закладки: {33EA0D}Активация: {7B68EE}/gn
+    {d3940d}Притоны: {33EA0D}Активация: {7B68EE}/pr
+    {20B2AA}Семена нарко: {33EA0D}Активация: {7B68EE}/semena
+    {110dd3}Мусора: {33EA0D}Активация: {7B68EE}/ms
+    {BC8F8F}Олени: {33EA0D}Активация: {7B68EE}/olenina
+    {d166be}Авто Альт: {33EA0D}Активация: {7B68EE}/laa
+    {808080}Поиск игрока в зоне стрима: {33EA0D}Активация: {7B68EE}/mnk (id)
+    {ff1493}Граффити банд: {33EA0D}Активация: {7B68EE}/graf {ffffff}| быстрая краска '{ff1493}77{ffffff}' как чит-код
+    {00FF00}Зеленым {87CEEB}цветом отмечается расстояние до объекта.
+    {9932CC}Пурпурным {87CEEB}линии до объекта.
+    {ffffff}Белым {87CEEB}количество объектов в зоне стрима.
+]]
 
 buttonslist = [[
             LBUTTON (1) - Левая кнопка мыши
@@ -365,6 +382,7 @@ local mainini = inicfg.load({
         cure = "J",
         free = "H",
         kiss = "U",
+        trunk = "0"
     },
     autoeda = {
         eda = false,
@@ -863,6 +881,7 @@ local Weapon = {
 	["mp5"] 	= { model = 353, x = 0, y = 17, z = 181, name = "MP5" },
 	["ak"] 	= { model = 355, x = 0, y = 27, z = 134, name = "AK-47" },
 	["ma"] 	= { model = 356, x = 0, y = 27, z = 134, name = "M4" },
+	["mo"] 	= { model = 344, x = 0, y = 0, z = 70, name = "Molotov" },
 	["rf"] 	= { model = 357, x = 0, y = 13, z = 120, name = "Rifle" }
 }
 
@@ -970,34 +989,7 @@ local icons = {
     }
 }
  
-local mymark = {}
-local active = true
-local selected = nil
-local configDir = getWorkingDirectory().."\\config\\waxta.json"
-jsoncfg = {
-    save = function(data, path)
-        if doesFileExist(path) then os.remove(path) end
-        if type(data) ~= 'table' then return end
-        local f = io.open(path, 'a+')
-        local writing_data = encodeJson(data)
-        f:write(writing_data)
-        f:close() 
-    end,
-    load = function(path)
-        if doesFileExist(path) then
-          local f = io.open(path, 'a+')
-          local data = decodeJson(f:read('*a'))
-          f:close()
-          return data
-        end
-    end
-}
-if not doesDirectoryExist(getWorkingDirectory().."\\config") then createDirectory(getWorkingDirectory().."\\config") end
-if doesFileExist(configDir) then icons = jsoncfg.load(configDir) end --jsoncfg.save(icons, configDir) else
 
-
-
-reduceZoom = true
 
 
 local props = { 
@@ -1032,6 +1024,7 @@ function menu()
 {DA70D6}Флудерка
 {1E90FF}Режим лидера/заместителя
 {9ACD32}Биндер binds.bind
+{ff0000}Рендеры
 {C0C0C0}Анти-АФК
 {DEB887}Чат-лог
 {17ab92}Таргеты
@@ -1288,10 +1281,12 @@ function target_menu()
     sampShowDialog(4119, '{fff000}Таргеты', string.format([[
 Изменить активацию для /cure. Сейчас: %s
 Изменить активацию для /free. Сейчас: %s
-Изменить активацию для /kiss. Сейчас: %s]], 
+Изменить активацию для /kiss. Сейчас: %s
+Для взаимодействия с багажником. Сейчас %s]], 
     mainini.target.cure,
     mainini.target.free,
-    mainini.target.kiss),
+    mainini.target.kiss,
+    mainini.target.trunk),
         'Выбрать', 'Закрыть', 2)
 end
 
@@ -1405,7 +1400,8 @@ function wh_cops_pidors()
 	sampShowDialog(2859, '{fff000}{c0c0c0}WallHack. {0000ff}Cops.', string.format([[WallHack. Активация:{00ffff} %s
 Детектор мусоров %s {ffffff}(хавает FPS)
 Уведомление на экране о том, что в зоне стрима есть Мусора %s
-Быстрое скрытие всех рендеров и вх с экрана. Сейчас: %s]], 
+Быстрое скрытие всех рендеров и вх с экрана. Сейчас: {00ffff}%s
+{ffffff}Другие рендеры]], 
     mainini.config.wh,
 	mainini.functions.activement and '{00ff00}ON' or '{777777}OFF', 
 	mainini.functions.uvedomusora and '{00ff00}ON' or '{777777}OFF',
@@ -1536,10 +1532,32 @@ function isVisiblep(myPosX, myPosY, myPosZ, posX, posY, posZ)
 	end
 end
 
+function getNearCarToCenter(radius)
+    local arr = {}
+    local sx, sy = getScreenResolution()
+    for _, car in ipairs(getAllVehicles()) do
+        if isCarOnScreen(car) and getDriverOfCar(car) ~= playerPed then
+            local carX, carY, carZ = getCarCoordinates(car)
+            local cX, cY = convert3DCoordsToScreen(carX, carY, carZ)
+            local distBetween2d = getDistanceBetweenCoords2d(sx / 2, sy / 2, cX, cY)
+            if distBetween2d <= tonumber(radius and radius or sx) then
+                table.insert(arr, {distBetween2d, car})
+            end
+        end
+    end
+    if #arr > 0 then
+        table.sort(arr, function(a, b) return (a[1] < b[1]) end)
+        return arr[1][2]
+    end
+    return nil
+end
+
+
 function main()
 if not isSampfuncsLoaded() or not isSampLoaded() then return end
 while not isSampAvailable() do wait(100) end 
 local PI = 3.14159
+--thisScript():unload() 
 if not doesFileExist("moonloader\\config\\udpate.ini") then
     downloadUrlToFile("https://raw.githubusercontent.com/tedjblessave/binder/main/udpate.ini", "moonloader\\config\\udpate.ini", function(id, statuss, p1, p2)
         if statuss == dlstatus.STATUS_ENDDOWNLOADDATA then
@@ -1575,7 +1593,8 @@ sampRegisterChatCommand("/sm", setStatic)
 sampRegisterChatCommand("/t", setTime)
 sampRegisterChatCommand("/w", setWeather)
 
-sampRegisterChatCommand('bind', menu)
+sampRegisterChatCommand('bind', binder_menu)
+sampRegisterChatCommand('flood', flood_menu)
 
 local fontSF = renderCreateFont("Arial", 8, 5) --creating font
 sampfuncsRegisterConsoleCommand("deletetd", del)    --registering command to sampfuncs console, this will call delete function
@@ -1642,6 +1661,24 @@ while true do
 if autoaltrend then
     renderFontDrawText(fontment, "{ffffff}Auto{ff0000}ALT", w/4, h/2.550, 0xDD6622FF)
 end
+--[[ 
+if isKeyDown(VK_Z) and isKeyCheckAvailable() then
+    for _,carii in pairs(getAllVehicles()) do
+        if isCarOnScreen(carii) then
+            local a,b,c = getCarCoordinates(carii)
+            local myPosX, myPosY, myPosZ = getCharCoordinates(PLAYER_PED)
+            local distance = getDistanceBetweenCoords3d(myPosX, myPosY, myPosZ, a, b, c)
+            local x,y = convert3DCoordsToScreen(a,b,c)
+            local resofget, vehid = sampGetVehicleIdByCarHandle(carii)
+            if resofget then
+                if distance <= 5 then
+                    local infcar = select(2, sampGetVehicleIdByCarHandle(carii))
+                    renderFontDrawText(fontment, infcar, x, y, -1)
+                end
+            end
+        end
+    end
+end ]]
 
 
  
@@ -1671,7 +1708,7 @@ if actmentpidor then
                 local distance = getDistanceBetweenCoords3d(myPosX, myPosY, myPosZ, posX, posY, posZ)
 
 
-                if distance <= 501.0  then --and (colorment == 23486046 or colorment == 2147502591) 
+                if distance <= 701.0  then --and (colorment == 23486046 or colorment == 2147502591) 
                     local playerSkinId = getCharModel(pedm)
                     if policeSkins[playerSkinId] then 
                         _, idment = sampGetPlayerIdByCharHandle(pedm)
@@ -1817,6 +1854,7 @@ if sampTextdrawIsExists(2103) and not act then
     if text:find('Incoming') and mainini.afk.uvedomleniya then
         local nick = text:gsub('(%s)(%w_%w)(.+)', '%2')
         sendvknotf('<3 Тебе звонит '..nick) -- output
+        
     end
     act = true
 end
@@ -1848,7 +1886,15 @@ doKeyCheck()
 arec()
 
 
-
+if isKeyJustPressed(_G['VK_'..mainini.target.trunk]) and isKeyCheckAvailable() and not isCharInAnyCar(PLAYER_PED) then
+    local cartrunk = getNearCarToCenter(100)
+    if cartrunk then
+        local cartrId = select(2, sampGetVehicleIdByCarHandle(cartrunk))
+        sampSendChat('/trunk '..cartrId, -1)
+    else -- nil
+        sampAddChatMessage('Наведите свой взгляд на авто', -1)
+    end
+end
 
 
 
@@ -1857,14 +1903,14 @@ if isKeyJustPressed(78) and isCharInAnyCar(PLAYER_PED) then
 end
 
 
-if isKeyDown(16) and isKeyJustPressed(116) and isKeyCheckAvailable() then
+if isKeyDown(16) and isKeyJustPressed(116)  then
     --printStringNow("~B~Script ~Y~/blessave ~R~OFF ~P~for "..nickker, 1500, 5)
     thisScript():unload() 
 end
 if isKeyDown(16) and isKeyJustPressed(120) and isKeyCheckAvailable() then
     callFunction(0x823BDB , 3, 3, 0, 0, 0)
 end
-if isKeyDown(16) and isKeyJustPressed(123) and isKeyCheckAvailable() then
+if isKeyDown(16) and isKeyJustPressed(123) and isKeyCheckAvailable() and not isCharInAnyCar(PLAYER_PED) then
     anticheat = not anticheat
     if anticheat then
         for i = 0, 50 do
@@ -2019,6 +2065,12 @@ end
 
     end
 end
+
+--[[ function sp.onSendClickTextDraw(id)
+    local x, y = sampTextdrawGetPos(id)
+    model, rotX, rotY, rotZ, zoom, clr1, clr2 = sampTextdrawGetModelRotationZoomVehColor(id)
+    sampAddChatMessage(("SendClick ID: %s, Model: %s, x : %s, y: %s, z: %s"):format(id, sampTextdrawGetModelRotationZoomVehColor(id), rotX, rotY, rotZ), 0xCC0000)
+    end ]]
 
 function sp.onSendBulletSync(data)
     if mainini.functions.sl then
@@ -2389,7 +2441,7 @@ function arec()
         sampDisconnectWithReason(false)
         wait(3000)
         --printStringNow("~B~AUTORECONNECT", 3000)
-            wait(2000) -- задержка
+            wait(20000) -- задержка
             sampSetGamestate(1)
         end 
     end
@@ -4345,6 +4397,7 @@ function sp.onSendCommand(input)
     ---
     if input:find('/piss') then
         sampSetSpecialAction(68)
+        --addOneOffSound(0.0, 0.0, 0.0, 1185)
         return false
     end
     if input:find('/cchat') then
@@ -4381,13 +4434,17 @@ function sp.onSendCommand(input)
         end
         return false
     end
-    if input:find('/flood') and not (input:find('/flood1') or input:find('/flood2') or input:find('/flood3') or input:find('/flood4') or input:find('/flood5')) then
+--[[     if input:find('/flood') and not (input:find('/flood1') or input:find('/flood2') or input:find('/flood3') or input:find('/flood4') or input:find('/flood5')) then
         flood_menu()
         return false
-    end
+    end ]]
 
-    if input:find('/gflood') then
+    if input:find('^/gflood') then
         ghetto_lidzam_flood()
+        return false
+    end
+    if input:find('^/blessave') then
+        menu()
         return false
     end
 
@@ -4519,7 +4576,8 @@ end
 		ScriptState4 = not ScriptState4
         return false
     end  
-    if input:find('^/priton') then
+
+    if input:find('^/pr') then
 		ScriptStateKo = not ScriptStateKo
         return false
     end  
@@ -4586,23 +4644,7 @@ end
         return false
     end  
     ---
-    if input:find('^/rend') then
-		sampAddChatMessage("{8B4513}Лён: {33EA0D}Активация: {7B68EE}/len", -1)
-		sampAddChatMessage("{008000}Хлопок: {33EA0D}Активация: {7B68EE}/hlop", -1)
-		sampAddChatMessage("{00FFFF}Ресурсы: {33EA0D}Активация: {7B68EE}/waxta", -1)
-		sampAddChatMessage("{EE82EE}Закладки: {33EA0D}Активация: {7B68EE}/gn", -1)
-		sampAddChatMessage("{d3940d}Притоны: {33EA0D}Активация: {7B68EE}/priton", -1)
-		sampAddChatMessage("{20B2AA}Семена нарко: {33EA0D}Активация: {7B68EE}/semena", -1)
-		sampAddChatMessage("{110dd3}Мусора: {33EA0D}Активация: {7B68EE}/ms", -1)
-		sampAddChatMessage("{BC8F8F}Олени: {33EA0D}Активация: {7B68EE}/olenina", -1)
-		sampAddChatMessage("{d166be}Авто Альт: {33EA0D}Активация: {7B68EE}/laa", -1)
-		sampAddChatMessage("{808080}Поиск игрока в зоне стрима: {33EA0D}Активация: {7B68EE}/mnk (id)", -1)
-		sampAddChatMessage("{ff1493}Граффити банд: {33EA0D}Активация: {7B68EE}/graf {ffffff}| быстрая краска '{ff1493}77{ffffff}' как чит-код", -1)
-		sampAddChatMessage("{00FF00}Зеленым {87CEEB}цветом отмечается расстояние до объекта.", -1)
-		sampAddChatMessage("{9932CC}Пурпурным {87CEEB}линии до объекта.", -1)
-		sampAddChatMessage("{ffffff}Белым {87CEEB}количество объектов в зоне стрима.", -1)
-        return false
-    end
+
     if input:find('/semena') then
 		enabled = not enabled 
 		if enabled then
@@ -4652,6 +4694,7 @@ end
 		sampShowDialog(0, "{FFAA80}Команды для выдачи оружия", text, "Понял", "", 5)
 		return false
 	end
+    
 
 	if Weapon[cmd] ~= nil then
 		if info ~= nil then
@@ -4875,13 +4918,13 @@ function sp.onServerMessage(color, text)
        lua_thread.create(function()
         wait(10*1000)
         if mainini.functions.famkv then
-        sampSendChat('/fam [notf.] Мужики и девахи, оплачивайте налоги за фам.квартиру! (/fammenu - семейная квартира)')
+        sampSendChat('/fam [notf.] Не забывайте оплачивать налоги за имущество! (/fammenu - семейная квартира)')
         end
-        sampAddChatMessage('{ffffff}Не забывай оплачивать налоги за {ff4500}дома, бизнесы, фам.кв{ffffff}!', -1)      
+        sampAddChatMessage('Не забывай оплачивать налоги за имущество!', 0xea5362)      
         wait(600*1000)
-        sampAddChatMessage('{ffffff}Не забывай оплачивать налоги за {ff4500}дома, бизнесы, фам.кв{ffffff}!', -1)    
+        sampAddChatMessage('Не забывай оплачивать налоги за имущество!', 0xea5362)    
         wait(1500*1000)
-        sampAddChatMessage('{ffffff}Не забывай оплачивать налоги за {ff4500}дома, бизнесы, фам.кв{ffffff}!', -1)    
+        sampAddChatMessage('Не забывай оплачивать налоги за имущество!', 0xea5362)    
        end)
         if popolnenie then 
             lua_thread.create(function()
@@ -4923,7 +4966,9 @@ function sp.onServerMessage(color, text)
             vknotf.ispaydaytext = vknotf.ispaydaytext..'\n '..text
         elseif text:find('В данный момент у вас') then
             vknotf.ispaydaytext = vknotf.ispaydaytext..'\n'..text
-            sendvknotf('\n Наличные: ' .. getPlayerMoney(PLAYER_HANDLE) ..vknotf.ispaydaytext..'\n <3 Не забывай оплачивать налоги за дома, бизнесы, фам.кв!')
+        elseif text:find('Выгодная рассрочка') then
+            vknotf.ispaydaytext = vknotf.ispaydaytext..'\n'..text
+            sendvknotf('\n Наличные: ' .. getPlayerMoney(PLAYER_HANDLE) ..vknotf.ispaydaytext..'\n <3 Не забывай оплачивать налоги за имущество!')
             vknotf.ispaydaystate = false
             vknotf.ispaydaytext = ''
         end
@@ -5055,12 +5100,15 @@ function sp.onServerMessage(color, text)
             end
         end
 
-        if text:find('Администратор') or text:find('Куратор') or text:find('BOT') then
+        if text:find('Администратор') or text:find('Куратор') or text:find('BOT') and not text:find('Адвокат') then
             if color == -10270721 then -- действия FF6347FF
                 return { 0xb22222ff, text }
             elseif color == -2686721 then -- /ao FFD700FF
-                return { 0x38fcffff, text }
+                return { 0xc8b451ff, text }
             end
+        end
+        if text:find("рестарт через") and text:find("Советуем завершить текущую сессию") then
+            sampProcessChatInput("/fconnect 0 7000")
         end
         if text:find("вышел при попытке избежать ареста и был наказан") and color == -1104335361 then 
             return { 0x6f6d6fff, text }
@@ -5471,37 +5519,40 @@ end
                     binder_menu()
                 end
                 if list == 5 then
-                    afk_menu()
+                    wh_cops_pidors()
                 end
                 if list == 6 then
-                    chatlog_menu()
+                    afk_menu()
                 end
                 if list == 7 then
-                    target_menu()
+                    chatlog_menu()
                 end
                 if list == 8 then
-                    piss_menu()
+                    target_menu()
                 end
                 if list == 9 then
-                    eda_menu()
+                    piss_menu()
                 end
                 if list == 10 then
-                    sunduk_menu()
+                    eda_menu()
                 end
                 if list == 11 then
+                    sunduk_menu()
+                end
+                if list == 12 then
                     mainini.functions.famkv = not mainini.functions.famkv	
 					inicfg.save(mainini, 'bd')
 					menu()
                 end
-                if list == 12 then
+                if list == 13 then
 					mainini.functions.arecc = not mainini.functions.arecc	
 					inicfg.save(mainini, 'bd')
 					menu()
 				end
-                if list == 13 then
+                if list == 14 then
                     sampShowDialog(3905, "{00CC00}Список клавиш | Справка", buttonslist, "Закрыть", _, 2)
                 end
-                if list == 14 then 
+                if list == 15 then 
                     drugoenosoft_menu()
                 end
 			end
@@ -5639,6 +5690,13 @@ end
                         mainini.target.kiss), 
                         'Сохранить', 'Закрыть', 1)
                 end
+                if list == 3 then
+                    sampShowDialog(43291, '{fff000}Настройки', string.format([[
+{ffffff}Напишите в поле ниже название кнопки для активации
+Текущая активация: {00ffff}%s]], 
+                        mainini.target.trunk), 
+                        'Сохранить', 'Закрыть', 1)
+                end
 			end
 
             local result, button, _, lop = sampHasDialogRespond(44169)
@@ -5692,6 +5750,12 @@ end
             local result, button, _, lop = sampHasDialogRespond(41291)
             if result and button == 1 then
                 mainini.target.kiss = lop
+                inicfg.save(mainini, 'bd')
+                target_menu()
+            end
+            local result, button, _, lop = sampHasDialogRespond(43291)
+            if result and button == 1 then
+                mainini.target.trunk = lop
                 inicfg.save(mainini, 'bd')
                 target_menu()
             end
@@ -6208,6 +6272,9 @@ end
 Текущая клавиша: %s]], 
                         mainini.functions.fastnosoft), 
                         'Сохранить', 'Закрыть', 1)
+                end
+                if list == 4 then
+                    sampShowDialog(3905, "{00CC00}Другие рендеры", renderlist, "Закрыть", _, 2)
                 end
             end
 
