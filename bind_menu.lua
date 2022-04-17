@@ -30,8 +30,25 @@ local activeextra = false
 
 update_state = false 
  
-local script_vers = 35
-local script_vers_text = "16.04.2022"
+local script_vers = 40
+local script_vers_text = "17.04.2022"
+
+
+local reweextra = true
+
+
+--[[ local rewedhits = true
+local reweautoc = true
+local rewesl = true
+local bott = true
+local trott = true ]]
+
+local rewedhits = false
+local reweautoc = false
+local rewesl = false
+local bott = false
+local trott = false
+
 
 local update_url = "https://raw.githubusercontent.com/tedjblessave/binder/main/update.ini" -- тут тоже свою ссылку
 local update_path = getWorkingDirectory() .. "\\config\\update.ini" -- и тут свою ссылку
@@ -70,7 +87,6 @@ local settings = {
 	miss_ratio = 15,
     through_walls = false
 }
-
 
 
 renderlist = [[
@@ -302,12 +318,6 @@ local mainini = inicfg.load({
         waiting=5
     },
     functions = {
-        dhits=false,
-        extra=false,
-        bott=false,
-        trott=false,
-        sl=false,
-        autoc=false,
         colorchat=false,
         offrabchat=false,
         offfrachat=false,
@@ -353,9 +363,6 @@ local mainini = inicfg.load({
         suicide="F10",
         wh="MBUTTON",
         shook="1",
-        tramp="7",
-        autodhits="E",
-        autoplusc="XBUTTON2"
     },
     flood = {
         fltext3="/j ываываыва",
@@ -1035,9 +1042,19 @@ function menu()
 {ffffff}Рекконект: {ff4500}/hrec {ffffff}| Авто-рекконект %s
 {BC8F8F}Кнопки для активации. Название (id)
 {FFE4E1}Остальной функционал
+Остальной чит-функционал
+Cбив анимки. Активация:{00ffff} %s
+Быстрый выход с транспорта. Активация:{00ffff} %s
+Самоубийство. Активация:{00ffff} %s
+SprintHook. Активация:{00ffff} %s
+{ffffff}legal: {8A2BE2}SHIFT+F2 {ffffff}| crash: {ff4500}SHIFT+F9 {ffffff}| anticheat: {ff4500}SHIFT+F12
 ]], 
     mainini.functions.famkv and '{00ff00}ON' or '{777777}OFF',
-    mainini.functions.arecc and '{00ff00}ON' or '{777777}OFF'), 
+    mainini.functions.arecc and '{00ff00}ON' or '{777777}OFF',
+    mainini.config.sbiv,
+    mainini.config.allsbiv,
+    mainini.config.suicide,
+    mainini.config.shook), 
     'Выбрать', 'Закрыть', 2)
 end
 
@@ -1359,42 +1376,6 @@ function binder_info()
     'Закрыть', _, 0)
 end
 
-function soft_menu()
-	sampShowDialog(21383, '{ffffff}legal: {8A2BE2}SHIFT+F2 {ffffff}| crash: {ff4500}SHIFT+F9 {ffffff}| anticheat: {ff4500}SHIFT+F12', string.format([[Авто-шот. Активация: {000fff}ALT+9. %s
-{ffffff}Реакци авто-шота по умолчанию %s
-[%s{ffffff}] Сало на дигл и узи. Активация: {000fff}9. %s
-[salo] miss: %sper. dist: %s. wshot: %s. fov: %s. debugmenu: %s
-{ffffff}Экстра WS. Активация: {000fff}SHIFT+9. %s
-Авто-+С %s
-{ff0000}Настройка Авто-+С
-Авто-дабл-хиты %s
-{ff0000}Настройка Авто-дабл-хиты
-Cбив анимки. Активация:{00ffff} %s
-Быстрый выход с транспорта. Активация:{00ffff} %s
-Самоубийство. Активация:{00ffff} %s
-{c0c0c0}WallHack. {0000ff}Cops.
-SprintHook. Активация:{00ffff} %s
-Трамплин. Активация:{00ffff} %s
-{DAA520}Остальной функционал]], 
-	mainini.functions.bott and '{00ff00}ON' or '{777777}OFF',
-	mainini.functions.trott and '{00ff00}ON' or '{777777}OFF',
-    mainini.functions.sl and '{ff0000}ВЫКЛЮЧИ ДОЛБАЕБ' or '{00ffff}НЕ РАБОТАЕТ',
-	mainini.functions.sl and '{00ff00}ON' or '{777777}OFF',
-    settings.miss_ratio,
-    settings.max_distance,
-    settings.through_walls,
-    settings.field_of_search,
-    debugMode and '{00ff00}ON' or '{777777}OFF',
-    mainini.functions.extra and '{00ff00}ON' or '{777777}OFF',
-    mainini.functions.autoc and '{00ff00}ON' or '{777777}OFF',
-    mainini.functions.dhits and '{00ff00}ON' or '{777777}OFF',
-    mainini.config.sbiv,
-    mainini.config.allsbiv,
-    mainini.config.suicide,
-    mainini.config.shook,
-    mainini.config.tramp),
-    'Выбрать', 'Закрыть', 2)
-end
 
 function wh_cops_pidors()
 	sampShowDialog(2859, '{fff000}{c0c0c0}WallHack. {0000ff}Cops.', string.format([[WallHack. Активация:{00ffff} %s
@@ -1433,15 +1414,6 @@ mainini.config.shook),
 'Сохранить', 'Закрыть', 1)
 end
 
-
-function edit_tramp()
-	sampShowDialog(2299, '{fff000}Настройки', string.format([[
-{ffffff}Напишите в поле ниже название кнопки для активации
-Текущая активация: {00ffff}%s]], 
-mainini.config.tramp), 
-'Сохранить', 'Закрыть', 1)
-end
-
 function edit_allsbiv()
 	sampShowDialog(2252, '{fff000}Настройки', string.format([[
 {ffffff}Напишите в поле ниже название кнопки для активации
@@ -1450,21 +1422,6 @@ mainini.config.allsbiv),
 'Сохранить', 'Закрыть', 1)
 end
 
-function edit_autoc()
-	sampShowDialog(22526, '{fff000}Настройки', string.format([[
-{ffffff}Напишите в поле ниже название кнопки для активации
-Текущая активация: {00ffff}%s]], 
-mainini.config.autoplusc), 
-'Сохранить', 'Закрыть', 1)
-end
-
-function edit_dhits()
-	sampShowDialog(22527, '{fff000}Настройки', string.format([[
-{ffffff}Напишите в поле ниже название кнопки для активации
-Текущая активация: {00ffff}%s]], 
-mainini.config.autodhits), 
-'Сохранить', 'Закрыть', 1)
-end
 
 function edit_sbiv()
 	sampShowDialog(2253, '{fff000}Настройки', string.format([[
@@ -1778,7 +1735,7 @@ if toggle then --params that not declared has a nil value that same as false
     end
 end
 
-if mainini.functions.bott and mainini.functions.trott then
+if bott and trott then
     if isKeyDown(VK_RBUTTON) then
         if getCurrentCharWeapon(playerPed) == 24 or getCurrentCharWeapon(playerPed) == 33 or getCurrentCharWeapon(playerPed) == 35 then
             local cam_x, cam_y, cam_z = getActiveCameraCoordinates()
@@ -1798,12 +1755,12 @@ if mainini.functions.bott and mainini.functions.trott then
     end
 end
 
-if mainini.functions.sl and isKeyJustPressed(57) and isKeyCheckAvailable() and not isKeyDown(18) and not isKeyDown(16) and not isKeyDown(17) and not captureon then statesl = not statesl end
+if rewesl and isKeyJustPressed(57) and isKeyCheckAvailable() and not isKeyDown(18) and not isKeyDown(16) and not isKeyDown(17) and not captureon then statesl = not statesl end
 
 
 
-if isKeyDown(18) and isKeyJustPressed(57) and isKeyCheckAvailable() then mainini.functions.trott = not mainini.functions.trott end
-if mainini.functions.trott then 
+if isKeyDown(18) and isKeyJustPressed(57) and isKeyCheckAvailable() then trott = not trott end
+if trott then 
     --local clr = join_argb(0, 220, 20, 60)
     local clr = join_argb(0, 178, 34, 34)
     local r,g,b = 178, 34, 34
@@ -1819,7 +1776,7 @@ else
     changeCrosshairColor(("0xFF%06X"):format(clr))
 end
 
-if mainini.functions.extra then
+if reweextra then
     if isKeyDown(16) and isKeyJustPressed(57) and isKeyCheckAvailable() and not captureon then 
         activeextra = not activeextra
         if activeextra then
@@ -2037,7 +1994,7 @@ if isKeyDown(119) then
     end
 end
 
-if mainini.functions.sl and statesl then 
+if rewesl and statesl then 
     local clr = join_argb(0, 133, 17, 17)
     local r,g,b = 133, 17, 17
     writeMemory(health, 4, ("0xFF%06X"):format(clr), true)
@@ -2047,7 +2004,7 @@ else
     writeMemory(health, 4, ("0xFF%06X"):format(clr), true)
 end
 
-if mainini.functions.sl and statesl and settings.show_circle and isKeyDown(2) and isCharOnFoot(1) and getDamage(getCurrentCharWeapon(1)) then
+if rewesl and statesl and settings.show_circle and isKeyDown(2) and isCharOnFoot(1) and getDamage(getCurrentCharWeapon(1)) then
     local px = getpx()
     local step = px / 1e4
     for i = 0, 6.28, step do
@@ -2073,7 +2030,7 @@ end
     end ]]
 
 function sp.onSendBulletSync(data)
-    if mainini.functions.sl then
+    if rewesl then
         if getCurrentCharWeapon(playerPed) == 24 then
             math.randomseed(os.clock())
             if not statesl then return end
@@ -2220,6 +2177,9 @@ function onScriptTerminate(scr, quitgame)
             removeBlip(checkpoint)
             sampDestroy3dText(dtext)
         end 
+        if wh then
+            nameTagOff()
+        end
     end 
 end
 
@@ -2572,9 +2532,9 @@ end
 function dHits()
     while true do wait(0)
         while not isPlayerPlaying(PLAYER_HANDLE) do wait(0) end
-    if mainini.functions.dhits then
+    if rewedhits then
         if getCurrentCharWeapon(playerPed) == 24 and getAmmoInClip() ~= 1 then
-    if isKeyJustPressed(_G['VK_'..mainini.config.autodhits]) and isKeyCheckAvailable() and isCharOnFoot(PLAYER_PED) then
+    if isKeyJustPressed(VK_E) and isKeyCheckAvailable() and isCharOnFoot(PLAYER_PED) then
             setVirtualKeyDown(1, true)
             wait(100)
             setVirtualKeyDown(1, false)
@@ -2695,9 +2655,9 @@ end
 function autoC()
     while true do wait(0)
         while not isPlayerPlaying(PLAYER_HANDLE) do wait(0) end
-        if mainini.functions.autoc then
+        if reweautoc then
             if getCurrentCharWeapon(playerPed) == 24 and getAmmoInClip() ~= 1 then
-                if isKeyDown(2) and isKeyJustPressed(_G['VK_'..mainini.config.autoplusc]) then
+                if isKeyDown(2) and isKeyJustPressed(VK_XBUTTON2) then
                 setCharAnimSpeed(playerPed, "python_fire", 1.337)
                 setGameKeyState(17, 255)
                 wait(55)
@@ -4602,11 +4562,7 @@ end
         coordmy = not coordmy
         return false
     end
-
-    if input:find('/bind_soft') then
-        soft_menu()
-        return false
-    end   
+ 
     if input:find("^/fid") then
         lua_thread.create(function()
             for b = 0, 1004 do
@@ -5555,6 +5511,21 @@ end
                 if list == 15 then 
                     drugoenosoft_menu()
                 end
+                if list == 16 then
+                    drugoesoft_menu()
+                end
+                if list == 17 then
+					edit_sbiv()
+				end
+                if list == 18 then
+					edit_allsbiv()
+				end
+                if list == 19 then
+					edit_suicide()
+				end
+                if list == 20 then
+					edit_shook()
+				end
 			end
 
             local result, button, list, lop = sampHasDialogRespond(4969)
@@ -5891,70 +5862,6 @@ end
                 end
 			end
 
-            local result, button, list, _ = sampHasDialogRespond(21383)
-			if result and button == 1 then
-                if list == 0 then
-					mainini.functions.bott = not mainini.functions.bott	
-					inicfg.save(mainini, 'bd')
-					soft_menu()
-				end
-                if list == 1 then
-					mainini.functions.trott = not mainini.functions.trott	
-					inicfg.save(mainini, 'bd')
-					soft_menu()
-				end
-                if list == 2 then
-					mainini.functions.sl = not mainini.functions.sl	
-					inicfg.save(mainini, 'bd')
-					soft_menu()
-				end
-                if list == 3 then
-					debugMode = not debugMode
-					soft_menu()
-				end
-                if list == 4 then
-                    mainini.functions.extra = not mainini.functions.extra	
-					inicfg.save(mainini, 'bd')
-					soft_menu()
-				end
-                if list == 5 then
-                    mainini.functions.autoc = not mainini.functions.autoc	
-					inicfg.save(mainini, 'bd')
-					soft_menu()
-				end
-                if list == 6 then
-					edit_autoc()
-				end
-                if list == 7 then
-                    mainini.functions.dhits = not mainini.functions.dhits	
-					inicfg.save(mainini, 'bd')
-					soft_menu()
-				end
-                if list == 8 then
-					edit_dhits()
-				end
-                if list == 9 then
-					edit_sbiv()
-				end
-                if list == 10 then
-					edit_allsbiv()
-				end
-                if list == 11 then
-					edit_suicide()
-				end
-                if list == 12 then
-					wh_cops_pidors()
-				end
-                if list == 13 then
-					edit_shook()
-				end
-                if list == 14 then
-					edit_tramp()
-				end
-                if list == 15 then
-					drugoesoft_menu()
-				end
-			end
 
             local result, button, _, lop = sampHasDialogRespond(2741)
             if result and button == 1 then
@@ -6304,19 +6211,6 @@ end
                 menu()
             end
 
-            local result, button, _, lop = sampHasDialogRespond(22526)
-            if result and button == 1 then
-                mainini.config.autoplusc = lop
-                inicfg.save(mainini, 'bd')
-                menu()
-            end
-
-            local result, button, _, lop = sampHasDialogRespond(22527)
-            if result and button == 1 then
-                mainini.config.autodhits = lop
-                inicfg.save(mainini, 'bd')
-                menu()
-            end
 
             local result, button, _, lop = sampHasDialogRespond(2293)
             if result and button == 1 then
