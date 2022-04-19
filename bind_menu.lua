@@ -30,8 +30,8 @@ local activeextra = false
 
 update_state = false 
  
-local script_vers = 40
-local script_vers_text = "17.04.2022"
+local script_vers = 41
+local script_vers_text = "19.04.2022"
 
 
 local reweextra = true
@@ -552,7 +552,6 @@ local vknotf = {
 	ispaydaytext = '',
     chatc = false,
     chatf = false,
-    chatgo = false,
     chatadv = false,
     dialogs = false,
 }
@@ -637,13 +636,13 @@ function longpollResolve(result)
 						local pl = decodeJson(v.object.message.payload)
 						if pl.button then
 							if pl.button == 'getinfo' then
-								getPlayerInfo()
+								getPlayerInfo()                            
+                            elseif pl.button == 'getstats' then
+                                getPlayerArzStats()
                             elseif pl.button == 'chatchat' then
 								chatchatVK()
                             elseif pl.button == 'famchat' then
-								famchatVK()    
-                            elseif pl.button == 'chatgovor' then
-								govorchatVK()                            
+								famchatVK()                         
                             elseif pl.button == 'advchat' then
                                     advchatVK()
                             elseif pl.button == 'razgovor' then
@@ -778,53 +777,51 @@ function vkKeyboard()
 	keyboard.buttons[1] = {}
     keyboard.buttons[2] = {}
 	keyboard.buttons[3] = {}
-	keyboard.buttons[4] = {}
 	local row = keyboard.buttons[1]
     local row2 = keyboard.buttons[2]
 	local row3 = keyboard.buttons[3]
-	local row4 = keyboard.buttons[4]
     row[1] = {}
 	row[1].action = {}
-	row[1].color = 'positive'
+	row[1].color = 'secondary'
 	row[1].action.type = 'text'
 	row[1].action.payload = '{"button": "getinfo"}'
-	row[1].action.label = 'Статус'
+	row[1].action.label = 'Status'
+    row[2] = {}
+	row[2].action = {}
+	row[2].color = 'secondary'
+	row[2].action.type = 'text'
+	row[2].action.payload = '{"button": "getstats"}'
+	row[2].action.label = 'Stats'
     row2[1] = {}
 	row2[1].action = {}
-	row2[1].color = trubka and 'negative' or 'positive'
+	row2[1].color = trubka and 'secondary' or 'primary'
 	row2[1].action.type = 'text'
 	row2[1].action.payload = '{"button": "razgovor"}'
-	row2[1].action.label = trubka and 'Положить трубку' or 'Поднять трубку'
+	row2[1].action.label = trubka and 'PHONE OFF' or 'PHONE ON'
     row3[1] = {}
 	row3[1].action = {}
-	row3[1].color = vklchat and 'secondary' or 'primary'
+	row3[1].color = vklchat and 'negative' or 'positive'
 	row3[1].action.type = 'text'
 	row3[1].action.payload = '{"button": "chatchat"}'
-	row3[1].action.label = vklchat and 'Выкл. весь чат' or 'Вкл. весь чат'
+	row3[1].action.label = vklchat and 'Chat' or 'Chat'
     row3[2] = {}
 	row3[2].action = {}
-	row3[2].color = vklchatfam and 'primary' or 'secondary'
+	row3[2].color = vklchatfam and 'positive' or 'negative'
 	row3[2].action.type = 'text'
 	row3[2].action.payload = '{"button": "famchat"}'
-	row3[2].action.label = vklchatfam and 'Вкл. fam чат' or 'Выкл. fam чат'
+	row3[2].action.label = vklchatfam and 'Fam' or 'Fam'
     row3[3] = {}
 	row3[3].action = {}
-	row3[3].color = vklchatdialog and 'secondary' or 'primary'
+	row3[3].color = vklchatadv and 'negative' or 'positive'
 	row3[3].action.type = 'text'
-	row3[3].action.payload = '{"button": "alldialogs"}'
-	row3[3].action.label = vklchatdialog and 'Выкл. диалоги' or 'Вкл. диалоги'
-    row4[1] = {}
-	row4[1].action = {}
-	row4[1].color = vklchatgovor and 'secondary' or 'primary'
-	row4[1].action.type = 'text'
-	row4[1].action.payload = '{"button": "chatgovor"}'
-	row4[1].action.label = vklchatgovor and 'Выкл. чат рядом' or 'Вкл. чат рядом'
-    row4[2] = {}
-	row4[2].action = {}
-	row4[2].color = vklchatadv and 'secondary' or 'primary'
-	row4[2].action.type = 'text'
-	row4[2].action.payload = '{"button": "advchat"}'
-	row4[2].action.label = vklchatadv and 'Выкл. adv чат' or 'Вкл. adv чат'
+	row3[3].action.payload = '{"button": "advchat"}'
+	row3[3].action.label = vklchatadv and 'Job' or 'Job'
+    row3[4] = {}
+	row3[4].action = {}
+	row3[4].color = vklchatdialog and 'negative' or 'positive'
+	row3[4].action.type = 'text'
+	row3[4].action.payload = '{"button": "alldialogs"}'
+	row3[4].action.label = vklchatdialog and 'Dialogs' or 'Dialogs'
 	return encodeJson(keyboard)
 end
 function char_to_hex(str)
@@ -863,7 +860,25 @@ function vkget()
 	end
 end
 
-
+sendstatsstate = false
+function getPlayerArzStats()
+	if sampIsLocalPlayerSpawned() then
+    sendstatsstate = true
+    sampSendChat('/stats')
+    local timesendrequest = os.clock()
+    while os.clock() - timesendrequest <= 10 do
+        wait(0)
+        if sendstatsstate ~= true then
+            timesendrequest = 0
+        end 
+    end
+    sendvknotf(sendstatsstate == true and 'Ошибка! В течении 10 секунд скрипт не получил информацию!' or tostring(sendstatsstate))
+    sendstatsstate = false
+    closeDialog()
+else
+    sendvknotf("dsadas")
+end
+end
    
 local health = 0xBAB22C
 
@@ -933,9 +948,7 @@ local status = false
 local graffiti = false
 
 local on = false
-local draw_suka = false
-local mark = nil
-local dtext = nil
+
 
 local x, y, z = 0, 0, 0
 
@@ -1892,7 +1905,6 @@ if isKeyJustPressed(_G['VK_'..mainini.functions.fastnosoft]) and isKeyCheckAvail
         graffiti = false
         autoaltrend = false
         on = false
-        draw_suka = false
     else
         wh = false
         actmentpidor = false
@@ -1907,7 +1919,6 @@ if isKeyJustPressed(_G['VK_'..mainini.functions.fastnosoft]) and isKeyCheckAvail
         graffiti = false
         autoaltrend = false
         on = false
-        draw_suka = false
     end
 end
 
@@ -1935,7 +1946,6 @@ if isKeyDown(16) and isKeyJustPressed(113) and isKeyCheckAvailable() then
         autoaltrend = false
 
         on = false
-        draw_suka = false
     elseif captureon then
         printStringNow("~P~LEGAL ~G~ON", 1500, 5)
         wh = false
@@ -1956,7 +1966,6 @@ if isKeyDown(16) and isKeyJustPressed(113) and isKeyCheckAvailable() then
         autoaltrend = false
 
         on = false
-        draw_suka = false
     else
         printStringNow("~P~LEGAL ~R~OFF", 1500, 5)
     end
@@ -2485,7 +2494,7 @@ if valid and doesCharExist(ped) then
 
         if mainini.lidzamband.devyatka and isKeyJustPressed(219) and isKeyCheckAvailable() then
             if sampGetPlayerScore(id) >= mainini.lidzamband.minlvl then
-                sampSendChat(string.format("/todo Надень вот это на себя*кинув в руки %s поношенную(5) бандану %s", namee, mainini.lidzamband.band))
+                sampSendChat(string.format("/todo Надень вот это на себя*кинув в руки %s поношенную бандану %s", namee, mainini.lidzamband.band))
                 wait(500)
                 sampSendChat(string.format('/invite %s', name))
                 wait(3000)
@@ -2495,7 +2504,7 @@ if valid and doesCharExist(ped) then
             end
         end
         if mainini.lidzamband.devyatka and isKeyJustPressed(221) and isKeyCheckAvailable() then
-            sampSendChat(string.format("/todo Надень вот это на себя*кинув в руки %s легендарную(8) бандану %s", namee, mainini.lidzamband.band))
+            sampSendChat(string.format("/todo Надень вот это на себя*кинув в руки %s легендарную бандану %s", namee, mainini.lidzamband.band))
             wait(500)
             sampSendChat(string.format('/invite %s', name))
             wait(3000)
@@ -2902,15 +2911,6 @@ function famchatVK()
         vknotf.chatf = false
     end
     sendvknotf('Fam чат '..(vklchatfam and 'включен!' or 'выключен!'))
-end
-function govorchatVK()
-    vklchatgovor = not vklchatgovor
-    if vklchatgovor then
-        vknotf.chatgo = true
-    else
-        vknotf.chatgo = false
-    end
-    sendvknotf('Чат рядом '..(vklchatgovor and 'включен!' or 'выключен!'))
 end
 function advchatVK()
     vklchatadv = not vklchatadv
@@ -3419,6 +3419,12 @@ function sampGetListboxItemByText(text, plain)
 end
 -----autopin
 function sp.onShowDialog(id, style, title, button1, button2, text)
+
+    if sendstatsstate and id == 235 then
+		sampSendDialogResponse(id,0,0,'')
+		sendstatsstate = text
+		closeDialog()
+	end
 
     --fast gun
     if info ~= nil then
@@ -4015,15 +4021,7 @@ end
                 renderFontDrawText(fontment, '{d3940d}Притоны:{ffffff} '..Counter, w/5, h/3.150, 0xDD6622FF)
             end
            
-            if on then
-                if draw_suka then
-                    removeUser3dMarker(mark)
-                    mark = createUser3dMarker(x,y,z+2,0xFFD00000)
-                else
-                    removeUser3dMarker(mark)
-        
-                end
-            end
+
     end
         end
 
@@ -4465,7 +4463,7 @@ function sp.onSendCommand(input)
     end
 ----------------------------------------------------------------
 
-if input:find('/mnk (.+)') then
+if input:find('^/mnk (.+)') then
     local arg = input:match('/mnk (.+)')
         if sampIsPlayerConnected(arg) then
             arg = sampGetPlayerNickname(arg)
@@ -4495,26 +4493,15 @@ if input:find('/mnk (.+)') then
                         local x2, y2 = convert3DCoordsToScreen(mX, mY, mZ)
                         if isPointOnScreen(x,y,z,0) then
                             renderDrawLine(x2, y2, x1, y1, 2.0, 0xDD6622FF)
-                            renderDrawBox(x1-2, y1-2, 8, 8, 0xAA00CC00)
+                           -- renderDrawBox(x1-2, y1-2, 8, 8, 0xAA00CC00)
                         else
                             screen_text = 'Где-то рядом!'
                         end
                         printStringNow(conv(screen_text),1)
-                    else
-                        if marker or checkpoint then
-                            deleteCheckpoint(marker)
-                            removeBlip(checkpoint)
-                        end
                     end
                 end
             end
     
-        end)
-    else
-        lua_thread.create(function()
-            draw_suka = false
-            wait(10)
-            removeUser3dMarker(mark)
         end)
     end
     return false
@@ -4817,11 +4804,6 @@ function sp.onServerMessage(color, text)
 			sendvknotf0(text)
 		end
 	end 
-    if vknotf.chatgo  and mainini.afk.uvedomleniya then 
-        if text:find('говорит:') then
-			sendvknotf0(text)
-		end
-	end 
     if color == -1347440641 and text:find('купил у вас') and text:find('от продажи') and text:find('комиссия')  and mainini.afk.uvedomleniya then
         sendvknotf0(text)
     end
@@ -5063,9 +5045,9 @@ function sp.onServerMessage(color, text)
                 return { 0xc8b451ff, text }
             end
         end
-        if text:find("рестарт через") and text:find("Советуем завершить текущую сессию") then
+--[[         if text:find("рестарт через") and text:find("Советуем завершить текущую сессию") then
             sampProcessChatInput("/fconnect 0 7000")
-        end
+        end ]]
         if text:find("вышел при попытке избежать ареста и был наказан") and color == -1104335361 then 
             return { 0x6f6d6fff, text }
         end
