@@ -18,7 +18,6 @@ local rkeys = require 'rkeys'
 encoding.default = 'CP1251'
 u8 = encoding.UTF8
 local poss = false 
-local popolnenie = false
 local captureon = false
 local anticheat = false
 
@@ -30,8 +29,8 @@ local activeextra = false
 
 update_state = false 
  
-local script_vers = 41
-local script_vers_text = "19.04.2022"
+local script_vers = 42
+local script_vers_text = "22.04.2022"
 
 
 local reweextra = true
@@ -743,11 +742,7 @@ function sendvknotf(msg, host)
     local _, id = sampGetPlayerIdByCharHandle(PLAYER_PED)
 	local acc = sampGetPlayerNickname(select(2,sampGetPlayerIdByCharHandle(playerPed))) .. '['..select(2,sampGetPlayerIdByCharHandle(playerPed))..']'
 	msg = msg:gsub('{......}', '')
-    if sampIsLocalPlayerSpawned() then
-	msg = ''..host..' | Online:' .. sampGetPlayerCount(false) ..'\n'..acc..' | Health: '.. getCharHealth(PLAYER_PED) ..' | Ping: '..sampGetPlayerPing(id)..'\n'..msg
-	else
-    msg = ''..host..' | Online:' .. sampGetPlayerCount(false) ..'\n'..acc..'\n'..msg
-    end
+    msg = ''..host..' | Online:' .. sampGetPlayerCount(false) ..' | '..acc..'\n'..msg
     msg = u8(msg)
 	msg = url_encode(msg)
 	local keyboard = vkKeyboard()
@@ -839,6 +834,8 @@ function getPlayerInfo()
 	local response = ''
 	local x, y, z = getCharCoordinates(PLAYER_PED)
 	response = response .. 'Координаты: X: ' .. math.floor(x) .. ' | Y: ' .. math.floor(y) .. ' | Z: ' .. math.floor(z)
+	response = response .. '\nHP: '.. getCharHealth(PLAYER_PED)
+	response = response .. '\nPing: '..sampGetPlayerPing(id)
 	sendvknotf(response)
 	else
 		sendvknotf('Вы не подключены к серверу!')
@@ -876,7 +873,7 @@ function getPlayerArzStats()
     sendstatsstate = false
     closeDialog()
 else
-    sendvknotf("dsadas")
+    sendvknotf("Вы не подключены!")
 end
 end
    
@@ -1522,6 +1519,27 @@ function getNearCarToCenter(radius)
     return nil
 end
 
+function applySampfuncsPatch()
+    local memory = memory or require 'memory'
+    local module = getModuleHandle("SAMPFUNCS.asi")
+    if module ~= 0 and memory.compare(module + 0xBABD, memory.strptr('\x8B\x43\x04\x8B\x5C\x24\x20\x8B\x48\x34\x83\xE1'), 12) then
+        memory.setuint16(module + 0x83349, 0x01ac, true)
+        memory.setuint16(module + 0x8343c, 0x01b0, true)
+        memory.setuint16(module + 0x866dd, 0x00f4, true)
+        memory.setuint16(module + 0x866e9, 0x0306, true)
+        memory.setuint8(module + 0x8e754, 0x40, true)
+    end
+end
+
+local showa = false
+local mainadm = inicfg.load({
+	a = {
+        "Kevin_Sweezy",
+        "Diana_Mironova",
+    }
+}, 'a')
+inicfg.save(mainadm, 'a')
+
 
 function main()
 if not isSampfuncsLoaded() or not isSampLoaded() then return end
@@ -1649,7 +1667,7 @@ if isKeyDown(VK_Z) and isKeyCheckAvailable() then
         end
     end
 end ]]
-
+applySampfuncsPatch()
 
  
 wait(0)
@@ -1664,6 +1682,27 @@ wait(0)
     
     end
 end ]]
+
+if showa then
+	local resX, resY = getScreenResolution()
+    local admtbl = {}
+    for id = 0, sampGetMaxPlayerId() do
+        if sampIsPlayerConnected(id) then
+            local name = sampGetPlayerNickname(id)
+            local found = false
+            for _,vv in pairs(mainadm.a) do
+                if vv == name and not found then
+                    found = true
+                end
+            end
+            if found == true then table.insert(admtbl,{name,id}) end
+        end
+    end
+    for _,v in pairs(admtbl) do
+        renderFontDrawText(fontment, '{0f96b8}Админы:', resX-(resX/27*3), (resY/3.25), 0xFFFFFFFF)
+        renderFontDrawText(fontment, '{16c0ac}'..v[1], resX-(resX/27*3), (resY/3.25)+_*15, 0xFFFFFFFF)
+    end
+end
 
 
 if actmentpidor then
@@ -1823,7 +1862,7 @@ if sampTextdrawIsExists(2103) and not act then
     local text = sampTextdrawGetString(2103)
     if text:find('Incoming') and mainini.afk.uvedomleniya then
         local nick = text:gsub('(%s)(%w_%w)(.+)', '%2')
-        sendvknotf('<3 Тебе звонит '..nick) -- output
+        sendvknotf(';-) Тебе звонит '..nick) -- output
         
     end
     act = true
@@ -1905,6 +1944,7 @@ if isKeyJustPressed(_G['VK_'..mainini.functions.fastnosoft]) and isKeyCheckAvail
         graffiti = false
         autoaltrend = false
         on = false
+        showa = false
     else
         wh = false
         actmentpidor = false
@@ -1919,6 +1959,7 @@ if isKeyJustPressed(_G['VK_'..mainini.functions.fastnosoft]) and isKeyCheckAvail
         graffiti = false
         autoaltrend = false
         on = false
+        showa = false
     end
 end
 
@@ -1944,6 +1985,7 @@ if isKeyDown(16) and isKeyJustPressed(113) and isKeyCheckAvailable() then
         status = false
         graffiti = false
         autoaltrend = false
+        showa = fasle
 
         on = false
     elseif captureon then
@@ -1964,6 +2006,7 @@ if isKeyDown(16) and isKeyJustPressed(113) and isKeyCheckAvailable() then
         status = false
         graffiti = false
         autoaltrend = false
+        showa = fasle
 
         on = false
     else
@@ -2189,6 +2232,7 @@ function onScriptTerminate(scr, quitgame)
         if wh then
             nameTagOff()
         end
+        sendvknotf(":-( Скрипт перезагружен или крашнулся...")
     end 
 end
 
@@ -2408,6 +2452,8 @@ function arec()
         local chatstring = sampGetChatString(99)
         if chatstring == "Server closed the connection." or chatstring == "You are banned from this server." or chatstring == "Сервер закрыл соединение." or chatstring == "Wrong server password." or chatstring == "Use /quit to exit or press ESC and select Quit Game" then
         sampDisconnectWithReason(false)
+        
+    sendvknotf("Сработал автореконнект...")
         wait(3000)
         --printStringNow("~B~AUTORECONNECT", 3000)
             wait(20000) -- задержка
@@ -2604,14 +2650,14 @@ end
 function tormoz()
     while true do wait(0)
         if not captureon then
-            if isCharInAnyCar(PLAYER_PED) and isKeyDown(90) and not sampIsChatInputActive() and not isSampfuncsConsoleActive() and not sampIsDialogActive() then
+--[[             if isCharInAnyCar(PLAYER_PED) and isKeyDown(90) and not sampIsChatInputActive() and not isSampfuncsConsoleActive() and not sampIsDialogActive() then
                 local veh = storeCarCharIsInNoSave(PLAYER_PED)
                 repeat
                     local speed = getCarSpeed(veh)
                     setCarForwardSpeed(veh, speed - 0.5)
                     wait(0)
                 until speed > 0
-            end
+            end ]]
             if isCharInAnyCar(playerPed) then 
                 local car = storeCarCharIsInNoSave(playerPed)
                 local speed = getCarSpeed(car)
@@ -3338,33 +3384,42 @@ function sp.onPlayerChatBubble(id, col, dist, dur, msg)
 		return {id, col, 1488, dur, msg}
 	end
 end
+
 function rltao()
 	while true do wait(0)
         while not isPlayerPlaying(PLAYER_HANDLE) do wait(0) end
-        local textdrawtelefon = sampTextdrawGetString(2103)
-        if work and not (textdrawtelefon:find('Incoming') or textdrawtelefon:find('Outcoming')) then 
-            sampSendClickTextdraw(65535)
-            wait(355)
-            sundukwork = true
-            fix = true
-            sampSendChat("/donate")
-            wait(3000)
-            fix = false
-            sampSendChat('/invent')
-            wait(400)
-            --printStringNow("~P~Fuck off", 10000)
-            for i = 1, 5 do
-                if not work then break end
-                sampSendClickTextdraw(textdraw[i][1])
-                wait(textdraw[i][3])
-                sampSendClickTextdraw(textdraw[i][2])
-                wait(textdraw[i][3])
+        if sampTextdrawGetString(2103) and work then
+            local textdrawtelefon = sampTextdrawGetString(2103)
+            if (textdrawtelefon:find('Incoming') or textdrawtelefon:find('Outcoming')) then
+                teleact = false
+            elseif not (textdrawtelefon:find('Incoming') or textdrawtelefon:find('Outcoming')) then
+                teleact = true
             end
-            wait(100)
-            sampSendClickTextdraw(65535)
-            --sampAddChatMessage("Завершено", -1)
-            sundukwork = false
-            wait(mainini.sunduk.waiting*60000)
+        end
+
+        if work then 
+            if teleact then
+                sampSendClickTextdraw(65535)
+                wait(355)
+                sundukwork = true
+                fix = true
+                sampSendChat("/donate")
+                wait(3000)
+                fix = false
+                sampSendChat('/invent')
+                wait(400)
+                for i = 1, 5 do
+                    if not work then break end
+                    sampSendClickTextdraw(textdraw[i][1])
+                    wait(textdraw[i][3])
+                    sampSendClickTextdraw(textdraw[i][2])
+                    wait(textdraw[i][3])
+                end
+                wait(100)
+                sampSendClickTextdraw(65535)
+                sundukwork = false
+                wait(mainini.sunduk.waiting*60000)
+            end
         end
     end
 end
@@ -3423,7 +3478,7 @@ function sp.onShowDialog(id, style, title, button1, button2, text)
     if sendstatsstate and id == 235 then
 		sampSendDialogResponse(id,0,0,'')
 		sendstatsstate = text
-		closeDialog()
+		return false
 	end
 
     --fast gun
@@ -3445,7 +3500,7 @@ function sp.onShowDialog(id, style, title, button1, button2, text)
         --fix = false
 	end
     if text:find("Вы были кикнуты за подозрение") and mainini.afk.uvedomleniya then
-        sendvknotf(text)
+        sendvknotf0(text)
 	--return false
         --fix = false
 	end
@@ -3539,20 +3594,27 @@ function sp.onShowDialog(id, style, title, button1, button2, text)
     end
     end)    
 
-      if id == 8928 and mainini.afk.uvedomleniya then
+    if id == 162 and mainini.afk.uvedomleniya then
         sendvknotf(text)
+       -- return false
+    end
+
+      if id == 8928 and mainini.afk.uvedomleniya then
+        sendvknotf0(text)
        -- return false
     end
     if id == 7782 and mainini.afk.uvedomleniya then
-        sendvknotf(text)
+        sendvknotf0(text)
        -- return false
     end
     if id == 1333 and mainini.afk.uvedomleniya then
-        sendvknotf(text)
-        setVirtualKeyDown(13, false)
+        sendvknotf0(text)
+        sampSendDialogResponse(id, 0, 0, "")
+		return false
     end
     if id == 1332 then
-        setVirtualKeyDown(13, false)
+		sampSendDialogResponse(id, 0, 0, "")
+		return false
     end
     if text:find('Вы получили бан аккаунта') and mainini.afk.uvedomleniya then
         local svk = text:gsub('\n','') 
@@ -3581,17 +3643,14 @@ function sp.onShowDialog(id, style, title, button1, button2, text)
 		end
 		return false
 	end
-    --autophone
-    if id == 1000 then
-        setVirtualKeyDown(13, false)
-    end
-    --bankpin
+    
     if id == 991 then 
         sampSendDialogResponse(id, 1, _, mainini.helper.bankpin)
     end
     --skipzz
 	if text:find("В этом месте запрещено") then
-		setVirtualKeyDown(13, false)
+		sampSendDialogResponse(id, 0, 0, "")
+		return false
 	end
     --dotmoney
     if dotmoney then
@@ -4240,7 +4299,7 @@ function sp.onSendCommand(input)
         end)
         return false
     end
-    if input:find('/probiv') then
+    if input:find('^/probiv') then
         lua_thread.create(function()
             sampSendChat("/id "..sampGetPlayerNickname(select(2,sampGetPlayerIdByCharHandle(playerPed))))
             wait(1000)
@@ -4523,8 +4582,48 @@ end
 		ScriptState4 = not ScriptState4
         return false
     end  
+    if input:find('^/adm') then
+		showa = not showa
+        return false
+    end 
 
-    if input:find('^/pr') then
+--[[     if input:find('^/addadm %a+_%a+') then
+        local nick = string.match(input,"%a+_%a+")
+        local found = false
+		for _,v in pairs(mainadm.a) do
+			if v == nick and not found then
+				found = true
+                sampAddChatMessage("Админ "..nick.." уже в списке!", 0xC0C0C0)
+			end
+		end
+        if found == false then
+        table.insert(mainadm.a,nick)
+        inicfg.save(mainadm, 'a.ini')
+        sampAddChatMessage("Админ "..nick.." добавлен!", 0xC0C0C0)
+        end
+        return false
+    end
+            ------------------------------------
+    if input:find('/addadm %d+') then
+        local id = string.match(input,"%d+")
+        local nick = sampGetPlayerNickname(id)
+        local found = false
+		for _,v in pairs(mainadm.a) do
+			if v == nick and not found then
+				found = true
+                sampAddChatMessage("Админ "..nick.." уже в списке!", 0xC0C0C0)
+			end
+		end
+        if found == false then
+        table.insert(mainadm.a,nick)
+        inicfg.save(mainadm, 'a.ini')
+        sampAddChatMessage("Админ "..nick.." добавлен!", 0xC0C0C0)
+        end
+        return false
+    end ]]
+
+
+    if input:find('^/pr') and not input:find('/premium') then
 		ScriptStateKo = not ScriptStateKo
         return false
     end  
@@ -4534,16 +4633,7 @@ end
     end  
 
     
-    if input:find('/depopo') then
-		popolnenie = not popolnenie
-        if popolnenie then
-            sampAddChatMessage("Авто-пополнение депозита {00ff00}включено{ffffff}. Заранее встань у банковской стойки и авторизуйся!", -1)
-            sampAddChatMessage("В свернутом режиме (анти-афк) не работает!", -1)
-        else
-            sampAddChatMessage("Авто-пополнение депозита {ff0000}выключено{ffffff}. Пошел нахуй!", -1)
-        end
-        return false
-    end  
+ 
 
     if input:find("/coords") then
         coordmy = not coordmy
@@ -4840,6 +4930,20 @@ function sp.onServerMessage(color, text)
             end 
         end
     end
+    if text:find("Администратор") and color == -10270721 and (text:find('заглушил') or text:find('установил в оффлайне') or text:find('забанил') or text:find('посадил') or text:find('выдал')  or text:find('выпустил') or text:find('кикнул') or text:find('снял заглушку')) and not text:find('SaintRoseBot') then
+		local nick = string.match(text,"%a+_%a+")
+		local found = false
+		for _,v in pairs(mainadm.a) do
+			if v == nick and not found then
+				found = true
+			end
+		end
+		if found == false then
+			--sampAddChatMessage("Новый админ! Это - "..nick,-255)
+			table.insert(mainadm.a,nick)
+			inicfg.save(mainadm, 'a')
+		end
+	end
     if color == -10270721 and text:find('Администратор') and text:find('кикнул') then
         local res, mid = sampGetPlayerIdByCharHandle(PLAYER_PED)
         if res then 
@@ -4852,7 +4956,7 @@ function sp.onServerMessage(color, text)
     if color == -10270721 and text:find('Вы можете выйти из психиатрической больницы') and mainini.afk.uvedomleniya  then
             sendvknotf(text)
     end
-    if text:find('Банковский чек') then -- and color == 1941201407
+    if text:find('Банковский чек') and color == 1941201407 then
        lua_thread.create(function()
         wait(10*1000)
         if mainini.functions.famkv then
@@ -4864,24 +4968,6 @@ function sp.onServerMessage(color, text)
         wait(1500*1000)
         sampAddChatMessage('Не забывай оплачивать налоги за имущество!', 0xea5362)    
        end)
-        if popolnenie then 
-            lua_thread.create(function()
-                local depostroka = sampGetListboxItemByText('Пополнить депозит')
-                wait(5000)
-                setVirtualKeyDown(VK_N, true)
-                wait(400) 
-                setVirtualKeyDown(VK_N, false)		
-                wait(500)
-                sampSendDialogResponse(33, 1, depostroka, false)
-                wait(1500)
-                sampSendDialogResponse(4498, 1, 1, 5000000)
-                wait(500)
-                sampCloseCurrentDialogWithButton(0)
-            end)
-        end
-    end
-    if text:find("Вы положили на свой депозитный счет") and popolnenie then --Вы сняли со своего депозитного счета
-        sendvknotf(text)
     end
     if text:find('Вы оплатили все налоги на сумму') and color == 1941201407 then
         lua_thread.create(function()
@@ -4950,7 +5036,7 @@ function sp.onServerMessage(color, text)
 
     if (text:find('На сервере есть инвентарь') or text:find('Вы можете задать вопрос в нашу') or text:find('Чтобы запустить браузер') or text:find('Чтобы включить радио в')) and text:find('Подсказка') then return false end
 
-    if (text:find('Чтобы завести двигатель введите') or text:find('Чтобы включить радио используйте кнопку') or text:find('может присутствует радио') or text:find('Для управления поворотниками используйте') or text:find('В транспорте присутствует радио')) and text:find('Подсказка') then return false end
+    if (text:find('Чтобы завести двигатель введите') or text:find('Чтобы включить радио используйте кнопку') or text:find('может присутствует радио') or text:find('Для управления поворотниками используйте') or text:find('В транспорте присутствует радио') or text:find('круговое меню для')) and text:find('Подсказка') then return false end
 
     if text:find('Состояние вашего авто крайне') and text:find('Информация') and not text:find('говорит') and not text:find('- |') then return false end
     if text:find('Необходимо заехать на станцию') and text:find('Используйте /gps') and not text:find('говорит') and not text:find('- |') then return false end
