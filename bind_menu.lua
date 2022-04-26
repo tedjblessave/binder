@@ -29,8 +29,8 @@ local activeextra = false
 
 update_state = false 
  
-local script_vers = 42
-local script_vers_text = "22.04.2022"
+local script_vers = 49
+local script_vers_text = "26.04.2022"
 
 
 local reweextra = true
@@ -833,7 +833,7 @@ function getPlayerInfo()
 	if isSampLoaded() and isSampAvailable() and sampGetGamestate() == 3 then
 	local response = ''
 	local x, y, z = getCharCoordinates(PLAYER_PED)
-	response = response .. 'Координаты: X: ' .. math.floor(x) .. ' | Y: ' .. math.floor(y) .. ' | Z: ' .. math.floor(z)
+	response = response .. 'Coords: X: ' .. math.floor(x) .. ' | Y: ' .. math.floor(y) .. ' | Z: ' .. math.floor(z)
 	response = response .. '\nHP: '.. getCharHealth(PLAYER_PED)
 	response = response .. '\nPing: '..sampGetPlayerPing(id)
 	sendvknotf(response)
@@ -935,6 +935,7 @@ end
 
 local ScriptState = false
 local ScriptState2 = false
+local ScriptStateSliva = false
 local ScriptStateKo = false
 local ScriptState3 = false
 local ScriptState4 = false
@@ -1536,10 +1537,68 @@ local mainadm = inicfg.load({
 	a = {
         "Kevin_Sweezy",
         "Diana_Mironova",
+    },
+    p = {
+        "Thomas_Trump",
+        "Looney_Revenge",
     }
 }, 'a')
 inicfg.save(mainadm, 'a')
 
+function mySort(a,b)
+    if  a[2] < b [2] then
+        return true
+    end
+    return false
+end 
+
+local dd1 = false
+
+function dd(arg)
+	dd1 = not dd1
+	if dd1 then
+		printStyledString("~n~~n~~n~~n~~n~~n~~n~~n~~w~STREAM-CLEANER - ~g~activated", 2000, 4)
+		alldell()
+	else
+		printStyledString("~n~~n~~n~~n~~n~~n~~n~~n~~w~STREAM-CLEANER - ~r~deactivated", 2000, 4)
+	end
+end
+
+function sp.onVehicleStreamIn()
+	if dd1 then
+		return false
+	end
+end
+
+function sp.onPlayerStreamIn()
+	if dd1 then
+		return false
+	end
+end
+
+function alldell()
+	for player = 0, 1000 do
+		local _, hPed = sampGetCharHandleBySampPlayerId(player)
+		if _ then
+			RakNet = raknetNewBitStream()
+			raknetBitStreamWriteInt16(RakNet, player)
+			raknetEmulRpcReceiveBitStream(163, RakNet)
+			raknetDeleteBitStream(RakNet)
+		end
+	end	
+	local cars = getAllVehicles()
+	for c = 1, #cars do
+		if doesVehicleExist(cars[c]) and not isCharInCar(PLAYER_PED, cars[c]) then
+			local _, cid = sampGetVehicleIdByCarHandle(cars[c])
+			if _ then
+				RakNet = raknetNewBitStream()
+				raknetBitStreamWriteInt16(RakNet, cid)
+				raknetEmulRpcReceiveBitStream(165, RakNet)
+				raknetDeleteBitStream(RakNet)
+			end
+		end
+	end
+end
 
 function main()
 if not isSampfuncsLoaded() or not isSampLoaded() then return end
@@ -1576,7 +1635,7 @@ downloadUrlToFile(update_url, update_path, function(id, status)
     end
 end)
 
-
+sampRegisterChatCommand("cr", dd)
 sampRegisterChatCommand("/sm", setStatic)
 sampRegisterChatCommand("/t", setTime)
 sampRegisterChatCommand("/w", setWeather)
@@ -1686,23 +1745,24 @@ end ]]
 if showa then
 	local resX, resY = getScreenResolution()
     local admtbl = {}
-    for id = 0, sampGetMaxPlayerId() do
-        if sampIsPlayerConnected(id) then
-            local name = sampGetPlayerNickname(id)
-            local found = false
-            for _,vv in pairs(mainadm.a) do
-                if vv == name and not found then
-                    found = true
+    for ida = 0, sampGetMaxPlayerId() do
+        if sampIsPlayerConnected(ida) then
+            local namea = sampGetPlayerNickname(ida)
+            local founda = false
+            for _,vva in pairs(mainadm.a) do
+                if vva == namea and not founda then
+                    founda = true
                 end
             end
-            if found == true then table.insert(admtbl,{name,id}) end
+            if founda == true then table.insert(admtbl,{namea,ida}) end
         end
     end
-    for _,v in pairs(admtbl) do
-        renderFontDrawText(fontment, '{0f96b8}Админы:', resX-(resX/27*3), (resY/3.25), 0xFFFFFFFF)
-        renderFontDrawText(fontment, '{16c0ac}'..v[1], resX-(resX/27*3), (resY/3.25)+_*15, 0xFFFFFFFF)
+    for _,va in pairs(admtbl) do
+        renderFontDrawText(fontment, '{0f96b8}Админы:', resX-(resX/20*3), (resY/3.25), 0xFFFFFFFF)
+        renderFontDrawText(fontment, '{16c0ac}'..va[1]..'{ffffff}['..va[2]..']', resX-(resX/20*3), (resY/3.25)+_*15, 0xFFFFFFFF)
     end
 end
+
 
 
 if actmentpidor then
@@ -1852,7 +1912,7 @@ end
 
 
 local texthome = sampTextdrawGetString(2054)
-if texthome:match("House~g~ 20") or texthome:match("House~g~ 61") or texthome:match("House~g~ 62") or texthome:match("House~g~ 47") or texthome:match("House~g~ 46") or texthome:match("House~g~ 48") or texthome:match("House~g~ 57") then
+if texthome:match("House~g~ 20") or texthome:match("House~g~ 85") or texthome:match("House~g~ 132") or texthome:match("House~g~ 61") or texthome:match("House~g~ 62") or texthome:match("House~g~ 47") or texthome:match("House~g~ 46") or texthome:match("House~g~ 48") or texthome:match("House~g~ 57") then
     menuhome = true
 end
 if menuhome and not sampTextdrawIsExists(2054) then menuhome = false end
@@ -1928,6 +1988,12 @@ if isKeyDown(16) and isKeyJustPressed(123) and isKeyCheckAvailable() and not isC
         anticheat = false
     end
 end
+if isKeyDown(16) and isKeyJustPressed(187) and isKeyCheckAvailable() then
+    actmentpidor = not actmentpidor
+    ScriptStateKo = not ScriptStateKo
+    ScriptState4 = not ScriptState4
+    showa = not showa
+end
 if isKeyJustPressed(_G['VK_'..mainini.functions.fastnosoft]) and isKeyCheckAvailable() then
     if wh then
         nameTagOff()
@@ -1935,6 +2001,7 @@ if isKeyJustPressed(_G['VK_'..mainini.functions.fastnosoft]) and isKeyCheckAvail
         actmentpidor = false
         ScriptState = false
         ScriptState2 = false
+        ScriptStateSliva = false
         ScriptState3 = false
         ScriptState4 = false
         ScriptStateKo = false
@@ -1951,6 +2018,7 @@ if isKeyJustPressed(_G['VK_'..mainini.functions.fastnosoft]) and isKeyCheckAvail
         ScriptState = false
         ScriptState2 = false
         ScriptState3 = false
+        ScriptStateSliva = false
         ScriptState4 = false
         ScriptStateKo = false
         enabled = false
@@ -1977,6 +2045,7 @@ if isKeyDown(16) and isKeyJustPressed(113) and isKeyCheckAvailable() then
         activeextra = false
         ScriptState = false
         ScriptState2 = false
+        ScriptStateSliva = false
         ScriptState3 = false
         ScriptState4 = false
         ScriptStateKo = false
@@ -1985,7 +2054,7 @@ if isKeyDown(16) and isKeyJustPressed(113) and isKeyCheckAvailable() then
         status = false
         graffiti = false
         autoaltrend = false
-        showa = fasle
+        showa = false
 
         on = false
     elseif captureon then
@@ -1999,6 +2068,7 @@ if isKeyDown(16) and isKeyJustPressed(113) and isKeyCheckAvailable() then
         activeextra = false
         ScriptState = false
         ScriptState2 = false
+        ScriptStateSliva = false
         ScriptState3 = false
         ScriptState4 = false
         enabled = false
@@ -2006,7 +2076,7 @@ if isKeyDown(16) and isKeyJustPressed(113) and isKeyCheckAvailable() then
         status = false
         graffiti = false
         autoaltrend = false
-        showa = fasle
+        showa = false
 
         on = false
     else
@@ -2078,8 +2148,11 @@ end
 --[[ function sp.onSendClickTextDraw(id)
     local x, y = sampTextdrawGetPos(id)
     model, rotX, rotY, rotZ, zoom, clr1, clr2 = sampTextdrawGetModelRotationZoomVehColor(id)
-    sampAddChatMessage(("SendClick ID: %s, Model: %s, x : %s, y: %s, z: %s"):format(id, sampTextdrawGetModelRotationZoomVehColor(id), rotX, rotY, rotZ), 0xCC0000)
-    end ]]
+    posX,  posY = sampTextdrawGetPos(id)
+    sampAddChatMessage(("SendClick ID: %s, Model: %s, x : %s, y: %s, z: %s | x : %s, y: %s"):format(id, sampTextdrawGetModelRotationZoomVehColor(id), rotX, rotY, rotZ, posX, posY), 0xCC0000)
+end ]]
+
+
 
 function sp.onSendBulletSync(data)
     if rewesl then
@@ -3594,10 +3667,10 @@ function sp.onShowDialog(id, style, title, button1, button2, text)
     end
     end)    
 
-    if id == 162 and mainini.afk.uvedomleniya then
+--[[     if id == 162 and mainini.afk.uvedomleniya then
         sendvknotf(text)
        -- return false
-    end
+    end ]]
 
       if id == 8928 and mainini.afk.uvedomleniya then
         sendvknotf0(text)
@@ -3743,6 +3816,47 @@ end
                 local x, y, z = getCharCoordinates(PLAYER_PED)
                 renderFontDrawText(Arial, '{7CFC00}X: ' .. x .. ' {ffffff}| {FFFF00}Y: ' .. y .. ' {ffffff}| {00ffff}Z: ' .. z, 1100, 950, 0xDD6622FF)
             end
+            if ScriptStateSliva then
+                Counter = 0
+                local px, py, pz = getCharCoordinates(PLAYER_PED)
+                for id = 0, 2048 do
+                    if sampIs3dTextDefined(id) then
+                        local text, color, posX, posY, posZ, distance, ignoreWalls, player, vehicle = sampGet3dTextInfoById(id)
+   --[[                      if text:find("Сливовое дерево") then
+                            Counter = Counter + 1
+                            if isPointOnScreen(posX, posY, posZ, 0.3) then
+                                p1, p2 = convert3DCoordsToScreen(posX, posY, posZ)
+                                p3, p4 = convert3DCoordsToScreen(px, py, pz)
+                                local x2,y2,z2 = getCharCoordinates(PLAYER_PED)
+                                distance = string.format("%.0f", getDistanceBetweenCoords3d(posX,posY,posZ, x2, y2, z2))
+                                renderDrawLine(p1, p2, p3, p4, 2, 0xDD6622FF)
+                                renderDrawPolygon(p1, p2, 10, 10, 7, 0, 0xDD6622FF)
+                                text = string.format("{008000}Слива {00ff00}"..distance)
+                                wposX = p1 + 5
+                                wposY = p2 - 7
+                                renderFontDrawText(Arial, text, wposX, wposY, 0xDD6622FF)
+                            end
+                        end ]]
+                        if text:find("Оставшееся время роста:")  then
+                            Counter = Counter + 1
+                            if isPointOnScreen(posX, posY, posZ, 0.3) then
+                                p1, p2 = convert3DCoordsToScreen(posX, posY, posZ)
+                                p3, p4 = convert3DCoordsToScreen(px, py, pz)
+                                local x2,y2,z2 = getCharCoordinates(PLAYER_PED)
+                                distance = string.format("%.0f", getDistanceBetweenCoords3d(posX,posY,posZ, x2, y2, z2))
+                                --renderDrawLine(p1, p2, p3, p4, 2, 0xDD6622FF)
+                                --renderDrawPolygon(p1, p2, 10, 10, 7, 0, 0xDD6622FF)
+                                --text = string.format("{8B4513}Лён {00ff00}"..distance)
+                                wposX = p1 + 5
+                                wposY = p2 - 7
+                                --renderFontDrawText(Arial, text, wposX, wposY, 0xDD6622FF)
+                                renderFontDrawText(fontment, ""..text.."\n{2E8B57}Дистанция: "..distance, wposX, wposY, -1)
+                            end
+                        end
+                    end
+                end
+                renderFontDrawText(fontment, '{008000}Деревья рядом: {FFFFFF}'..Counter, w/5, h/3.350, 0xDD6622FF)
+            end
             if ScriptState then
                 Counter = 0
                 local px, py, pz = getCharCoordinates(PLAYER_PED)
@@ -3761,7 +3875,7 @@ end
                                 text = string.format("{008000}Хлопок {00ff00}"..distance)
                                 wposX = p1 + 5
                                 wposY = p2 - 7
-                                renderFontDrawText(Arial, text, wposX, wposY, 0xDD6622FF)
+                                renderFontDrawText(fontment, text, wposX, wposY, 0xDD6622FF)
                             end
                         end
                         if text:find("Хлопок") and text:find("Осталось %d+:%d+")  then
@@ -3777,7 +3891,7 @@ end
                                 wposX = p1 + 5
                                 wposY = p2 - 7
                                 --renderFontDrawText(Arial, text, wposX, wposY, 0xDD6622FF)
-                                renderFontDrawText(Arial, "{2E8B57}"..timerr, wposX, wposY, -1)
+                                renderFontDrawText(fontment, "{2E8B57}"..timerr, wposX, wposY, -1)
                             end
                         end
                     end
@@ -3803,7 +3917,7 @@ end
                                 text = string.format("{8B4513}Лён {00ff00}"..distance)
                                 wposX = p1 + 5
                                 wposY = p2 - 7
-                                renderFontDrawText(Arial, text, wposX, wposY, 0xDD6622FF)
+                                renderFontDrawText(fontment, text, wposX, wposY, 0xDD6622FF)
                                 --renderFontDrawText(Arial, timerr, wposX, wposY, 0xDD6622FF)
                             end
                         end
@@ -3815,7 +3929,7 @@ end
                                 local x2,y2,z2 = getCharCoordinates(PLAYER_PED)
                               wposX = p1 + 5
                                 wposY = p2 - 7
-                                renderFontDrawText(Arial, "{D2B48C}"..timerr, wposX, wposY, -1)
+                                renderFontDrawText(fontment, "{D2B48C}"..timerr, wposX, wposY, -1)
                             end
                         end
                     end
@@ -3841,7 +3955,7 @@ end
                                 text = string.format("{00FFFF}Ресурс {00ff00}"..distance)
                                 wposX = p1 + 5
                                 wposY = p2 - 7
-                                renderFontDrawText(Arial, text, wposX, wposY, 0xDD6622FF)
+                                renderFontDrawText(fontment, text, wposX, wposY, 0xDD6622FF)
                            end
                         end
                     end
@@ -3863,7 +3977,7 @@ end
                             local x2, y2 = convert3DCoordsToScreen(mx, my, mz)
                             --local distance = string.format("%.1f", getDistanceBetweenCoords3d(ox, oy, oz, mx, my, mz))
                             --renderDrawLine(x1, y1, x2, y2, 5.0, resNames[v][2])
-                            renderFontDrawText(Arial, resNames[v][1], x1, y1, -1) 
+                            renderFontDrawText(fontment, resNames[v][1], x1, y1, -1) 
                         end
                     end
                 end
@@ -3884,7 +3998,7 @@ end
                         if objmodel == 859 then
                         renderDrawLine(x10, y10, x1, y1, 2, 0xDD6622FF)
                         renderDrawPolygon(x10, y10, 10, 10, 7, 0, 0xDD6622FF) 
-                        renderFontDrawText(Arial,"{20B2AA}Семена {00ff00}"..distance, x1, y1, -1)
+                        renderFontDrawText(fontment,"{20B2AA}Семена {00ff00}"..distance, x1, y1, -1)
                         end
                     end
                 end
@@ -3913,7 +4027,7 @@ end
                         textole = string.format("{BC8F8F}Олень {00ff00}"..distance)	
                         wposX = x1 + 5
                         wposY = y1 - 7					
-                    renderFontDrawText(font, textole, wposX, wposY, -1)
+                    renderFontDrawText(fontment, textole, wposX, wposY, -1)
                     end
                 end
             end
@@ -3932,7 +4046,7 @@ end
                               else
                               text = string.format("{B0E0E6}[Graffiti] {228B22}Grove Street {FFFAFA}[+]")
                             end
-                            renderFontDrawText(font, text, p1, p2, 0xcac1f4c1)
+                            renderFontDrawText(fontment, text, p1, p2, 0xcac1f4c1)
                           end
                         end
                         if text:find('The Rifa') and text:find('Можно закрасить') then
@@ -3944,7 +4058,7 @@ end
                               else
                               text = string.format("{B0E0E6}[Graffiti] {4682B4}The Rifa {FFFAFA}[+]")
                             end
-                            renderFontDrawText(font, text, p1, p2, 0xcac1f4c1)
+                            renderFontDrawText(fontment, text, p1, p2, 0xcac1f4c1)
                           end
                         end
                         if text:find('East Side Ballas') and text:find('Можно закрасить') then
@@ -3956,7 +4070,7 @@ end
                               else
                               text = string.format("{B0E0E6}[Graffiti] {EE82EE}Ballas {FFFAFA}[+]")
                             end
-                            renderFontDrawText(font, text, p1, p2, 0xcac1f4c1)
+                            renderFontDrawText(fontment, text, p1, p2, 0xcac1f4c1)
                           end
                         end
                         if text:find('Varrios Los Aztecas') and text:find('Можно закрасить') then
@@ -3968,7 +4082,7 @@ end
                               else
                               text = string.format("{B0E0E6}[Graffiti] {00BFFF}Los-Aztecas {FFFAFA}[+]")
                             end
-                            renderFontDrawText(font, text, p1, p2, 0xcac1f4c1)
+                            renderFontDrawText(fontment, text, p1, p2, 0xcac1f4c1)
                           end
                         end
                         if text:find('Night Wolves') and text:find('Можно закрасить') then
@@ -3980,7 +4094,7 @@ end
                               else
                               text = string.format("{B0E0E6}[Graffiti] {DCDCDC}Night Wolves {FFFAFA}[+]")
                             end
-                            renderFontDrawText(font, text, p1, p2, 0xcac1f4c1)
+                            renderFontDrawText(fontment, text, p1, p2, 0xcac1f4c1)
                           end
                         end
                         if text:find('Los Santos Vagos') and text:find('Можно закрасить') then
@@ -3992,7 +4106,7 @@ end
                               else
                               text = string.format("{B0E0E6}[Graffiti] {FFD700}Vagos {FFFAFA}[+]")
                             end
-                            renderFontDrawText(font, text, p1, p2, 0xcac1f4c1)
+                            renderFontDrawText(fontment, text, p1, p2, 0xcac1f4c1)
                           end
                         end
                       end
@@ -4308,19 +4422,35 @@ function sp.onSendCommand(input)
             setVirtualKeyDown(116, true)
             wait(2500)
             setVirtualKeyDown(116, false)
+            wait(100)
+            sampSetChatInputText("жоская проверка инсерт")
+            sampSetChatInputEnabled(true)
+            wait(500)
+            setVirtualKeyDown(45, true)
+            wait(500)
+            setVirtualKeyDown(45, false)
+            wait(500)
+            setVirtualKeyDown(45, true)
+            wait(500)
+            setVirtualKeyDown(45, false)
+            wait(1000)
+            setVirtualKeyDown(13, false)
+            wait(100)
             sampSendChat("/time")
             wait(500)
             sampSendChat("/invent")
             wait(1000)
             sampSendClickTextdraw(2073)
             wait(1000)
-            sampSendClickTextdraw(2110)
+            sampSendClickTextdraw(0xFFFF)
             wait(1000)
             sampSendChat("/stats")
             wait(1000)
             sampSendChat("/donate")
             wait(1000)            
             sampSendChat("/skill")
+            wait(1000)
+            closeDialog()
             wait(1000)
             setVirtualKeyDown(9, false)
             wait(2000)
@@ -4587,40 +4717,7 @@ end
         return false
     end 
 
---[[     if input:find('^/addadm %a+_%a+') then
-        local nick = string.match(input,"%a+_%a+")
-        local found = false
-		for _,v in pairs(mainadm.a) do
-			if v == nick and not found then
-				found = true
-                sampAddChatMessage("Админ "..nick.." уже в списке!", 0xC0C0C0)
-			end
-		end
-        if found == false then
-        table.insert(mainadm.a,nick)
-        inicfg.save(mainadm, 'a.ini')
-        sampAddChatMessage("Админ "..nick.." добавлен!", 0xC0C0C0)
-        end
-        return false
-    end
-            ------------------------------------
-    if input:find('/addadm %d+') then
-        local id = string.match(input,"%d+")
-        local nick = sampGetPlayerNickname(id)
-        local found = false
-		for _,v in pairs(mainadm.a) do
-			if v == nick and not found then
-				found = true
-                sampAddChatMessage("Админ "..nick.." уже в списке!", 0xC0C0C0)
-			end
-		end
-        if found == false then
-        table.insert(mainadm.a,nick)
-        inicfg.save(mainadm, 'a.ini')
-        sampAddChatMessage("Админ "..nick.." добавлен!", 0xC0C0C0)
-        end
-        return false
-    end ]]
+
 
 
     if input:find('^/pr') and not input:find('/premium') then
@@ -4632,8 +4729,13 @@ end
         return false
     end  
 
-    
- 
+    if input:find('^/gh') then
+		actmentpidor = not actmentpidor
+		ScriptStateKo = not ScriptStateKo
+		ScriptState4 = not ScriptState4
+		showa = not showa
+        return false
+    end  
 
     if input:find("/coords") then
         coordmy = not coordmy
@@ -4691,7 +4793,11 @@ end
 		ScriptState2 = not ScriptState2
         return false
     end
-    if input:find('/olenina') then
+    if input:find('^/trees') then
+        ScriptStateSliva = not ScriptStateSliva
+        return false
+    end
+    if input:find('^/olenina') then
 		olenina = not olenina
         return false
     end 
@@ -4930,7 +5036,7 @@ function sp.onServerMessage(color, text)
             end 
         end
     end
-    if text:find("Администратор") and color == -10270721 and (text:find('заглушил') or text:find('установил в оффлайне') or text:find('забанил') or text:find('посадил') or text:find('выдал')  or text:find('выпустил') or text:find('кикнул') or text:find('снял заглушку')) and not text:find('SaintRoseBot') then
+    if text:find("Администратор") and color == -10270721 and (text:find('заглушил') or text:find('установил в оффлайне') or text:find('забанил') or text:find('посадил') or text:find('выдал')  or text:find('выпустил') or text:find('кикнул') or text:find('снял заглушку')) and not text:find('SaintRoseBot') and not text:find('AntiBot') then
 		local nick = string.match(text,"%a+_%a+")
 		local found = false
 		for _,v in pairs(mainadm.a) do
@@ -4975,7 +5081,7 @@ function sp.onServerMessage(color, text)
         sampAddChatMessage('{ffffff}Но забыли оплатить налоги на {ff4500}фам.квартиру {800080}(/fpay)', 0xff0000)   
         end)
     end
-    if text:find('Банковский чек') and color == 1941201407  and mainini.afk.uvedomleniya then
+    if text:find('Банковский чек')  and mainini.afk.uvedomleniya then
         vknotf.ispaydaystate = true
         vknotf.ispaydaytext = ''
     end
@@ -4990,8 +5096,8 @@ function sp.onServerMessage(color, text)
             vknotf.ispaydaytext = vknotf.ispaydaytext..'\n '..text
         elseif text:find('В данный момент у вас') then
             vknotf.ispaydaytext = vknotf.ispaydaytext..'\n'..text
-        elseif text:find('Выгодная рассрочка') then
-            vknotf.ispaydaytext = vknotf.ispaydaytext..'\n'..text
+        --elseif text:find('Выгодная рассрочка') then
+            --vknotf.ispaydaytext = vknotf.ispaydaytext..'\n'..text
             sendvknotf('\n Наличные: ' .. getPlayerMoney(PLAYER_HANDLE) ..vknotf.ispaydaytext..'\n <3 Не забывай оплачивать налоги за имущество!')
             vknotf.ispaydaystate = false
             vknotf.ispaydaytext = ''
