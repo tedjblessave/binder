@@ -29,7 +29,7 @@ local activeextra = false
 
 update_state = false 
  
-local script_vers = 55
+local script_vers = 56
 local script_vers_text = "26.04.2022"
 
 
@@ -2782,16 +2782,6 @@ function tormoz()
                     setGameKeyState(16, 255)
                 end  
             end 
-            if isCharInAnyCar(PLAYER_PED) and isKeyJustPressed(_G['VK_'..mainini.config.tramp]) and isKeyCheckAvailable() and not sampIsChatInputActive() and not isSampfuncsConsoleActive() and not sampIsDialogActive() then
-                local veh = storeCarCharIsInNoSave(PLAYER_PED)
-                local vle = getCarHeading(veh)
-                local ofX, ofY, ofZ = getOffsetFromCarInWorldCoords(veh, 0.0, 24.5, -1.3)
-                local object = createObject(1634, ofX, ofY, ofZ) 
-                local ole = getObjectHeading(object)
-                setObjectHeading(object, vle)
-                wait(3500)
-                deleteObject(object)
-            end
             if isCharInAnyCar(PLAYER_PED) and not sampIsChatInputActive() and not sampIsDialogActive() then
                 local veh = storeCarCharIsInNoSave(PLAYER_PED)
                 local speed = getCarSpeed(veh)
@@ -6456,12 +6446,7 @@ end
                 menu()
             end
 
-            local result, button, _, lop = sampHasDialogRespond(2299)
-            if result and button == 1 then
-                mainini.config.tramp = lop
-                inicfg.save(mainini, 'bd')
-                menu()
-            end
+
 
             local result, button, _, lop = sampHasDialogRespond(2253)
             if result and button == 1 then
