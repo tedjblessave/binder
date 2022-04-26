@@ -29,7 +29,7 @@ local activeextra = false
 
 update_state = false 
  
-local script_vers = 50
+local script_vers = 51
 local script_vers_text = "26.04.2022"
 
 
@@ -3991,11 +3991,13 @@ end
                 end
             end
             if enabled then
+                Counter = 0
                 for _, v in pairs(getAllObjects()) do
                     local asd
                     if sampGetObjectSampIdByHandle(v) ~= -1 then
                         asd = sampGetObjectSampIdByHandle(v)
                     end
+                    
                     if isObjectOnScreen(v) then
                         local result, oX, oY, oZ = getObjectCoordinates(v)
                         local x1, y1 = convert3DCoordsToScreen(oX,oY,oZ)
@@ -4004,12 +4006,16 @@ end
                         local x10, y10 = convert3DCoordsToScreen(x2,y2,z2)
                         distance = string.format("%.0f", getDistanceBetweenCoords3d(oX,oY,oZ, x2, y2, z2))
                         if objmodel == 859 then
+                            
+                    Counter = Counter + 1
                         renderDrawLine(x10, y10, x1, y1, 2, 0xDD6622FF)
                         renderDrawPolygon(x10, y10, 10, 10, 7, 0, 0xDD6622FF) 
                         renderFontDrawText(fontment,"{20B2AA}Семена {00ff00}"..distance, x1, y1, -1)
                         end
                     end
                 end
+                
+                renderFontDrawText(fontment, '{20B2AA}Семена: {ffffff}'..Counter, w/5, h/2.950, 0xDD6622FF)
             end
             if olenina then
                 olenk = 0
@@ -4816,11 +4822,6 @@ end
 
     if input:find('/semena') then
 		enabled = not enabled 
-		if enabled then
-			printString("Semena ~G~ON",1500)
-		else
-			printString("Semena ~R~OFF",1500)
-		end
         return false
     end
     if input:find('/len') then
