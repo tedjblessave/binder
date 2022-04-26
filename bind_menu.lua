@@ -2008,6 +2008,7 @@ if isKeyJustPressed(_G['VK_'..mainini.functions.fastnosoft]) and isKeyCheckAvail
         ScriptState3 = false
         ScriptState4 = false
         ScriptStateKo = false
+        ScriptStateGrib = false
         enabled = false
         olenina = false
         status = false
@@ -2024,6 +2025,7 @@ if isKeyJustPressed(_G['VK_'..mainini.functions.fastnosoft]) and isKeyCheckAvail
         ScriptStateSliva = false
         ScriptState4 = false
         ScriptStateKo = false
+        ScriptStateGrib = false
         enabled = false
         olenina = false
         status = false
@@ -2052,6 +2054,7 @@ if isKeyDown(16) and isKeyJustPressed(113) and isKeyCheckAvailable() then
         ScriptState3 = false
         ScriptState4 = false
         ScriptStateKo = false
+        ScriptStateGrib = false
         enabled = false
         olenina = false
         status = false
@@ -2071,7 +2074,9 @@ if isKeyDown(16) and isKeyJustPressed(113) and isKeyCheckAvailable() then
         activeextra = false
         ScriptState = false
         ScriptState2 = false
+        ScriptStateKo = false
         ScriptStateSliva = false
+        ScriptStateGrib = false
         ScriptState3 = false
         ScriptState4 = false
         enabled = false
