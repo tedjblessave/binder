@@ -29,7 +29,7 @@ local activeextra = false
 
 update_state = false 
  
-local script_vers = 49
+local script_vers = 50
 local script_vers_text = "26.04.2022"
 
 
@@ -97,6 +97,8 @@ renderlist = [[
     {20B2AA}Семена нарко: {33EA0D}Активация: {7B68EE}/semena
     {110dd3}Мусора: {33EA0D}Активация: {7B68EE}/ms
     {BC8F8F}Олени: {33EA0D}Активация: {7B68EE}/olenina
+    {f3ab12}Плодовые деревья: {33EA0D}Активация: {7B68EE}/trees
+    {7faa09}Грибы: {33EA0D}Активация: {7B68EE}/grib
     {d166be}Авто Альт: {33EA0D}Активация: {7B68EE}/laa
     {808080}Поиск игрока в зоне стрима: {33EA0D}Активация: {7B68EE}/mnk (id)
     {ff1493}Граффити банд: {33EA0D}Активация: {7B68EE}/graf {ffffff}| быстрая краска '{ff1493}77{ffffff}' как чит-код
@@ -939,6 +941,7 @@ local ScriptStateSliva = false
 local ScriptStateKo = false
 local ScriptState3 = false
 local ScriptState4 = false
+local ScriptStateGrib = false
 local autoaltrend = false
 local enabled = false
 local olenina = false
@@ -3837,7 +3840,7 @@ end
                                 renderFontDrawText(Arial, text, wposX, wposY, 0xDD6622FF)
                             end
                         end ]]
-                        if text:find("Оставшееся время роста:")  then
+                        if text:find("Оставшееся время роста:") or text:find("На дереве") then
                             Counter = Counter + 1
                             if isPointOnScreen(posX, posY, posZ, 0.3) then
                                 p1, p2 = convert3DCoordsToScreen(posX, posY, posZ)
@@ -3850,12 +3853,12 @@ end
                                 wposX = p1 + 5
                                 wposY = p2 - 7
                                 --renderFontDrawText(Arial, text, wposX, wposY, 0xDD6622FF)
-                                renderFontDrawText(fontment, ""..text.."\n{2E8B57}Дистанция: "..distance, wposX, wposY, -1)
+                                renderFontDrawText(fontment, ""..text.."\n{f3ab12}Дистанция: {ffffff}"..distance, wposX, wposY, -1)
                             end
                         end
                     end
                 end
-                renderFontDrawText(fontment, '{008000}Деревья рядом: {FFFFFF}'..Counter, w/5, h/3.350, 0xDD6622FF)
+                renderFontDrawText(fontment, '{f3ab12}Деревья рядом: {FFFFFF}'..Counter, w/5, h/3.150, 0xDD6622FF)
             end
             if ScriptState then
                 Counter = 0
@@ -4138,6 +4141,32 @@ end
                 renderFontDrawText(fontment, '{EE82EE}Закладки:{ffffff} '..Counter, w/5, h/3.350, 0xDD6622FF)
             end
 
+            if ScriptStateGrib then
+                Counter = 0
+                local px, py, pz = getCharCoordinates(PLAYER_PED)
+                for id = 0, 2048 do
+                    if sampIs3dTextDefined(id) then
+                        local text, color, posX, posY, posZ, distance, ignoreWalls, player, vehicle = sampGet3dTextInfoById(id)
+                        if text:find('Срезать гриб') and text:find('Нажмите ALT') then
+                            Counter = Counter + 1
+                            if isPointOnScreen(posX, posY, posZ, 0.3) then
+                                p1, p2 = convert3DCoordsToScreen(posX, posY, posZ)
+                                p3, p4 = convert3DCoordsToScreen(px, py, pz)
+                                local x2,y2,z2 = getCharCoordinates(PLAYER_PED)
+                                distance = string.format("%.0f", getDistanceBetweenCoords3d(posX,posY,posZ, x2, y2, z2))
+                                renderDrawLine(p1, p2, p3, p4, 2, 0xDD6622FF)
+                                renderDrawPolygon(p1, p2, 10, 10, 7, 0, 0xDD6622FF)
+                                text = string.format("{7faa09}Гриб {00ff00}"..distance)
+                                wposX = p1 + 5
+                                wposY = p2 - 7
+                                renderFontDrawText(fontment, text, wposX, wposY, 0xDD6622FF)
+                            end
+                        end
+                    end
+                end
+                renderFontDrawText(fontment, '{7faa09}Грибы:{ffffff} '..Counter, w/5, h/3.350, 0xDD6622FF)
+            end
+
             if ScriptStateKo then
                 Counter = 0
                 local px, py, pz = getCharCoordinates(PLAYER_PED)
@@ -4371,7 +4400,7 @@ function sp.onSendCommand(input)
         sampSendDialogResponse(1214, 1, 3, -1)
         return false
     end ]]
-    if input:find('/gr') and not input:find('/graf') and mainini.lidzamband.devyatka then 
+    if input:find('/gr') and not input:find('/graf') and not input:find('/grib') and mainini.lidzamband.devyatka then 
         local argidgr = input:match('/gr (.+)')
         sampSendChat('/giverank '..argidgr)
         return false
@@ -4795,6 +4824,10 @@ end
     end
     if input:find('^/trees') then
         ScriptStateSliva = not ScriptStateSliva
+        return false
+    end
+    if input:find('^/grib') then
+        ScriptStateGrib = not ScriptStateGrib
         return false
     end
     if input:find('^/olenina') then
