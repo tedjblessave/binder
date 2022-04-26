@@ -29,7 +29,7 @@ local activeextra = false
 
 update_state = false 
  
-local script_vers = 51
+local script_vers = 55
 local script_vers_text = "26.04.2022"
 
 
@@ -88,24 +88,7 @@ local settings = {
 }
 
 
-renderlist = [[
-    {8B4513}Лён: {33EA0D}Активация: {7B68EE}/len
-    {008000}Хлопок: {33EA0D}Активация: {7B68EE}/hlop
-    {00FFFF}Ресурсы: {33EA0D}Активация: {7B68EE}/waxta
-    {EE82EE}Закладки: {33EA0D}Активация: {7B68EE}/gn
-    {d3940d}Притоны: {33EA0D}Активация: {7B68EE}/pr
-    {20B2AA}Семена нарко: {33EA0D}Активация: {7B68EE}/semena
-    {110dd3}Мусора: {33EA0D}Активация: {7B68EE}/ms
-    {BC8F8F}Олени: {33EA0D}Активация: {7B68EE}/olenina
-    {f3ab12}Плодовые деревья: {33EA0D}Активация: {7B68EE}/trees
-    {7faa09}Грибы: {33EA0D}Активация: {7B68EE}/grib
-    {d166be}Авто Альт: {33EA0D}Активация: {7B68EE}/laa
-    {808080}Поиск игрока в зоне стрима: {33EA0D}Активация: {7B68EE}/mnk (id)
-    {ff1493}Граффити банд: {33EA0D}Активация: {7B68EE}/graf {ffffff}| быстрая краска '{ff1493}77{ffffff}' как чит-код
-    {00FF00}Зеленым {87CEEB}цветом отмечается расстояние до объекта.
-    {9932CC}Пурпурным {87CEEB}линии до объекта.
-    {ffffff}Белым {87CEEB}количество объектов в зоне стрима.
-]]
+
 
 buttonslist = [[
             LBUTTON (1) - Левая кнопка мыши
@@ -947,6 +930,7 @@ local enabled = false
 local olenina = false
 local status = false
 local graffiti = false
+local showa = false
 
 local on = false
 
@@ -1227,6 +1211,39 @@ Flood 5 %s
     floodon5 and '{00ff00}ON' or '{777777}OFF', 
     mainini.flood.flwait5,
     mainini.flood.fltext5),
+        'Выбрать', 'Закрыть', 2)
+end
+
+function render_rr()
+    sampShowDialog(5612, '{fff000}Рендер', string.format([[
+        {8B4513}Лён %s
+        {008000}Хлопок %s
+        {00FFFF}Ресурсы шахты %s
+        {EE82EE}Закладки %s
+        {d3940d}Притоны %s
+        {20B2AA}Семена нарко %s
+        {110dd3}Мусора %s
+        {BC8F8F}Олени %s
+        {f3ab12}Плодовые деревья %s
+        {7faa09}Грибы %s
+        {ff1493}Граффити банд %s
+        {ff0000}Админы %s
+
+        {808080}Поиск игрока в зоне стрима: {33EA0D}Активация: {7B68EE}/mnk (id)
+        {d166be}Авто Альт: {33EA0D}Активация: {7B68EE}/laa
+]], 
+    ScriptState2 and '{00ff00}ON' or '{777777}OFF', 
+    ScriptState and '{00ff00}ON' or '{777777}OFF', 
+    ScriptState3 and '{00ff00}ON' or '{777777}OFF', 
+    ScriptState4 and '{00ff00}ON' or '{777777}OFF', 
+    ScriptStateKo and '{00ff00}ON' or '{777777}OFF', 
+    enabled and '{00ff00}ON' or '{777777}OFF', 
+    actmentpidor and '{00ff00}ON' or '{777777}OFF', 
+    olenina and '{00ff00}ON' or '{777777}OFF', 
+    ScriptStateSliva and '{00ff00}ON' or '{777777}OFF', 
+    ScriptStateGrib and '{00ff00}ON' or '{777777}OFF', 
+    graffiti and '{00ff00}ON' or '{777777}OFF', 
+    showa and '{00ff00}ON' or '{777777}OFF'),
         'Выбрать', 'Закрыть', 2)
 end
 
@@ -1535,7 +1552,6 @@ function applySampfuncsPatch()
     end
 end
 
-local showa = false
 local mainadm = inicfg.load({
 	a = {
         "Kevin_Sweezy",
@@ -4747,35 +4763,23 @@ end
         sampSendChat("/findibiz "..arg)
         return false
     end
-
-    if input:find('^/gn') then
-		ScriptState4 = not ScriptState4
+    if input:find('^/nb (.+)') then
+        local arg = input:match('/nb (.+)')
+        sampSendChat("/number "..arg)
         return false
-    end  
-    if input:find('^/adm') then
-		showa = not showa
+    end
+
+
+    if input:find('^/rend') then
+		render_rr()
         return false
-    end 
+    end
 
 
 
 
-    if input:find('^/pr') and not input:find('/premium') then
-		ScriptStateKo = not ScriptStateKo
-        return false
-    end  
-    if input:find('^/ms') then
-		actmentpidor = not actmentpidor
-        return false
-    end  
 
-    if input:find('^/gh') then
-		actmentpidor = not actmentpidor
-		ScriptStateKo = not ScriptStateKo
-		ScriptState4 = not ScriptState4
-		showa = not showa
-        return false
-    end  
+ 
 
     if input:find("/coords") then
         coordmy = not coordmy
@@ -4820,38 +4824,6 @@ end
     end  
     ---
 
-    if input:find('/semena') then
-		enabled = not enabled 
-        return false
-    end
-    if input:find('/len') then
-		ScriptState2 = not ScriptState2
-        return false
-    end
-    if input:find('^/trees') then
-        ScriptStateSliva = not ScriptStateSliva
-        return false
-    end
-    if input:find('^/grib') then
-        ScriptStateGrib = not ScriptStateGrib
-        return false
-    end
-    if input:find('^/olenina') then
-		olenina = not olenina
-        return false
-    end 
-    if input:find('/graf') then
-		graffiti = not graffiti
-        return false
-    end
-    if input:find('/waxta') then
-        ScriptState3 = not ScriptState3
-        return false
-    end
-    if input:find('/hlop') then
-		ScriptState = not ScriptState
-        return false
-    end
     if input:find('/laa') then
 		status = not status
 		if status then
@@ -6095,6 +6067,58 @@ end
                     lidzammafia_menu()
                 end
             end
+
+            local result, button, _, lop = sampHasDialogRespond(5612)
+            if result and button == 1 then
+                if list == 0 then
+                    ScriptState2 = not ScriptState2
+                    render_rr()
+                end
+                if list == 1 then
+                    ScriptState = not ScriptState
+                    render_rr()
+                end
+                if list == 2 then
+                    ScriptState3 = not ScriptState3
+                    render_rr()
+                end
+                if list == 3 then
+                    ScriptState4 = not ScriptState4
+                    render_rr()
+                end
+                if list == 4 then
+                    ScriptStateKo = not ScriptStateKo
+                    render_rr()
+                end
+                if list == 5 then
+                    enabled = not enabled
+                    render_rr()
+                end
+                if list == 6 then
+                    actmentpidor = not actmentpidor
+                    render_rr()
+                end
+                if list == 7 then
+                    olenina = not olenina
+                    render_rr()
+                end
+                if list == 8 then
+                    ScriptStateSliva = not ScriptStateSliva
+                    render_rr()
+                end
+                if list == 9 then
+                    ScriptStateGrib = not ScriptStateGrib
+                    render_rr()
+                end
+                if list == 10 then
+                    graffiti = not graffiti
+                    render_rr()
+                end
+                if list == 11 then
+                    showa = not showa
+                    render_rr()
+                end
+            end
             
             local result, button, _, lop = sampHasDialogRespond(2790)
             if result and button == 1 then
@@ -6394,7 +6418,7 @@ end
                         'Сохранить', 'Закрыть', 1)
                 end
                 if list == 4 then
-                    sampShowDialog(3905, "{00CC00}Другие рендеры", renderlist, "Закрыть", _, 2)
+                    render_rr()
                 end
             end
 
