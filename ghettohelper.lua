@@ -5947,7 +5947,7 @@ function imgui.OnDrawFrame()
                 lua_thread.create(function()
                     downloadUrlToFile(script_url, script_path, function(id, status)
                         if status == dlstatus.STATUS_ENDDOWNLOADDATA then
-                            sampAddChatMessage("Скрипт успешно обновлен!", -1)
+                            sampAddChatMessage("{800080}[blessave]: {ffffff}Скрипт {c0c0c0}Ghetto Helper {36ce38}Успешно обновлен!", 0x800080)
                             --thisScript():reload()
                         end
                     end)
@@ -6521,7 +6521,8 @@ function onScriptTerminate(script, quit)
                 deleteObject(object)
             end
         end 
-        os.remove(update_path) 
+        os.remove(update_path)
+        showCursor(false)
     end  
 end
 
