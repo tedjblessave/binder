@@ -1,6 +1,6 @@
 {
   "groups":{
-    "ballas":[
+    "Ballas":[
       {
         "rotation":{"y":0,"x":-2,"z":80},
         "modelId":18651,
@@ -442,7 +442,7 @@
         }
       }
     ],
-    "nw":[
+    "Night Wolfs":[
       {
         "rotation":{"y":0,"x":0,"z":90},
         "modelId":18647,
@@ -1195,7 +1195,7 @@
         }
       }
     ],
-    "vla":[
+    "Aztecas":[
       {
         "rotation":{"y":0,"x":0,"z":90},
         "modelId":18648,
@@ -2160,7 +2160,7 @@
         }
       }
     ],
-    "sfr":[
+    "Rifa":[
       {
         "rotation":{"y":0,"x":0,"z":51},
         "modelId":18648,
@@ -2477,7 +2477,7 @@
         }
       }
     ],
-    "fam":[
+    "Grove":[
       {
         "rotation":{"y":0,"x":0,"z":88},
         "modelId":18649,
@@ -3091,7 +3091,7 @@
         }
       }
     ],
-    "lsv":[
+    "Vagos":[
       {
         "rotation":{"y":0,"x":7,"z":0},
         "modelId":18650,
@@ -3647,6 +3647,5 @@
         }
       }
     ]
-  },
-  "enabledGroups":[ "sfr","lsv" ]
+  }
 }
