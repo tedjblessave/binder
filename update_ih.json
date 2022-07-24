@@ -1,4 +1,17 @@
 {
-  "ghettohelper_version":"20",
-   "ghettohelper_date":"24.07.2022"
+  "ghettohelper_version":"21",
+  "ghettohelper_date":"24.07.2022",
+  "changelog":
+      "version 21
+            фикс цветов показателя онлайна 
+    version 20
+            добавлен быстрый крафт оружия в меню fastgun;
+            авто-пробив консольных команд SF: threads, chatcmds;
+            добавлена карта закладок по гетто;
+            добавлен показатель онлайна нелегальных организаций
+    version 19 
+            -добавление быстрой серверной карты;
+            -фикс car hp hud
+    version 18 
+            -релиз скрипта на blast.hk"
 }
