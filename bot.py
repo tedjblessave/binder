@@ -5,14 +5,14 @@ from vk_api.longpoll import VkLongPoll, VkEventType
 from cmath import inf
 import discord
 from discord_components import DiscordComponents, ComponentsBot, Button, SelectOption, Select
-#import discord.ext.commands as commands
+import discord.ext.commands as commands
 import random
 import threading
 import asyncio
 from threading import Thread 
 import re
 
-from config import settings
+from conf import settings
 
 capt_zabiv_channel = 1034522667853815921 #828285598305091657 
 capt_info_channel = 828210586529431572 
